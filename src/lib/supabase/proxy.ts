@@ -41,6 +41,7 @@ export async function updateSession(request: NextRequest) {
 
   const user = data?.claims;
 
+  /*
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
@@ -51,6 +52,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
+  */
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
