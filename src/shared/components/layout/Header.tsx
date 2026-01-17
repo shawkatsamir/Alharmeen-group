@@ -1,33 +1,12 @@
 import Link from "next/link";
+import { getNavigationCategories } from "@/services/server/categories";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
 
 import { ChevronDown, Search, ShoppingCart, User } from "lucide-react";
 
-const navigationData = [
-  {
-    id: 1,
-    name: "أجهزة منزلية كبيرة",
-    slug: "large-appliances", // or arabic "أجهزة-منزلية-كبيرة"
-    subcategories: [
-      { name: "ثلاجات", slug: "refrigerators" },
-      { name: "غسالات", slug: "washing-machines" },
-      { name: "بوتاجازات", slug: "cookers" },
-    ],
-  },
-  {
-    id: 2,
-    name: "أجهزة منزلية صغيرة",
-    slug: "small-appliances",
-    subcategories: [
-      { name: "ميكروويف", slug: "microwaves" },
-      { name: "خلاطات", slug: "blenders" },
-      { name: "مكانس", slug: "vacuums" },
-    ],
-  },
-];
-
-export default function Header() {
+export default async function Header() {
+  const categories = await getNavigationCategories();
   return (
     <header className="bg-white shadow-sm relative z-50 sticky top-0">
       <div className="container mx-auto px-4">
@@ -70,7 +49,7 @@ export default function Header() {
       <div className="hidden lg:block border-t">
         <div className="container max-auto px-4">
           <nav className="flex items-center justify-center gap-8 py-3">
-            {navigationData.map((category) => (
+            {categories.map((category) => (
               <div
                 key={category.id}
                 className="group relative h-full flex items-center"
