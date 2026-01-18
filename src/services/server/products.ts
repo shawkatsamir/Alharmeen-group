@@ -67,6 +67,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .eq("slug", slug)
     .single();
 
+  console.log(data);
   if (error) {
     console.error(`Error fetching product with slug ${slug}:`, error);
     return null;
