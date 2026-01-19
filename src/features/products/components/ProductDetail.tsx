@@ -2,16 +2,7 @@ import { Database } from "@/shared/types/database.types";
 import { Img } from "@/shared/components/ui/Image";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
-import {
-  Check,
-  Heart,
-  Minus,
-  Plus,
-  Share2,
-  ShoppingCart,
-  Star,
-  X,
-} from "lucide-react";
+import { Check, Heart, Share2, ShoppingCart, X } from "lucide-react";
 import Breadcrumb from "@/shared/components/ui/Breadcrumb";
 import { Separator } from "@/shared/components/ui/Separator";
 import { Tabs, TabsContent, TabsTrigger } from "@/shared/components/ui/Tabs";
@@ -32,7 +23,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
-
+        <Breadcrumb />
         {/* Product Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Left: Images */}
@@ -122,7 +113,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
               <ul className="space-y-2">
                 {product.features?.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                    <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                     <span className="text-gray-700">{feature}</span>
                   </li>
                 ))}

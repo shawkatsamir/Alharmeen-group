@@ -1,22 +1,24 @@
 import Link from "next/link";
-import { Database } from "@/shared/types/database.types";
 import { Button } from "@/shared/components/ui/Button";
 import { Img } from "@/shared/components/ui/Image";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/shared/components/ui/Badge";
-
-type Product = Database["public"]["Tables"]["products"]["Row"] & {
-  category?: { slug: string };
-  images?: { image_url: string }[];
-};
+import { Product } from "../types";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const hasDiscount = product.old_price && product.old_price > product.price;
+  const discountPercentage = hasDiscount
+    ? Math.round(
+        ((product.old_price! - product.price) / product.old_price!) * 100,
+      )
+    : 0;
+
   return (
-    <div className="group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white">
+    <div className="group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col">
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {/* Main Image */}
         <Img
@@ -26,38 +28,46 @@ export function ProductCard({ product }: ProductCardProps) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
-        <Badge className="absolute top-3 right-3 z-10" variant="default">
-          جديد
-        </Badge>
+        {/* Badges */}
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+          {product.is_new && !hasDiscount && (
+            <Badge variant="default">جديد</Badge>
+          )}
+          {hasDiscount && (
+            <Badge variant="destructive">وفر {discountPercentage}%</Badge>
+          )}
+        </div>
+
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
       </div>
 
-      <div className="p-4">
-        {/* <p className="text-sm text-gray-500 mb-1">{product.brand}</p> */}
-        <h3 className="font-semibold mb-2 line-clamp-2 min-h-[3rem]">
+      <div className="p-4 flex flex-col grow">
+        <h3 className="font-semibold mb-2 line-clamp-2 min-h-12">
           {product.name_ar}
         </h3>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 mt-auto">
           <span className="text-lg font-bold text-primary">
             {product.price.toLocaleString()} ج.م
           </span>
-          {product.old_price && (
+          {hasDiscount && (
             <span className="text-sm text-gray-400 line-through">
-              {product.old_price.toLocaleString()} ج.م
+              {product.old_price!.toLocaleString()} ج.م
             </span>
           )}
         </div>
 
-        <Button className="w-full" size="lg">
-          <ShoppingCart className="w-4 h-4 ml-2" />
-          اضف للسلة
-        </Button>
-        <Link href={`/product/${product.slug}`} className="text-sm">
-          <Button size="sm" variant="outline">
-            عرض التفاصيل
+        <div className="flex flex-col gap-2">
+          <Button className="w-full" size="lg">
+            <ShoppingCart className="w-4 h-4 ml-2" />
+            اضف للسلة
           </Button>
-        </Link>
+          <Link href={`/product/${product.slug}`} className="w-full">
+            <Button size="sm" variant="outline" className="w-full">
+              عرض التفاصيل
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

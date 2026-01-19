@@ -152,6 +152,47 @@ export async function getBestSellerProducts(limit = 10): Promise<Product[]> {
   return data as Product[];
 }
 
+export async function getOffers(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<Product[]> {
+  const supabase = await createStaticClient();
+  let query = supabase
+    .from("products")
+    .select(
+      `
+      *,
+      brand:brands(*),
+      category:categories(*),
+      images:product_images(*)
+    `,
+    )
+    .eq("is_special_offer", true)
+    .eq("is_active", true);
+
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  if (options.offset) {
+    query = query.range(
+      options.offset,
+      options.offset + (options.limit || 10) - 1,
+    );
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching offers:", error);
+    return [];
+  }
+
+  return data as Product[];
+}
+
 export async function getBrands(): Promise<Brand[]> {
   const supabase = await createStaticClient();
   const { data, error } = await supabase
@@ -211,4 +252,19 @@ export async function getProductsBySubcategory(
   }
 
   return data as Product[];
+}
+
+export async function getAllProductSlugs(): Promise<string[]> {
+  const supabase = await createStaticClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("slug")
+    .eq("is_active", true);
+
+  if (error) {
+    console.error("Error fetching product slugs:", error);
+    return [];
+  }
+
+  return data.map((product) => product.slug);
 }
