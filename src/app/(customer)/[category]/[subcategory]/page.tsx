@@ -28,6 +28,7 @@ export default async function SubCategoryPage({
         {/* We could fetch the subcategory name here if needed, or rely on info from the products */}
         المنتجات
       </h1>
+
       <ProductsClient initialProducts={products} />
     </div>
   );
