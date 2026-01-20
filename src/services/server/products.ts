@@ -124,13 +124,23 @@ export async function getProductsByBrand(brandId: string): Promise<Product[]> {
   return data as Product[];
 }
 
-export async function getFeaturedProducts(limit = 10): Promise<Product[]> {
-  return getProducts({ limit, featured: true });
+export async function getFeaturedProducts(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<Product[]> {
+  return getProducts({ ...options, featured: true });
 }
 
-export async function getBestSellerProducts(limit = 10): Promise<Product[]> {
+export async function getBestSellerProducts(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<Product[]> {
   const supabase = await createStaticClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("products")
     .select(
       `
@@ -141,8 +151,20 @@ export async function getBestSellerProducts(limit = 10): Promise<Product[]> {
     `,
     )
     .eq("is_best_seller", true)
-    .eq("is_active", true)
-    .limit(limit);
+    .eq("is_active", true);
+
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  if (options.offset) {
+    query = query.range(
+      options.offset,
+      options.offset + (options.limit || 10) - 1,
+    );
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching best seller products:", error);

@@ -18,7 +18,7 @@ export function ProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <div className="group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col">
+    <div className="group border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col">
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {/* Main Image */}
         <Img
