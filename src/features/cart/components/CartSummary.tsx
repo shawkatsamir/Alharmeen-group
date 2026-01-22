@@ -7,7 +7,7 @@ export function CartSummary() {
   const { total, items } = useCartStore();
   const subtotal = total();
   // We can add shipping logic later if needed
-  const shipping = 0;
+  const shipping: number = 0;
 
   const router = useRouter();
   const supabase = createClient();
