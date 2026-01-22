@@ -3,7 +3,8 @@ import { getNavigationCategories } from "@/services/server/categories";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
 
-import { ChevronDown, Search, ShoppingCart, User } from "lucide-react";
+import { ChevronDown, Search, User } from "lucide-react";
+import { CartButton } from "@/features/cart/components/CartButton";
 
 export default async function Header() {
   const categories = await getNavigationCategories();
@@ -39,9 +40,7 @@ export default async function Header() {
             >
               <User className="w-5 h-5" />
             </Button>
-            <Button className="relative" size="icon" variant="ghost">
-              <ShoppingCart className="h-5 w-5" />
-            </Button>
+            <CartButton />
           </div>
         </div>
       </div>

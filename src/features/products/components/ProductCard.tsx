@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Img } from "@/shared/components/ui/Image";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Product } from "../types";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +18,21 @@ export function ProductCard({ product }: ProductCardProps) {
         ((product.old_price! - product.price) / product.old_price!) * 100,
       )
     : 0;
+
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleAddToCart = () => {
+    addItem({
+      id: product.id,
+      name: product.name_ar,
+      price: product.price,
+      image: product.images?.[0]?.image_url || "/placeholder.jpg",
+      slug: product.slug,
+      brand: product.brand?.name_ar || "",
+    });
+
+    toast.success("تم إضافة المنتج إلى السلة");
+  };
 
   return (
     <div className="group border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col">
@@ -58,7 +75,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button className="w-full" size="lg">
+          <Button className="w-full" size="lg" onClick={handleAddToCart}>
             <ShoppingCart className="w-4 h-4 ml-2" />
             اضف للسلة
           </Button>
