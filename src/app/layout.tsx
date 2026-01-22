@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import Header from "@/shared/components/layout/Header";
 import Footer from "@/shared/components/layout/Footer";
+import { Toaster } from "sonner";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className={cairo.className}>
         <Header />
         {children}
+        <Toaster position="top-center" />
         <Footer />
       </body>
     </html>
