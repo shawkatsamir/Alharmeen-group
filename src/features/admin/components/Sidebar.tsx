@@ -14,6 +14,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -151,35 +152,18 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Footer Toggle (Optional, or keep it in header? The design usually has toggle in header or sidebar) 
-          The user replaced the header toggle with "Menu" icon. 
-          But the Sidebar has a toggle inside it in `src/features/admin/components/Sidebar.tsx` at line 97.
-          I kept it in the `open` block above.
-          But if I collapse it, the button disappears?
-          If the sidebar is collapsed, we need a way to expand it FROM the sidebar if the header button isn't the only way.
-          The user said: "toggle so on clicking the ChevronLeft button it already toggle it but i want to only display icons... and the icon should be swaped to ChevronRight".
-          This implies the toggle button stays visible in the sidebar even when collapsed?
-          If so, I should move the toggle button out of the `open` check or make it visible in collapsed state.
-          But the design often puts the toggle in the header for mobile, and sidebar-footer or header for desktop.
-          Currently sidebar has a toggle at the top next to logo.
-          If `open` is false (collapsed), logo is just icon.
-          Where does the toggle go?
-          If I hide it, how do they expand?
-          Via the Header Menu button? Yes, `AdminLayout` has a Header Menu button.
-          "Header > Menu icon".
-          Let's assume the Sidebar's internal toggle is for Desktop mainly?
-          If I leave it in the sidebar header, it takes space.
-          If collapsed (w-20), `p-6` -> `p-4`.
-          Flex row. Logo Icon + Button? Might be tight.
-          Maybe move toggle to bottom or keep it but ensure it fits.
-          Or, better, only use the Header toggle?
-          User specifically mentioned "ChevronLeft button" in Sidebar.
-          So let's keep it.
-          When collapsed: Logo Icon (left/right?) and Toggle Button.
-          In RTL: Logo (Right), Toggle (Left).
-          Width 20 (80px). 
-          Icon 24px + Gap + Button 20px. Fits.
-      */}
+      {/* Logout Button */}
+      <div className="p-4 border-t border-border">
+        <Link
+          href="/account"
+          className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:text-red-400 ${
+            !open ? "justify-center px-2" : ""
+          }`}
+        >
+          <LogOut className="w-5 h-5 min-w-[20px]" />
+          {open && <span>تسجيل الخروج</span>}
+        </Link>
+      </div>
       {/* {!open && (
         <div className="p-4 border-t border-border flex justify-center">
           <button
