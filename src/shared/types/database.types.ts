@@ -103,6 +103,194 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string | null
+          product_image: string | null
+          product_name: string
+          product_sku: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+          variant_options: Json | null
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id?: string | null
+          product_image?: string | null
+          product_name: string
+          product_sku?: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+          variant_options?: Json | null
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string | null
+          product_image?: string | null
+          product_name?: string
+          product_sku?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+          variant_options?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_notes: string | null
+          customer_phone: string
+          delivered_at: string | null
+          discount_amount: number
+          id: string
+          order_number: string
+          payment_method: string
+          payment_status: string
+          shipping_address_line: string
+          shipping_city: string
+          shipping_cost: number
+          shipping_governorate: string
+          status: string
+          subtotal: number
+          total: number
+          tracking_number: string | null
+          tracking_token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_notes?: string | null
+          customer_phone: string
+          delivered_at?: string | null
+          discount_amount?: number
+          id?: string
+          order_number?: string
+          payment_method?: string
+          payment_status?: string
+          shipping_address_line: string
+          shipping_city: string
+          shipping_cost?: number
+          shipping_governorate: string
+          status?: string
+          subtotal: number
+          total: number
+          tracking_number?: string | null
+          tracking_token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_notes?: string | null
+          customer_phone?: string
+          delivered_at?: string | null
+          discount_amount?: number
+          id?: string
+          order_number?: string
+          payment_method?: string
+          payment_status?: string
+          shipping_address_line?: string
+          shipping_city?: string
+          shipping_cost?: number
+          shipping_governorate?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          tracking_number?: string | null
+          tracking_token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           alt_text_ar: string | null
@@ -176,6 +364,7 @@ export type Database = {
           specifications: Json | null
           stock_quantity: number
           updated_at: string
+          video_urls: string[] | null
           view_count: number
           warranty_info: string | null
         }
@@ -207,6 +396,7 @@ export type Database = {
           specifications?: Json | null
           stock_quantity?: number
           updated_at?: string
+          video_urls?: string[] | null
           view_count?: number
           warranty_info?: string | null
         }
@@ -238,6 +428,7 @@ export type Database = {
           specifications?: Json | null
           stock_quantity?: number
           updated_at?: string
+          video_urls?: string[] | null
           view_count?: number
           warranty_info?: string | null
         }
@@ -260,6 +451,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           created_at: string
           email: string
           full_name: string
@@ -269,6 +461,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           email: string
           full_name: string
@@ -278,6 +471,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           email?: string
           full_name?: string
@@ -293,7 +487,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

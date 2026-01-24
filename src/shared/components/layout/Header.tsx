@@ -6,8 +6,27 @@ import { Button } from "@/shared/components/ui/Button";
 import { ChevronDown, Search, User } from "lucide-react";
 import { CartButton } from "@/features/cart/components/CartButton";
 
+import { createClient } from "@/lib/supabase/server";
+
 export default async function Header() {
   const categories = await getNavigationCategories();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let accountHref = "/auth/login";
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    accountHref = profile?.role === "admin" ? "/admin" : "/account";
+  }
+
   return (
     <header className="bg-white shadow-sm relative z-50 sticky top-0">
       <div className="container mx-auto px-4">
@@ -33,13 +52,15 @@ export default async function Header() {
             <Button className="lg:hidden" variant="ghost">
               <Search className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden md:flex relative"
-            >
-              <User className="w-5 h-5" />
-            </Button>
+            <Link href={accountHref}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex relative"
+              >
+                <User className="w-5 h-5" />
+              </Button>
+            </Link>
             <CartButton />
           </div>
         </div>
