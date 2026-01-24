@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+
 import { Input } from "@/shared/components/ui/Input";
 import {
   Form,
@@ -15,19 +15,7 @@ import {
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const checkoutFormSchema = z.object({
-  fullName: z.string().min(2, "الاسم مطلوب"),
-  phone: z
-    .string()
-    .min(10, "رقم الهاتف غير صحيح")
-    .regex(/^\d+$/, "يجب أن يحتوي على أرقام فقط"),
-  governorate: z.string().min(2, "المحافظة مطلوبة"),
-  city: z.string().min(2, "المدينة مطلوبة"),
-  address: z.string().min(5, "العنوان بالتفصيل مطلوب"),
-  notes: z.string().optional(),
-});
-
-export type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
+import { checkoutFormSchema, CheckoutFormValues } from "../schema";
 
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutFormValues) => void;
@@ -39,6 +27,7 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
       fullName: "",
+      email: "",
       phone: "",
       governorate: "",
       city: "",
@@ -64,6 +53,7 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
 
         if (profile) {
           form.setValue("fullName", profile.full_name || "");
+          form.setValue("email", profile.email || user.email || "");
           form.setValue("phone", profile.phone || "");
         }
       }
@@ -87,6 +77,20 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
                 <FormLabel>الاسم بالكامل</FormLabel>
                 <FormControl>
                   <Input placeholder="الاسم" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>البريد الإلكتروني</FormLabel>
+                <FormControl>
+                  <Input placeholder="name@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

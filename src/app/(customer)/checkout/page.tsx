@@ -2,10 +2,9 @@
 
 import { useCartStore } from "@/stores/cartStore";
 import { useEffect, useState } from "react";
-import {
-  CheckoutForm,
-  CheckoutFormValues,
-} from "@/features/checkout/components/CheckoutForm";
+import { createOrder } from "@/features/checkout/actions/createOrder";
+import { CheckoutForm } from "@/features/checkout/components/CheckoutForm";
+import { CheckoutFormValues } from "@/features/checkout/schema";
 import { OrderSummary } from "@/features/checkout/components/OrderSummary";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -20,30 +19,31 @@ export default function CheckoutPage() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  useEffect(() => {
+    if (mounted && items.length === 0) {
+      router.replace("/cart");
+    }
+  }, [mounted, items, router]);
 
-  if (items.length === 0) {
-    router.replace("/cart");
-    return null;
-  }
+  if (!mounted) return null;
+  if (!mounted || items.length === 0) return null;
 
   const handleSubmit = async (data: CheckoutFormValues) => {
     setIsLoading(true);
     try {
-      console.log("Submitting order:", {
-        items,
-        shippingAddress: data,
-      });
+      const result = await createOrder(data, items);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast.success("تم استلام طلبك بنجاح!");
-      clearCart();
-      router.push("/");
+      if (result.success) {
+        toast.success("تم استلام طلبك بنجاح!");
+        clearCart();
+        // Redirect to success page or order details
+        router.push(`/order-success/${result.orderId}`); // Assuming we will create this page
+      } else {
+        toast.error(result.error || "حدث خطأ أثناء إتمام الطلب");
+      }
     } catch (error) {
       console.error(error);
-      toast.error("حدث خطأ أثناء إتمام الطلب");
+      toast.error("حدث خطأ غير متوقع");
     } finally {
       setIsLoading(false);
     }

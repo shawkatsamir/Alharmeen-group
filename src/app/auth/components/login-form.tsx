@@ -71,9 +71,30 @@ export function LoginForm({
         throw error;
       }
 
-      // Success! Redirect to checkout
-      router.push("/checkout");
-      router.refresh(); // Refresh to ensure header updates (e.g. shows Profile instead of Login)
+      // 4. Check Role & Redirect
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role === "admin") {
+          router.push("/admin");
+        } else {
+          // Default redirect for customers
+          // We could improve this by checking if there's a 'next' param
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
+
+      router.refresh();
     } catch (error: unknown) {
       setServerError(
         error instanceof Error ? error.message : "حدث خطأ غير متوقع",
