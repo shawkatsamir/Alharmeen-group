@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/shared/components/ui/Button";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -47,9 +48,19 @@ export default async function AccountPage() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-semibold mb-4">طلباتي</h2>
-        <p className="text-gray-500">لا توجد طلبات سابقة.</p>
-        {/* TODO: List orders here */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">طلباتي</h2>
+          <Button variant="link" asChild className="text-[#4EA674]">
+            <Link href="/account/orders">عرض الكل</Link>
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {/* Show a preview of the latest order or a placeholder if none */}
+          <p className="text-gray-500 text-sm">أحدث طلباتك ستظهر هنا.</p>
+          <Button variant="outline" className="w-full" asChild>
+            <Link href="/account/orders">الذهاب إلى طلباتي</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

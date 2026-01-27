@@ -68,7 +68,7 @@ export function TopProducts() {
                   alt={product.name}
                   fill
                   sizes="48px"
-                  className="rounded-lg object-cover" // Added object-cover to prevent stretching
+                  className="rounded-lg object-cover"
                 />
               </div>
               {/* 3. Text Section */}
