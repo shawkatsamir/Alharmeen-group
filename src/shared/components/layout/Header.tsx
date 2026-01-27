@@ -3,29 +3,13 @@ import { getNavigationCategories } from "@/services/server/categories";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
 
-import { ChevronDown, Search, User } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { CartButton } from "@/features/cart/components/CartButton";
 
-import { createClient } from "@/lib/supabase/server";
+import { UserMenu } from "@/shared/components/layout/UserMenu";
 
 export default async function Header() {
   const categories = await getNavigationCategories();
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let accountHref = "/auth/login";
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    accountHref = profile?.role === "admin" ? "/admin" : "/account";
-  }
 
   return (
     <header className="bg-white shadow-sm relative z-50 sticky top-0">
@@ -52,15 +36,10 @@ export default async function Header() {
             <Button className="lg:hidden" variant="ghost">
               <Search className="h-5 w-5" />
             </Button>
-            <Link href={accountHref}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden md:flex relative"
-              >
-                <User className="w-5 h-5" />
-              </Button>
-            </Link>
+            <Button className="lg:hidden" variant="ghost">
+              <Search className="h-5 w-5" />
+            </Button>
+            <UserMenu />
             <CartButton />
           </div>
         </div>

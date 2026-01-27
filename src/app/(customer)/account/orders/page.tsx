@@ -24,7 +24,7 @@ export default async function OrdersPage() {
   // Map DB orders to component props
   const orders: OrderCardType[] = dbOrders.map((order) => ({
     id: order.id,
-    number: order.id.slice(0, 8).toUpperCase(), // Use first 8 chars of UUID as display number for now
+    number: order.order_number,
     date: new Date(order.created_at).toLocaleDateString("en-GB"),
     status: order.status as OrderCardType["status"],
     total: order.total,
