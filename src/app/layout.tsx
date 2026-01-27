@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
+import { Toaster } from "@/shared/components/ui/Sonner";
+import { Providers } from "@/providers/QueryProvider";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
@@ -18,8 +19,10 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={cairo.className}>
-        {children}
-        <Toaster position="top-center" />
+        <Providers>
+          {children}
+          <Toaster position="top-center" />
+        </Providers>
       </body>
     </html>
   );

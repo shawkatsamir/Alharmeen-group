@@ -1,4 +1,9 @@
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/DropdownMenu";
 import { Filter, MoreVertical } from "lucide-react";
 
 export function TransactionTable() {
@@ -42,30 +47,25 @@ export function TransactionTable() {
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">المعاملات</h2>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg border border-border">
                 <Filter className="w-4 h-4" />
                 <span>تصفية</span>
               </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className="bg-popover rounded-lg shadow-lg border border-border p-2 min-w-[160px]"
-                align="end"
-              >
-                <DropdownMenu.Item className="px-3 py-2 text-sm text-popover-foreground hover:bg-accent rounded cursor-pointer outline-none text-right">
-                  كل المعاملات
-                </DropdownMenu.Item>
-                <DropdownMenu.Item className="px-3 py-2 text-sm text-popover-foreground hover:bg-accent rounded cursor-pointer outline-none text-right">
-                  مدفوع
-                </DropdownMenu.Item>
-                <DropdownMenu.Item className="px-3 py-2 text-sm text-popover-foreground hover:bg-accent rounded cursor-pointer outline-none text-right">
-                  قيد الانتظار
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[160px]">
+              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
+                كل المعاملات
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
+                مدفوع
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
+                قيد الانتظار
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

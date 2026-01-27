@@ -2,7 +2,7 @@
 
 import { useCartStore } from "@/stores/cartStore";
 import { useEffect, useState } from "react";
-import { createOrder } from "@/features/checkout/actions/createOrder";
+import { createOrder } from "@/actions/checkout-actions";
 import { CheckoutForm } from "@/features/checkout/components/CheckoutForm";
 import { CheckoutFormValues } from "@/features/checkout/schema";
 import { OrderSummary } from "@/features/checkout/components/OrderSummary";
