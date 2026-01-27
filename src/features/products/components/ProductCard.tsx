@@ -28,7 +28,7 @@ export function ProductCard({ product }: ProductCardProps) {
       id: product.id,
       name: product.name_ar,
       price: product.price,
-      image: product.images?.[0]?.image_url || "/placeholder.jpg",
+      image: product.images?.[0]?.image_url || "/placeholder.svg",
       slug: product.slug,
       brand: product.brand?.name_ar || "",
     });
@@ -41,7 +41,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {/* Main Image */}
         <Img
-          src={product.images?.[0]?.image_url || "/placeholder.jpg"}
+          src={product.images?.[0]?.image_url || "/placeholder.svg"}
           alt={product.name_ar}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
