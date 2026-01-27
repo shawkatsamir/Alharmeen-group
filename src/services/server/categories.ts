@@ -1,4 +1,4 @@
-import { createClient, createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/server";
 
 import { Database } from "@/shared/types/database.types";
 
@@ -10,7 +10,7 @@ type CategoryWithParent = Category & {
 export async function getSubcategoryBySlug(
   slug: string,
 ): Promise<CategoryWithParent | null> {
-  const supabase = await createClient();
+  const supabase = await createStaticClient();
 
   const { data, error } = await supabase
     .from("categories")
@@ -48,7 +48,7 @@ export async function getSubCategory() {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const supabase = await createClient();
+  const supabase = await createStaticClient();
   const { data, error } = await supabase
     .from("categories")
     .select("*")
@@ -75,7 +75,7 @@ export type NavigationCategory = {
 };
 
 export async function getNavigationCategories(): Promise<NavigationCategory[]> {
-  const supabase = await createClient();
+  const supabase = await createStaticClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, name_ar, slug, parent_id")
