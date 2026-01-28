@@ -1,6 +1,7 @@
-import { Search, Bell } from "lucide-react";
+import { Search } from "lucide-react";
 import { Img } from "@/shared/components/ui/Image";
 import { ModeToggle } from "./ThemeToggle";
+import { NotificationBell } from "../notifications/components/NotificationBell";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -29,10 +30,7 @@ export function Header({ children }: HeaderProps) {
           </div>
 
           {/* Notification */}
-          <button className="relative p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-accent-foreground">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
-          </button>
+          <NotificationBell />
 
           {/* Theme Toggle */}
           <ModeToggle />

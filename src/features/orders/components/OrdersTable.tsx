@@ -193,7 +193,7 @@ export default function OrdersTable({
                     {index + 1}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {order.id.slice(0, 8)}
+                    {order.order_number}
                   </td>
                   <td className="px-6 py-4">
                     {/* Just showing the first item as a preview for now */}
