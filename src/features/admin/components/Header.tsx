@@ -40,7 +40,7 @@ export function Header({ children }: HeaderProps) {
           {/* User Avatar */}
           <button className="w-8 h-8 rounded-full bg-muted overflow-hidden">
             <Img
-              src="/images/avatar.jpeg"
+              src="/avatar.jpeg"
               alt="User"
               width={32}
               height={32}

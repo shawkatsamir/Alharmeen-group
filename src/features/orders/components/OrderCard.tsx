@@ -3,6 +3,7 @@ import { Img } from "@/shared/components/ui/Image";
 import { Button } from "@/shared/components/ui/Button";
 import { ChevronLeft } from "lucide-react";
 import { OrderTracker } from "./OrderTracker";
+import { CancelOrderButton } from "./CancleOrderButton";
 
 interface OrderItem {
   id: string;
@@ -35,6 +36,7 @@ const statusMap: Record<string, string> = {
 };
 
 export function OrderCard({ order }: OrderCardProps) {
+  const isCancelled = order.status === "ملغي";
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="p-4 sm:p-6">
@@ -57,6 +59,8 @@ export function OrderCard({ order }: OrderCardProps) {
               {order.total.toFixed(2)} ج.م
             </span>
           </div>
+
+          <CancelOrderButton orderId={order.id} status={order.status} />
         </div>
 
         <div className="mb-6">
