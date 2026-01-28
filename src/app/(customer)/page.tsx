@@ -6,6 +6,8 @@ import {
   getFeaturedProducts,
 } from "@/services/server/products";
 
+export const revalidate = 3600;
+
 export default async function Home() {
   const offers = await getOffers({ limit: 10 });
   const bestSellers = await getBestSellerProducts({ limit: 10 });
