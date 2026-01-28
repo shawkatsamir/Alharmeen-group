@@ -1,3 +1,5 @@
+import { ProductsTable } from "@/features/admin/products/components/ProductsTable";
+
 export default function ProductsPage() {
-  return <div>Products</div>;
+  return <ProductsTable />;
 }
