@@ -5,8 +5,12 @@ import { Button } from "@/shared/components/ui/Button";
 import { Check, Heart, Share2, ShoppingCart, X } from "lucide-react";
 import Breadcrumb from "@/shared/components/ui/Breadcrumb";
 import { Separator } from "@/shared/components/ui/Separator";
-import { Tabs, TabsContent, TabsTrigger } from "@/shared/components/ui/Tabs";
-import { TabsList } from "@radix-ui/react-tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsContent,
+  TabsTrigger,
+} from "@/shared/components/ui/Tabs";
 
 type Product = Database["public"]["Tables"]["products"]["Row"] & {
   brand?: Database["public"]["Tables"]["brands"]["Row"];
@@ -94,7 +98,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
 
             {/* Stock Status */}
             <div className="flex items-center gap-2 mb-6">
-              {product.is_available ? (
+              {product.is_available && product.stock_quantity > 0 ? (
                 <>
                   <Check className="w-5 h-5 text-green-600" />
                   <span className="text-green-600">متوفر في المخزون</span>
@@ -135,6 +139,8 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             <TabsList className="w-full justify-start">
               <TabsTrigger value="description">الوصف</TabsTrigger>
               <TabsTrigger value="specifications">المواصفات</TabsTrigger>
+              <TabsTrigger value="reviews">التقييمات</TabsTrigger>
+              <TabsTrigger value="shipping">الشحن</TabsTrigger>
             </TabsList>
 
             <TabsContent value="description" className="mt-6">

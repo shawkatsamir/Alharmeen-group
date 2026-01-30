@@ -1,7 +1,7 @@
 "use client";
 
 import { Switch } from "@/shared/components/ui/Switch";
-import { Tag } from "lucide-react";
+import { Tag, Timer, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -22,10 +22,12 @@ interface ProductImage {
 interface Product {
   id: string;
   name: string;
-  image: string; // fallback or main image url
+  image: string;
   createdDate: string;
   order: number;
   price: number;
+  oldPrice: number | null;
+  saleEndDate: string | null;
   bestSeller: boolean;
   isNew: boolean;
   featured: boolean;
@@ -44,7 +46,6 @@ export function UpdateProductModal({
   open,
   onOpenChange,
   product,
-  onUpdate,
 }: UpdateProductModalProps) {
   const [price, setPrice] = useState("");
   const [bestSeller, setBestSeller] = useState(false);
@@ -52,11 +53,35 @@ export function UpdateProductModal({
   const [featured, setFeatured] = useState(false);
   const [specialOffer, setSpecialOffer] = useState(false);
 
+  // Offer states
+  const [offerEnabled, setOfferEnabled] = useState(false);
+  const [salePrice, setSalePrice] = useState("");
+  const [saleEndDate, setSaleEndDate] = useState("");
+
   const updateProductMutation = useUpdateProduct();
 
   useEffect(() => {
     if (product) {
-      setPrice(product.price.toString());
+      // If there's an old_price, it means there's an active offer
+      // old_price is the original price, price is the sale price
+      const hasActiveOffer = product.oldPrice !== null && product.oldPrice > 0;
+
+      if (hasActiveOffer) {
+        setOfferEnabled(true);
+        setPrice(product.oldPrice!.toString()); // original price
+        setSalePrice(product.price.toString()); // sale price
+        setSaleEndDate(
+          product.saleEndDate
+            ? new Date(product.saleEndDate).toISOString().slice(0, 16)
+            : "",
+        );
+      } else {
+        setOfferEnabled(false);
+        setPrice(product.price.toString());
+        setSalePrice("");
+        setSaleEndDate("");
+      }
+
       setBestSeller(product.bestSeller);
       setIsNew(product.isNew);
       setFeatured(product.featured);
@@ -64,26 +89,74 @@ export function UpdateProductModal({
     }
   }, [product]);
 
+  const handleOfferToggle = (enabled: boolean) => {
+    setOfferEnabled(enabled);
+    if (!enabled) {
+      // When disabling offer, clear sale fields and turn off special offer
+      setSalePrice("");
+      setSaleEndDate("");
+      setSpecialOffer(false);
+    }
+  };
+
+  const handleSpecialOfferToggle = (enabled: boolean) => {
+    setSpecialOffer(enabled);
+    if (enabled) {
+      // When enabling special offer, auto-enable offer section
+      setOfferEnabled(true);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (product) {
+      const originalPrice = parseFloat(price);
+
+      // Build the update data
+      const updateData: {
+        price: number;
+        old_price: number | null;
+        sale_end_date: string | null;
+        is_best_seller: boolean;
+        is_new: boolean;
+        is_featured: boolean;
+        is_special_offer: boolean;
+      } = {
+        price: originalPrice,
+        old_price: null,
+        sale_end_date: null,
+        is_best_seller: bestSeller,
+        is_new: isNew,
+        is_featured: featured,
+        is_special_offer: specialOffer,
+      };
+
+      // Validate: if specialOffer is ON, offer must be enabled with a sale price
+      if (specialOffer && (!offerEnabled || !salePrice)) {
+        alert("يجب تحديد سعر العرض عند تفعيل العرض الخاص");
+        return;
+      }
+
+      if (offerEnabled && salePrice) {
+        const salePriceNum = parseFloat(salePrice);
+        // Validate sale price is less than original price
+        if (salePriceNum >= originalPrice) {
+          alert("سعر العرض يجب أن يكون أقل من السعر الأصلي");
+          return;
+        }
+        // When offer is enabled: price = sale price, old_price = original price
+        updateData.price = salePriceNum;
+        updateData.old_price = originalPrice;
+        updateData.sale_end_date = saleEndDate || null;
+      }
+
       updateProductMutation.mutate(
         {
           id: product.id,
-          data: {
-            price: parseFloat(price),
-            is_best_seller: bestSeller,
-            is_new: isNew,
-            is_featured: featured,
-            is_special_offer: specialOffer,
-          },
+          data: updateData,
         },
         {
-          onSuccess: (resultUserId) => {
-            // The hook handles toast and invalidation.
-            // We can optionally close the modal here or rely on parent.
-            // But the parent passed onUpdate. Ideally we should call onUpdate if we want optmistic UI or just close.
-            // Given the hook invalidates queries, we can just close.
+          onSuccess: () => {
             onOpenChange(false);
           },
         },
@@ -95,7 +168,10 @@ export function UpdateProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" dir="rtl">
+      <DialogContent
+        className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        dir="rtl"
+      >
         <DialogHeader className="bg-gradient-to-r from-[#4EA674] to-[#3d8a5e] px-6 py-4 -mx-6 -mt-6 rounded-t-lg flex flex-row items-center justify-between space-x-reverse space-x-3 text-right">
           <div className="flex items-center space-x-3 space-x-reverse text-white">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -116,7 +192,7 @@ export function UpdateProductModal({
           {/* Price Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              سعر المنتج
+              {offerEnabled ? "السعر الأصلي" : "سعر المنتج"}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -132,6 +208,99 @@ export function UpdateProductModal({
                 required
               />
             </div>
+          </div>
+
+          {/* Offer Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              إعدادات العرض
+            </h3>
+
+            {/* Enable Offer Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/10 dark:to-red-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center space-x-3 space-x-reverse">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                  <Timer className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="mr-3 text-right">
+                  <label
+                    htmlFor="offerEnabled"
+                    className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+                  >
+                    تفعيل العرض
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    إضافة سعر عرض وتاريخ انتهاء
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="offerEnabled"
+                checked={offerEnabled}
+                onCheckedChange={handleOfferToggle}
+                className={`w-11 h-6 ${
+                  offerEnabled
+                    ? "bg-orange-500"
+                    : "bg-gray-300 dark:bg-gray-600"
+                }`}
+              />
+            </div>
+
+            {/* Offer Fields (shown when enabled) */}
+            {offerEnabled && (
+              <div className="space-y-4 p-4 bg-orange-50/50 dark:bg-orange-900/5 rounded-lg border border-orange-100 dark:border-orange-900/20">
+                {/* Sale Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    سعر العرض
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400 text-sm">ج.م</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      className="block w-full pl-10 pr-4 py-3 text-gray-900 dark:text-white bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors text-right"
+                      placeholder="0.00"
+                      required={offerEnabled}
+                    />
+                  </div>
+                  {salePrice &&
+                    price &&
+                    parseFloat(salePrice) < parseFloat(price) && (
+                      <p className="mt-1 text-xs text-green-600">
+                        خصم{" "}
+                        {Math.round(
+                          ((parseFloat(price) - parseFloat(salePrice)) /
+                            parseFloat(price)) *
+                            100,
+                        )}
+                        %
+                      </p>
+                    )}
+                </div>
+
+                {/* Sale End Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      تاريخ انتهاء العرض (اختياري)
+                    </span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={saleEndDate}
+                    onChange={(e) => setSaleEndDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="block w-full px-4 py-3 text-gray-900 dark:text-white bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Product Flags */}
@@ -245,7 +414,7 @@ export function UpdateProductModal({
               <Switch
                 id="specialOffer"
                 checked={specialOffer}
-                onCheckedChange={setSpecialOffer}
+                onCheckedChange={handleSpecialOfferToggle}
                 className={`w-11 h-6 ${
                   specialOffer ? "bg-[#4EA674]" : "bg-gray-300 dark:bg-gray-600"
                 }`}

@@ -103,6 +103,41 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          order_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          order_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          order_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           brand_name: string | null
@@ -358,6 +393,7 @@ export type Database = {
           name_en: string | null
           old_price: number | null
           price: number
+          sale_end_date: string | null
           sales_count: number
           sku: string
           slug: string
@@ -390,6 +426,7 @@ export type Database = {
           name_en?: string | null
           old_price?: number | null
           price: number
+          sale_end_date?: string | null
           sales_count?: number
           sku: string
           slug: string
@@ -422,6 +459,7 @@ export type Database = {
           name_en?: string | null
           old_price?: number | null
           price?: number
+          sale_end_date?: string | null
           sales_count?: number
           sku?: string
           slug?: string

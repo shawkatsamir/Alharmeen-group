@@ -30,6 +30,8 @@ interface Product {
   createdDate: string;
   order: number;
   price: number;
+  oldPrice: number | null;
+  saleEndDate: string | null;
   bestSeller: boolean;
   isNew: boolean;
   featured: boolean;
@@ -44,6 +46,8 @@ interface RawProduct {
   created_at: string;
   stock_quantity: number;
   price: number;
+  old_price: number | null;
+  sale_end_date: string | null;
   is_best_seller: boolean;
   is_new: boolean;
   is_featured: boolean;
@@ -81,6 +85,8 @@ export function ProductsTable() {
       createdDate: new Date(p.created_at).toLocaleDateString("ar-EG"),
       order: p.stock_quantity, // Mapping stock to order column
       price: p.price,
+      oldPrice: p.old_price,
+      saleEndDate: p.sale_end_date,
       bestSeller: p.is_best_seller,
       isNew: p.is_new,
       featured: p.is_featured,
