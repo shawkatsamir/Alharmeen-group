@@ -52,7 +52,7 @@ export function UserMenu() {
 
   return (
     <Link href={accountHref}>
-      <Button variant="ghost" size="icon" className="hidden md:flex relative">
+      <Button variant="ghost" size="icon" className="relative">
         <User className="w-5 h-5" />
       </Button>
     </Link>

@@ -276,6 +276,132 @@ export async function getProductsBySubcategory(
   return data as Product[];
 }
 
+export type FilterOptions = {
+  brands: { id: string; name_ar: string; slug: string; count: number }[];
+  priceRange: { min: number; max: number };
+  hasOffers: boolean;
+};
+
+export type ProductsWithFilters = {
+  products: Product[];
+  filterOptions: FilterOptions;
+  subcategoryName: string;
+};
+
+export async function getProductsWithFilters(
+  subcategorySlug: string,
+): Promise<ProductsWithFilters> {
+  const supabase = await createStaticClient();
+
+  // First get the category info from the slug
+  const { data: category, error: categoryError } = await supabase
+    .from("categories")
+    .select("id, name_ar")
+    .eq("slug", subcategorySlug)
+    .single();
+
+  if (categoryError || !category) {
+    console.error(
+      `Error fetching category with slug ${subcategorySlug}:`,
+      categoryError,
+    );
+    return {
+      products: [],
+      filterOptions: {
+        brands: [],
+        priceRange: { min: 0, max: 0 },
+        hasOffers: false,
+      },
+      subcategoryName: "",
+    };
+  }
+
+  // Fetch products for this category
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      `
+      *,
+      brand:brands(*),
+      category:categories(*),
+      images:product_images(*)
+    `,
+    )
+    .eq("category_id", category.id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error(
+      `Error fetching products for subcategory ${subcategorySlug}:`,
+      error?.message || "No data returned",
+    );
+    return {
+      products: [],
+      filterOptions: {
+        brands: [],
+        priceRange: { min: 0, max: 0 },
+        hasOffers: false,
+      },
+      subcategoryName: category.name_ar ?? "",
+    };
+  }
+
+  const products = data as Product[];
+
+  // Extract filter options from products
+  const brandMap = new Map<
+    string,
+    { name_ar: string; slug: string; count: number }
+  >();
+  let minPrice = Infinity;
+  let maxPrice = 0;
+  let hasOffers = false;
+
+  for (const product of products) {
+    // Track brands
+    if (product.brand && product.brand.id && product.brand.name_ar) {
+      const existing = brandMap.get(product.brand.id);
+      if (existing) {
+        existing.count++;
+      } else {
+        brandMap.set(product.brand.id, {
+          name_ar: product.brand.name_ar,
+          slug: product.brand.slug || "",
+          count: 1,
+        });
+      }
+    }
+
+    // Track price range
+    if (product.price < minPrice) minPrice = product.price;
+    if (product.price > maxPrice) maxPrice = product.price;
+
+    // Track offers
+    if (product.old_price && product.old_price > product.price) {
+      hasOffers = true;
+    }
+  }
+
+  // Convert brand map to sorted array
+  const brands = Array.from(brandMap.entries())
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.count - a.count); // Sort by count descending
+
+  return {
+    products,
+    filterOptions: {
+      brands,
+      priceRange: {
+        min: minPrice === Infinity ? 0 : minPrice,
+        max: maxPrice,
+      },
+      hasOffers,
+    },
+    subcategoryName: category.name_ar,
+  };
+}
+
 export async function getAllProductSlugs(): Promise<string[]> {
   const supabase = await createStaticClient();
   const { data, error } = await supabase

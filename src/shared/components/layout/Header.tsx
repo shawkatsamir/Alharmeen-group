@@ -16,7 +16,7 @@ export default async function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4 gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="hidden sm:block">
+            <div className="">
               <div className="text-primary">الحرمين</div>
               <div className="text-xs text-gray-500">للأجهزة الكهربائية</div>
             </div>
@@ -33,9 +33,6 @@ export default async function Header() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button className="lg:hidden" variant="ghost">
-              <Search className="h-5 w-5" />
-            </Button>
             <Button className="lg:hidden" variant="ghost">
               <Search className="h-5 w-5" />
             </Button>
