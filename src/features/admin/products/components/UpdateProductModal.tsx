@@ -172,7 +172,7 @@ export function UpdateProductModal({
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         dir="rtl"
       >
-        <DialogHeader className="bg-gradient-to-r from-[#4EA674] to-[#3d8a5e] px-6 py-4 -mx-6 -mt-6 rounded-t-lg flex flex-row items-center justify-between space-x-reverse space-x-3 text-right">
+        <DialogHeader className="bg-linear-to-r from-[#4EA674] to-[#3d8a5e] px-6 py-4 -mx-6 -mt-6 rounded-t-lg flex flex-row items-center justify-between space-x-reverse space-x-3 text-right">
           <div className="flex items-center space-x-3 space-x-reverse text-white">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
               <Tag className="w-5 h-5 text-white" />

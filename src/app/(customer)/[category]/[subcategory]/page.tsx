@@ -1,6 +1,7 @@
-import { getProductsBySubcategory } from "@/services/server/products";
+import { getProductsWithFilters } from "@/services/server/products";
 import ProductsClient from "./_components/ProductsClient";
 import { getSubCategory } from "@/services/server/categories";
+import { Suspense } from "react";
 
 export const revalidate = 60; // Revalidate every minute
 
@@ -20,16 +21,22 @@ export default async function SubCategoryPage({
   params,
 }: SubCategoryPageProps) {
   const { subcategory } = await params;
-  const products = await getProductsBySubcategory(subcategory);
+  const { products, filterOptions, subcategoryName } =
+    await getProductsWithFilters(subcategory);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">
-        {/* We could fetch the subcategory name here if needed, or rely on info from the products */}
-        المنتجات
+        {subcategoryName || "المنتجات"}
       </h1>
 
-      <ProductsClient initialProducts={products} />
+      <Suspense fallback={<div>جاري التحميل...</div>}>
+        <ProductsClient
+          initialProducts={products}
+          filterOptions={filterOptions}
+          subcategoryName={subcategoryName}
+        />
+      </Suspense>
     </div>
   );
 }
