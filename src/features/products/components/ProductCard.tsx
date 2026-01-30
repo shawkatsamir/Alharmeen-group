@@ -8,6 +8,7 @@ import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Product } from "../types";
 import { toast } from "sonner";
+import { CountdownTimer } from "./CountdownTimer";
 
 interface ProductCardProps {
   product: Product;
@@ -20,6 +21,12 @@ export function ProductCard({ product }: ProductCardProps) {
         ((product.old_price! - product.price) / product.old_price!) * 100,
       )
     : 0;
+
+  // Check if there's an active timed offer
+  const hasTimedOffer =
+    hasDiscount &&
+    product.sale_end_date &&
+    new Date(product.sale_end_date) > new Date();
 
   const addItem = useCartStore((state) => state.addItem);
 
@@ -65,15 +72,18 @@ export function ProductCard({ product }: ProductCardProps) {
         <h3 className="font-semibold mb-2 line-clamp-2 min-h-12">
           {product.name_ar}
         </h3>
-        <div className="flex items-center gap-2 mb-3 mt-auto">
-          <span className="text-lg font-bold text-primary">
-            {product.price.toLocaleString()} ج.م
-          </span>
-          {hasDiscount && (
-            <span className="text-sm text-gray-400 line-through">
-              {product.old_price!.toLocaleString()} ج.م
+        <div className="flex flex-col gap-1 mb-3 mt-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-primary">
+              {product.price.toLocaleString()} ج.م
             </span>
-          )}
+            {hasDiscount && (
+              <span className="text-sm text-gray-400 line-through">
+                {product.old_price!.toLocaleString()} ج.م
+              </span>
+            )}
+          </div>
+          {hasTimedOffer && <CountdownTimer endDate={product.sale_end_date!} />}
         </div>
 
         <div className="flex flex-col gap-2">
