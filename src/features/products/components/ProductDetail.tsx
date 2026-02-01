@@ -11,6 +11,10 @@ import {
   TabsContent,
   TabsTrigger,
 } from "@/shared/components/ui/Tabs";
+import {
+  ProductVideos,
+  VideoUrls,
+} from "@/features/products/components/ProductVideos";
 
 type Product = Database["public"]["Tables"]["products"]["Row"] & {
   brand?: Database["public"]["Tables"]["brands"]["Row"];
@@ -206,6 +210,10 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Video */}
+
+        <ProductVideos videos={product.video_urls as unknown as VideoUrls} />
       </div>
     </div>
   );
