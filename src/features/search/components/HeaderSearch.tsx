@@ -28,7 +28,7 @@ export function HeaderSearch({ isMobileToggle = false }: HeaderSearchProps) {
 
         {/* Mobile Search Overlay */}
         {isSearchOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
+          <div className="fixed inset-0 z-100 lg:hidden">
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/50"

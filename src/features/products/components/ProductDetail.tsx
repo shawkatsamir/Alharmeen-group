@@ -1,4 +1,7 @@
 import { Database } from "@/shared/types/database.types";
+import { useEffect, useState } from "react";
+import { useCartStore } from "@/stores/cartStore";
+import { toast } from "sonner";
 import { Img } from "@/shared/components/ui/Image";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
@@ -27,6 +30,40 @@ interface ProductDetailProps {
 }
 
 export const ProductDetail = ({ product }: ProductDetailProps) => {
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const cartItem = useCartStore((state) =>
+    state.items.find((i) => i.id === product.id),
+  );
+  const quantity = cartItem?.quantity || 0;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleAddToCart = () => {
+    addItem({
+      id: product.id,
+      name: product.name_ar,
+      price: product.price,
+      image: product.images?.[0]?.image_url || "/placeholder.jpg",
+      slug: product.slug,
+      brand: product.brand?.name_ar || "",
+    });
+    toast.success("تم إضافة المنتج إلى السلة");
+  };
+
+  const handleUpdateQuantity = (newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeItem(product.id);
+    } else {
+      updateQuantity(product.id, newQuantity);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
@@ -130,10 +167,32 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
 
             <Separator className="mb-6" />
 
-            <Button className="max-w-fit" size="lg">
-              <ShoppingCart className="w-4 h-4 ml-2" />
-              أضف للسلة
-            </Button>
+            {mounted && quantity > 0 ? (
+              <div className="flex items-center gap-3 max-w-fit">
+                <div className="flex items-center justify-between min-w-[140px] border rounded-md h-12 px-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleUpdateQuantity(quantity - 1)}
+                  >
+                    -
+                  </Button>
+                  <span className="font-medium text-lg">{quantity}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleUpdateQuantity(quantity + 1)}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button className="max-w-fit" size="lg" onClick={handleAddToCart}>
+                <ShoppingCart className="w-4 h-4 ml-2" />
+                أضف للسلة
+              </Button>
+            )}
           </div>
         </div>
 
