@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Img } from "@/shared/components/ui/Image";
@@ -29,6 +30,18 @@ export function ProductCard({ product }: ProductCardProps) {
     new Date(product.sale_end_date) > new Date();
 
   const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const cartItem = useCartStore((state) =>
+    state.items.find((i) => i.id === product.id),
+  );
+  const quantity = cartItem?.quantity || 0;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleAddToCart = () => {
     addItem({
@@ -39,8 +52,15 @@ export function ProductCard({ product }: ProductCardProps) {
       slug: product.slug,
       brand: product.brand?.name_ar || "",
     });
-
     toast.success("تم إضافة المنتج إلى السلة");
+  };
+
+  const handleUpdateQuantity = (newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeItem(product.id);
+    } else {
+      updateQuantity(product.id, newQuantity);
+    }
   };
 
   return (
@@ -87,10 +107,34 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button className="w-full" size="lg" onClick={handleAddToCart}>
-            <ShoppingCart className="w-4 h-4 ml-2" />
-            اضف للسلة
-          </Button>
+          {mounted && quantity > 0 ? (
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex items-center justify-between w-full border rounded-md h-11 px-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleUpdateQuantity(quantity - 1)}
+                >
+                  -
+                </Button>
+                <span className="font-medium">{quantity}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleUpdateQuantity(quantity + 1)}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button className="w-full" size="lg" onClick={handleAddToCart}>
+              <ShoppingCart className="w-4 h-4 ml-2" />
+              اضف للسلة
+            </Button>
+          )}
           <Link href={`/product/${product.slug}`} className="w-full">
             <Button size="sm" variant="outline" className="w-full">
               عرض التفاصيل

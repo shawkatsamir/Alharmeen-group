@@ -9,11 +9,11 @@ export default async function Header() {
   const categories = await getNavigationCategories();
 
   return (
-    <header className="bg-white shadow-sm relative z-50 sticky top-0">
+    <header className="bg-white shadow-sm z-50 relative lg:sticky lg:top-0">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4 gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div>
               <div className="text-primary font-bold text-lg">الحرمين</div>
               <div className="text-xs text-gray-500">للأجهزة الكهربائية</div>
@@ -29,8 +29,10 @@ export default async function Header() {
           <div className="flex items-center gap-2">
             {/* Mobile Search Toggle - handled by HeaderSearch */}
             <HeaderSearch isMobileToggle />
-            <UserMenu />
-            <CartButton />
+            <div className="hidden lg:flex items-center gap-2">
+              <UserMenu />
+              <CartButton />
+            </div>
           </div>
         </div>
       </div>
