@@ -526,6 +526,48 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      search_products: {
+        Args: { limit_count?: number; search_term: string }
+        Returns: {
+          brand_id: string
+          category_id: string
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          features: string[] | null
+          fts: unknown
+          id: string
+          is_active: boolean
+          is_available: boolean
+          is_best_seller: boolean
+          is_featured: boolean
+          is_new: boolean
+          is_special_offer: boolean
+          low_stock_threshold: number
+          meta_description_ar: string | null
+          meta_title_ar: string | null
+          name_ar: string
+          name_en: string | null
+          old_price: number | null
+          price: number
+          sale_end_date: string | null
+          sales_count: number
+          sku: string
+          slug: string
+          specifications: Json | null
+          stock_quantity: number
+          updated_at: string
+          video_urls: string[] | null
+          view_count: number
+          warranty_info: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       [_ in never]: never

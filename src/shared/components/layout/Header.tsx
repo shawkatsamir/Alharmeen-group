@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { getNavigationCategories } from "@/services/server/categories";
-import { Input } from "@/shared/components/ui/Input";
-import { Button } from "@/shared/components/ui/Button";
-
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { CartButton } from "@/features/cart/components/CartButton";
-
 import { UserMenu } from "@/shared/components/layout/UserMenu";
+import { HeaderSearch } from "@/features/search/components/HeaderSearch";
 
 export default async function Header() {
   const categories = await getNavigationCategories();
@@ -15,35 +12,32 @@ export default async function Header() {
     <header className="bg-white shadow-sm relative z-50 sticky top-0">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4 gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="">
-              <div className="text-primary">الحرمين</div>
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <div>
+              <div className="text-primary font-bold text-lg">الحرمين</div>
               <div className="text-xs text-gray-500">للأجهزة الكهربائية</div>
             </div>
           </Link>
+
+          {/* Desktop Search */}
           <div className="hidden lg:flex flex-1 max-w-2xl">
-            <div className="relative w-full">
-              <Input type="text" placeholder="ابحث عن المنتجات..." />
-              <Button
-                size="sm"
-                className="absolute left-1 top-1/2 -translate-y-1/2 h-8"
-              >
-                <Search className="w-5 h-5" />
-              </Button>
-            </div>
+            <HeaderSearch />
           </div>
+
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
-            <Button className="lg:hidden" variant="ghost">
-              <Search className="h-5 w-5" />
-            </Button>
+            {/* Mobile Search Toggle - handled by HeaderSearch */}
+            <HeaderSearch isMobileToggle />
             <UserMenu />
             <CartButton />
           </div>
         </div>
       </div>
 
+      {/* Navigation Bar */}
       <div className="hidden lg:block border-t">
-        <div className="container max-auto px-4">
+        <div className="container mx-auto px-4">
           <nav className="flex items-center justify-center gap-8 py-3">
             {categories.map((category) => (
               <div
@@ -55,7 +49,7 @@ export default async function Header() {
                   className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium transition-colors"
                 >
                   {category.name}
-                  <ChevronDown className="w-4 h-4 transition-transform group-hover:rotat-180" />
+                  <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
                 </Link>
 
                 {/* Desktop Dropdown */}
