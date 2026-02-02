@@ -6,7 +6,6 @@ import { Img } from "@/shared/components/ui/Image";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Check, Heart, Share2, ShoppingCart, X } from "lucide-react";
-import Breadcrumb from "@/shared/components/ui/Breadcrumb";
 import { Separator } from "@/shared/components/ui/Separator";
 import {
   Tabs,
@@ -14,6 +13,15 @@ import {
   TabsContent,
   TabsTrigger,
 } from "@/shared/components/ui/Tabs";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/shared/components/ui/Breadcrumb";
+import Link from "next/link";
 import {
   ProductVideos,
   VideoUrls,
@@ -68,7 +76,19 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
-        <Breadcrumb />
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">الرئيسية</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{product.name_ar}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {/* Product Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Left: Images */}
@@ -132,7 +152,6 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   </>
                 )}
               </div>
-              <p className="text-sm text-gray-500">شامل ضريبة القيمة المضافة</p>
             </div>
 
             <Separator className="mb-6" />

@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react"; // Or any spinner icon
+import { Loader2 } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile"; // 👈 Import Turnstile
+import { signupAction } from "@/actions/signup"; // 👈 Import your new action
 
 // Shadcn UI Imports
 import { cn } from "@/lib/utils";
@@ -29,17 +30,23 @@ import {
   FormMessage,
 } from "@/shared/components/ui/Form";
 
-// --- 1. Define the Validation Schema ---
+// --- 1. Define Validation ---
 const formSchema = z
   .object({
-    fullName: z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل"), // "Name must be at least 2 chars"
-    email: z.string().email("البريد الإلكتروني غير صحيح"), // "Invalid email"
-    password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"), // "Password min 6 chars"
+    fullName: z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل"),
+    email: z.string().email("البريد الإلكتروني غير صحيح"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Must contain at least one number"),
     repeatPassword: z.string(),
+    captchaToken: z.string().min(1, "يرجى إكمال التحقق الأمني"),
   })
   .refine((data) => data.password === data.repeatPassword, {
-    message: "كلمات المرور غير متطابقة", // "Passwords do not match"
-    path: ["repeatPassword"], // Shows the error on the repeat field
+    message: "كلمات المرور غير متطابقة",
+    path: ["repeatPassword"],
   });
 
 export function SignUpForm({
@@ -50,7 +57,7 @@ export function SignUpForm({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // --- 2. Initialize the Hook Form ---
+  // --- 2. Initialize Hook Form ---
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,35 +65,35 @@ export function SignUpForm({
       email: "",
       password: "",
       repeatPassword: "",
+      captchaToken: "", // Initialize empty
     },
   });
 
-  // --- 3. The Submit Handler ---
+  // --- 3. The Submit Handler (Uses Server Action) ---
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const supabase = createClient();
     setIsLoading(true);
     setServerError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/checkout`,
-          data: {
-            full_name: values.fullName, // Sends the name to your Trigger
-          },
-        },
-      });
+      // Create FormData to send to server action
+      const formData = new FormData();
+      formData.append("fullName", values.fullName);
+      formData.append("email", values.email);
+      formData.append("password", values.password);
 
-      if (error) throw error;
+      // Call the Server Action
+      const result = await signupAction(formData, values.captchaToken);
 
-      // Redirect or show success
-      router.push("/auth/sign-up-success");
-    } catch (error: unknown) {
-      setServerError(
-        error instanceof Error ? error.message : "An error occurred",
-      );
+      if (result.error) {
+        setServerError(result.error);
+        // If the token failed, we should reset it so the user can try again
+        form.setValue("captchaToken", "");
+      } else {
+        // Success!
+        router.push("/auth/sign-up-success");
+      }
+    } catch (err) {
+      setServerError("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً");
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +109,7 @@ export function SignUpForm({
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Full Name Field */}
+              {/* Full Name */}
               <FormField
                 control={form.control}
                 name="fullName"
@@ -117,7 +124,7 @@ export function SignUpForm({
                 )}
               />
 
-              {/* Email Field */}
+              {/* Email */}
               <FormField
                 control={form.control}
                 name="email"
@@ -136,7 +143,7 @@ export function SignUpForm({
                 )}
               />
 
-              {/* Password Field */}
+              {/* Password */}
               <FormField
                 control={form.control}
                 name="password"
@@ -151,7 +158,7 @@ export function SignUpForm({
                 )}
               />
 
-              {/* Repeat Password Field */}
+              {/* Repeat Password */}
               <FormField
                 control={form.control}
                 name="repeatPassword"
@@ -166,9 +173,32 @@ export function SignUpForm({
                 )}
               />
 
+              {/* 🤖 TURNSTILE WIDGET */}
+              <div className="flex justify-center py-2">
+                <FormField
+                  control={form.control}
+                  name="captchaToken"
+                  render={() => (
+                    <FormItem>
+                      <FormControl>
+                        <Turnstile
+                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                          onSuccess={(token) => {
+                            form.setValue("captchaToken", token);
+                            form.clearErrors("captchaToken");
+                          }}
+                          onExpire={() => form.setValue("captchaToken", "")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {/* Server Error Message */}
               {serverError && (
-                <div className="text-sm text-red-500 bg-red-50 p-2 rounded text-center">
+                <div className="text-sm text-red-500 bg-red-50 p-2 rounded text-center border border-red-200">
                   {serverError}
                 </div>
               )}

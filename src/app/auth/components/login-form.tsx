@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile"; // 👈 Import Turnstile
+import { loginAction } from "@/actions/login"; // 👈 Import Action
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/Button";
@@ -32,6 +33,7 @@ import {
 const formSchema = z.object({
   email: z.string().email("البريد الإلكتروني غير صحيح"),
   password: z.string().min(1, "يرجى إدخال كلمة المرور"),
+  captchaToken: z.string().min(1, "يرجى إكمال التحقق الأمني"), // 👈 Required
 });
 
 export function LoginForm({
@@ -40,6 +42,7 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Router is usually not needed if Action redirects, but good for refresh
   const router = useRouter();
 
   // 2. Initialize Form
@@ -48,57 +51,33 @@ export function LoginForm({
     defaultValues: {
       email: "",
       password: "",
+      captchaToken: "",
     },
   });
 
-  // 3. Handle Login
+  // 3. Handle Login (Now simpler!)
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const supabase = createClient();
     setIsLoading(true);
     setServerError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const formData = new FormData();
+      formData.append("email", values.email);
+      formData.append("password", values.password);
 
-      if (error) {
-        // Translate common Supabase errors to Arabic if needed
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-        }
-        throw error;
+      // Call Action
+      const result = await loginAction(formData, values.captchaToken);
+
+      if (result?.error) {
+        setServerError(result.error);
+        form.setValue("captchaToken", "");
+      } else if (result?.redirectUrl) {
+        router.push(result.redirectUrl);
+        router.refresh();
       }
-
-      // 4. Check Role & Redirect
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.role === "admin") {
-          router.push("/admin");
-        } else {
-          // Default redirect for customers
-          // We could improve this by checking if there's a 'next' param
-          router.push("/");
-        }
-      } else {
-        router.push("/");
-      }
-
-      router.refresh();
-    } catch (error: unknown) {
-      setServerError(
-        error instanceof Error ? error.message : "حدث خطأ غير متوقع",
-      );
+    } catch (err) {
+      console.error(err);
+      setServerError("حدث خطأ غير متوقع");
     } finally {
       setIsLoading(false);
     }
@@ -157,6 +136,29 @@ export function LoginForm({
                   </FormItem>
                 )}
               />
+
+              {/* 🤖 TURNSTILE WIDGET (New) */}
+              <div className="flex justify-center py-2">
+                <FormField
+                  control={form.control}
+                  name="captchaToken"
+                  render={() => (
+                    <FormItem>
+                      <FormControl>
+                        <Turnstile
+                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                          onSuccess={(token) => {
+                            form.setValue("captchaToken", token);
+                            form.clearErrors("captchaToken");
+                          }}
+                          onExpire={() => form.setValue("captchaToken", "")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Server Error Message */}
               {serverError && (
