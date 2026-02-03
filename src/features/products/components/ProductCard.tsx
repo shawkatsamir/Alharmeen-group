@@ -107,7 +107,21 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          {mounted && quantity > 0 ? (
+          {product.stock_quantity === 2 && (
+            <span className="text-red-500 text-xs font-bold w-full text-center">
+              متبقي قطعتين فقط
+            </span>
+          )}
+          {product.stock_quantity !== undefined &&
+          product.stock_quantity <= 0 ? (
+            <Button
+              className="w-full bg-gray-300 pointer-events-none text-gray-500"
+              size="lg"
+              disabled
+            >
+              غير متوفر حاليا
+            </Button>
+          ) : mounted && quantity > 0 ? (
             <div className="flex items-center gap-3 w-full">
               <div className="flex items-center justify-between w-full border rounded-md h-11 px-2">
                 <Button
@@ -122,8 +136,18 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleUpdateQuantity(quantity + 1)}
+                  className="h-8 w-8 text-black"
+                  onClick={() => {
+                    // Optionally check stock limit here too
+                    if (
+                      product.stock_quantity !== undefined &&
+                      quantity >= product.stock_quantity
+                    ) {
+                      toast.error("عفوا، الكمية المطلوبة غير متوفرة");
+                      return;
+                    }
+                    handleUpdateQuantity(quantity + 1);
+                  }}
                 >
                   +
                 </Button>
