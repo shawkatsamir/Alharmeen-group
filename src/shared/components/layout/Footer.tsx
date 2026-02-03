@@ -7,16 +7,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
-                م ك
-              </div>
               <div>
-                <div className="text-white">متجر الأجهزة الكهربائية</div>
+                <div className="text-white">
+                  الحرمين للأجهزة الكهربائية و المنزلية
+                </div>
               </div>
             </div>
             <p className="text-sm mb-4">
-              شريكك الموثوق للأجهزة المنزلية والمطبخ. منتجات عالية الجودة من
-              أفضل العلامات التجارية بأسعار تنافسية.
+              شريكك الموثوق للأجهزة الكهربائية و المنزلية. وكيل معتمد لافضل
+              شركات الاجهزة الكهربائية و المنزلية
             </p>
             <div className="flex gap-3">
               <a
@@ -124,13 +123,13 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex gap-2">
                 <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>123 شارع الرئيسي، القاهرة، مصر</span>
+                <span>شارع الكنيسة طريق الابراهيمية، ديرب نجم، الشرقية</span>
               </li>
               <li className="flex gap-2">
                 <Phone className="w-5 h-5 text-primary flex-shrink-0" />
                 <div>
-                  <div>+20 123 456 7890</div>
-                  <div>+20 123 456 7891</div>
+                  <div>01067304172</div>
+                  <div>01067304172</div>
                 </div>
               </li>
               <li className="flex gap-2">
