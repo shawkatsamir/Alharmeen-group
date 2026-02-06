@@ -1,7 +1,7 @@
 "use client";
 
 import { Switch } from "@/shared/components/ui/Switch";
-import { Tag, Timer, Calendar } from "lucide-react";
+import { Tag, Timer, Calendar, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -32,6 +32,7 @@ interface Product {
   isNew: boolean;
   featured: boolean;
   specialOffer: boolean;
+  stockQuantity: number;
   images: ProductImage[];
 }
 
@@ -48,6 +49,7 @@ export function UpdateProductModal({
   product,
 }: UpdateProductModalProps) {
   const [price, setPrice] = useState("");
+  const [stockQuantity, setStockQuantity] = useState("");
   const [bestSeller, setBestSeller] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [featured, setFeatured] = useState(false);
@@ -82,6 +84,7 @@ export function UpdateProductModal({
         setSaleEndDate("");
       }
 
+      setStockQuantity(product.stockQuantity?.toString() || "0");
       setBestSeller(product.bestSeller);
       setIsNew(product.isNew);
       setFeatured(product.featured);
@@ -111,6 +114,7 @@ export function UpdateProductModal({
     e.preventDefault();
     if (product) {
       const originalPrice = parseFloat(price);
+      const stock = parseInt(stockQuantity) || 0;
 
       // Build the update data
       const updateData: {
@@ -121,6 +125,7 @@ export function UpdateProductModal({
         is_new: boolean;
         is_featured: boolean;
         is_special_offer: boolean;
+        stock_quantity: number;
       } = {
         price: originalPrice,
         old_price: null,
@@ -129,6 +134,7 @@ export function UpdateProductModal({
         is_new: isNew,
         is_featured: featured,
         is_special_offer: specialOffer,
+        stock_quantity: stock,
       };
 
       // Validate: if specialOffer is ON, offer must be enabled with a sale price
@@ -189,24 +195,48 @@ export function UpdateProductModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-          {/* Price Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {offerEnabled ? "السعر الأصلي" : "سعر المنتج"}
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-400 text-sm">ج.م</span>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Price Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {offerEnabled ? "السعر الأصلي" : "سعر المنتج"}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-400 text-sm">ج.م</span>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="block w-full pl-10 pr-4 py-3 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#4EA674] focus:border-transparent transition-colors text-right"
+                  placeholder="0.00"
+                  required
+                />
               </div>
-              <input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="block w-full pl-10 pr-4 py-3 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#4EA674] focus:border-transparent transition-colors text-right"
-                placeholder="0.00"
-                required
-              />
+            </div>
+
+            {/* Stock Quantity Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  الكمية
+                </div>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  className="block w-full px-4 py-3 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#4EA674] focus:border-transparent transition-colors text-right"
+                  placeholder="0"
+                  required
+                />
+              </div>
             </div>
           </div>
 
