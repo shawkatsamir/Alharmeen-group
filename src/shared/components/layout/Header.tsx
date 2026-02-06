@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { CartButton } from "@/features/cart/components/CartButton";
 import { UserMenu } from "@/shared/components/layout/UserMenu";
 import { HeaderSearch } from "@/features/search/components/HeaderSearch";
+import { WishlistHeaderButton } from "@/features/wishlist/components/WishlistHeaderButton";
 
 export default async function Header() {
   const categories = await getNavigationCategories();
@@ -30,6 +31,7 @@ export default async function Header() {
             {/* Mobile Search Toggle - handled by HeaderSearch */}
             <HeaderSearch isMobileToggle />
             <div className="hidden lg:flex items-center gap-2">
+              <WishlistHeaderButton />
               <UserMenu />
               <CartButton />
             </div>

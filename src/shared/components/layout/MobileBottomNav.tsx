@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Home, Menu, Heart, User, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
+import { useWishlist } from "@/features/wishlist/context/wishlist-context";
 
 export type NavigationCategory = {
   id: string;
@@ -27,6 +28,8 @@ import { ChevronDown, ChevronUp, X } from "lucide-react";
 export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
   const pathname = usePathname();
   const itemCount = useCartStore((state) => state.itemCount());
+  const { wishlistIds } = useWishlist();
+  const wishlistCount = wishlistIds.size;
 
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,8 +48,11 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
   }, [isMenuOpen]);
 
   useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+    if (isMenuOpen) {
+      // Defer to avoid render cycle warning
+      setTimeout(() => setIsMenuOpen(false), 0);
+    }
+  }, [pathname, isMenuOpen]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
@@ -59,7 +65,16 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
     );
   };
 
-  const navItems = [
+  type NavItem = {
+    label: string;
+    href: string;
+    icon: React.ElementType;
+    onClick?: (e: React.MouseEvent) => void;
+    badge?: number | null;
+    customClass?: string;
+  };
+
+  const navItems: NavItem[] = [
     {
       label: "الرئيسية",
       href: "/",
@@ -78,6 +93,8 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
       label: "المفضلة",
       href: "/wishlist",
       icon: Heart,
+      badge: wishlistCount > 0 ? wishlistCount : null,
+      customClass: wishlistCount > 0 ? "fill-red-500 text-red-500" : "",
     },
     {
       label: "حسابي",
@@ -181,7 +198,7 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
                 )}
               >
                 <div className="relative">
-                  <Icon className="w-6 h-6" />
+                  <Icon className={cn("w-6 h-6", item.customClass || "")} />
                   {mounted && item.badge && (
                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                       {item.badge}

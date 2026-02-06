@@ -10,12 +10,14 @@ interface ProductSliderProps {
   title: string;
   products: Product[];
   seeMoreLink?: string;
+  wishlistIds?: string[];
 }
 
 export default function ProductSlider({
   title,
   products,
   seeMoreLink,
+  wishlistIds,
 }: ProductSliderProps) {
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +74,10 @@ export default function ProductSlider({
                 key={product.id}
                 className="flex-none w-[200px] md:w-[240px] lg:w-[260px] snap-start"
               >
-                <ProductCard product={product} />
+                <ProductCard
+                  product={product}
+                  isWishlisted={wishlistIds?.includes(product.id)}
+                />
               </div>
             ))}
           </div>

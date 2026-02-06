@@ -10,12 +10,17 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { Product } from "../types";
 import { toast } from "sonner";
 import { CountdownTimer } from "./CountdownTimer";
+import WishlistButton from "@/features/wishlist/components/WishlistButton";
 
 interface ProductCardProps {
   product: Product;
+  isWishlisted?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({
+  product,
+  isWishlisted = false,
+}: ProductCardProps) {
   const hasDiscount = product.old_price && product.old_price > product.price;
   const discountPercentage = hasDiscount
     ? Math.round(
@@ -86,6 +91,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+
+        <div className="absolute top-3 left-3 z-10 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <WishlistButton productId={product.id} isWishlisted={isWishlisted} />
+        </div>
       </div>
 
       <div className="p-4 flex flex-col grow">
