@@ -36,6 +36,7 @@ interface Product {
   isNew: boolean;
   featured: boolean;
   specialOffer: boolean;
+  stockQuantity: number;
   images: ProductImage[];
 }
 
@@ -91,6 +92,7 @@ export function ProductsTable() {
       isNew: p.is_new,
       featured: p.is_featured,
       specialOffer: p.is_special_offer,
+      stockQuantity: p.stock_quantity,
       images: (p.images as any) || [], // Keep as any for now or map correctly if structure matches
     })) || [];
 
@@ -290,11 +292,11 @@ export function ProductsTable() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {product.order}
+                        {product.stockQuantity}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {product.order > 0 ? (
+                      {product.stockQuantity > 0 ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                           متوفر
                         </span>
