@@ -14,6 +14,11 @@ const productUpdateSchema = z
     is_new: z.boolean().optional(),
     is_best_seller: z.boolean().optional(),
     is_special_offer: z.boolean().optional(),
+    stock_quantity: z
+      .number()
+      .int()
+      .nonnegative("الكمية يجب أن تكون رقماً صحيحاً غير سالب")
+      .optional(),
   })
   .refine(
     (data) => {
@@ -51,6 +56,7 @@ export type ProductUpdateData = {
   is_new?: boolean;
   is_best_seller?: boolean;
   is_special_offer?: boolean;
+  stock_quantity?: number;
 };
 
 export async function updateProduct(
