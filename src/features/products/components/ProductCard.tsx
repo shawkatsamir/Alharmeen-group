@@ -11,6 +11,8 @@ import { Product } from "../types";
 import { toast } from "sonner";
 import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
+import CompareToggle from "./CompareToggle";
+import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Product;
@@ -68,8 +70,16 @@ export function ProductCard({
     }
   };
 
+  const router = useRouter();
+  const handleCardClick = () => {
+    router.push(`/product/${product.slug}`);
+  };
+
   return (
-    <div className="group border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col">
+    <div
+      onClick={handleCardClick}
+      className="group border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col"
+    >
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {/* Main Image */}
         <Img
@@ -92,8 +102,9 @@ export function ProductCard({
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
 
-        <div className="absolute top-3 left-3 z-10 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute top-3 left-3 z-10 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2">
           <WishlistButton productId={product.id} isWishlisted={isWishlisted} />
+          <CompareToggle productId={product.id} />
         </div>
       </div>
 
@@ -168,11 +179,6 @@ export function ProductCard({
               اضف للسلة
             </Button>
           )}
-          <Link href={`/product/${product.slug}`} className="w-full">
-            <Button size="sm" variant="outline" className="w-full">
-              عرض التفاصيل
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
