@@ -48,11 +48,13 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
   }, [isMenuOpen]);
 
   useEffect(() => {
+    // Only close if it's open, but do NOT depend on isMenuOpen for triggering this effect
+    // We only want to close when pathname changes.
     if (isMenuOpen) {
-      // Defer to avoid render cycle warning
-      setTimeout(() => setIsMenuOpen(false), 0);
+      setIsMenuOpen(false);
     }
-  }, [pathname, isMenuOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
@@ -185,7 +187,28 @@ export function MobileBottomNav({ categories = [] }: MobileBottomNavProps) {
               pathname === item.href ||
               (item.label === "الأقسام" && isMenuOpen);
 
-            return (
+            return item.href === "#" ? (
+              <button
+                key={item.label}
+                onClick={item.onClick}
+                className={cn(
+                  "flex flex-col items-center justify-center w-full h-full space-y-1",
+                  isActive
+                    ? "text-primary"
+                    : "text-gray-500 hover:text-gray-900",
+                )}
+              >
+                <div className="relative">
+                  <Icon className={cn("w-6 h-6", item.customClass || "")} />
+                  {mounted && item.badge && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </button>
+            ) : (
               <Link
                 key={item.label}
                 href={item.href}
