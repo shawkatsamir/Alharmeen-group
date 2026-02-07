@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
 } from "react";
+import { useRouter } from "next/navigation";
 import { getWishlistIds, toggleWishlist } from "../actions/wishlist";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ const WishlistContext = createContext<WishlistContextType | undefined>(
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -38,52 +40,62 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     fetchWishlist();
   }, []);
 
-  const toggleItem = useCallback(async (productId: string) => {
-    // Optimistic update
-    setWishlistIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
-      return next;
-    });
+  const toggleItem = useCallback(
+    async (productId: string) => {
+      // Optimistic update
+      setWishlistIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(productId)) {
+          next.delete(productId);
+        } else {
+          next.add(productId);
+        }
+        return next;
+      });
 
-    try {
-      const result = await toggleWishlist(productId);
-      if (result.error) {
-        // Revert on error
-        setWishlistIds((prev) => {
-          const next = new Set(prev);
-          if (next.has(productId)) {
-            next.delete(productId); // it was added safely, so remove it? Wait.
-            // If we are reverting:
-            // If we thought we added it (it wasn't there), we remove it.
-            // If we thought we removed it (it was there), we add it back.
-            // This logic is tricky with just "revert".
-            // Better to sync with server or complex revert logic.
-            // For now, let's just re-fetch or simple revert.
+      try {
+        const result = await toggleWishlist(productId);
+        if (result.error) {
+          // Revert on error
+          setWishlistIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(productId)) {
+              next.delete(productId); // it was added safely, so remove it? Wait.
+              // If we are reverting:
+              // If we thought we added it (it wasn't there), we remove it.
+              // If we thought we removed it (it was there), we add it back.
+              // This logic is tricky with just "revert".
+              // Better to sync with server or complex revert logic.
+              // For now, let's just re-fetch or simple revert.
 
-            // Simple revert based on previous state is hard without history.
-            // Let's just fetchIds again to accept truth.
+              // Simple revert based on previous state is hard without history.
+              // Let's just fetchIds again to accept truth.
+              return prev;
+            }
             return prev;
+          });
+
+          // Check for specific login error
+          if (result.error === "Login required") {
+            router.push("/auth/login");
+            return;
           }
-          return prev;
-        });
-        // Actually, let's just refetch to be safe if error
+
+          // Actually, let's just refetch to be safe if error
+          const ids = await getWishlistIds();
+          setWishlistIds(new Set(ids));
+
+          toast.error(result.error);
+        }
+      } catch (error) {
+        console.error("Error toggling wishlist", error);
+        // Revert/Refetch
         const ids = await getWishlistIds();
         setWishlistIds(new Set(ids));
-
-        toast.error(result.error);
       }
-    } catch (error) {
-      console.error("Error toggling wishlist", error);
-      // Revert/Refetch
-      const ids = await getWishlistIds();
-      setWishlistIds(new Set(ids));
-    }
-  }, []);
+    },
+    [router],
+  );
 
   return (
     <WishlistContext.Provider value={{ wishlistIds, toggleItem, isLoading }}>
