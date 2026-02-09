@@ -50,7 +50,9 @@ export function ProductCard({
     return () => clearTimeout(timer);
   }, []);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     addItem({
       id: product.id,
       name: product.name_ar,
@@ -148,7 +150,11 @@ export function ProductCard({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => handleUpdateQuantity(quantity - 1)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleUpdateQuantity(quantity - 1);
+                  }}
                 >
                   -
                 </Button>
@@ -157,7 +163,9 @@ export function ProductCard({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-black"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     // Optionally check stock limit here too
                     if (
                       product.stock_quantity !== undefined &&
