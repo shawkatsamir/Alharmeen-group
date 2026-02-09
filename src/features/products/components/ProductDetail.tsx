@@ -128,24 +128,24 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             <p className="text-gray-500 mb-2">{product.brand?.name_ar}</p>
 
             {/* Product Name */}
-            <h1 className="mb-4">{product.name_ar}</h1>
-
-            {/* Rating & Reviews */}
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              {product.name_ar}
+            </h1>
 
             <Separator className="mb-6" />
 
             {/* Price */}
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-primary">
+                <span className="text-3xl font-bold text-primary">
                   {product.price.toLocaleString()} ج.م
                 </span>
                 {product.old_price && (
                   <>
-                    <span className="text-gray-400 line-through">
+                    <span className="text-lg text-gray-400 line-through">
                       {product.old_price.toLocaleString()} ج.م
                     </span>
-                    <Badge variant="destructive">
+                    <Badge variant="destructive" className="mr-2">
                       وفر {(product.old_price - product.price).toLocaleString()}{" "}
                       ج.م
                     </Badge>
@@ -159,33 +159,38 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             {/* Stock Status */}
             <div className="flex items-center gap-2 mb-6">
               {product.is_available && product.stock_quantity > 0 ? (
-                <>
-                  <Check className="w-5 h-5 text-green-600" />
-                  <span className="text-green-600">متوفر في المخزون</span>
-                </>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                  <Check className="w-4 h-4" />
+                  <span>متوفر في المخزون</span>
+                </div>
               ) : (
-                <>
-                  <X className="w-5 h-5 text-red-600" />
-                  <span className="text-red-600">غير متوفر حالياً</span>
-                </>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 rounded-full text-sm font-medium">
+                  <X className="w-4 h-4" />
+                  <span>غير متوفر حالياً</span>
+                </div>
               )}
             </div>
 
-            {/* Features */}
-            <div className="mb-6">
-              <h3 className="mb-3">المميزات الرئيسية:</h3>
-              <ul className="space-y-2">
-                {product.features?.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <span className="text-gray-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Features (Bullet Points from JSON) */}
+            {product.features && Array.isArray(product.features) && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  المميزات الرئيسية:
+                </h3>
+                <ul className="space-y-2">
+                  {product.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span className="text-gray-700">{String(feature)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <Separator className="mb-6" />
 
+            {/* Add to Cart Actions */}
             {mounted && quantity > 0 ? (
               <div className="flex items-center gap-3 max-w-fit">
                 <div className="flex items-center justify-between min-w-[140px] border rounded-md h-12 px-2">
@@ -207,73 +212,83 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                 </div>
               </div>
             ) : (
-              <Button className="max-w-fit" size="lg" onClick={handleAddToCart}>
-                <ShoppingCart className="w-4 h-4 ml-2" />
-                أضف للسلة
+              <Button
+                className="w-full md:w-auto min-w-[200px]"
+                size="lg"
+                onClick={handleAddToCart}
+                disabled={!product.is_available || product.stock_quantity <= 0}
+              >
+                <ShoppingCart className="w-5 h-5 ml-2" />
+                {product.is_available && product.stock_quantity > 0
+                  ? "أضف للسلة"
+                  : "نفذت الكمية"}
               </Button>
             )}
           </div>
         </div>
 
-        {/* Tabs Section */}
-        <div className="bg-white rounded-lg p-6 mb-12">
+        {/* Tabs Section (Description & Specs) */}
+        <div className="bg-white rounded-lg p-6 mb-12 border border-gray-100 shadow-sm">
           <Tabs defaultValue="description" dir="rtl">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="description">الوصف</TabsTrigger>
-              <TabsTrigger value="specifications">المواصفات</TabsTrigger>
-              <TabsTrigger value="reviews">التقييمات</TabsTrigger>
-              <TabsTrigger value="shipping">الشحن</TabsTrigger>
+            <TabsList className="w-full justify-start border-b rounded-lg p-0 h-auto bg-transparent">
+              <TabsTrigger
+                value="description"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                الوصف
+              </TabsTrigger>
+              <TabsTrigger
+                value="specifications"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                المواصفات
+              </TabsTrigger>
+              <TabsTrigger
+                value="reviews"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                التقييمات
+              </TabsTrigger>
+              <TabsTrigger
+                value="shipping"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                الشحن
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="description" className="mt-6">
-              <div className="prose max-w-none">
-                <h3 className="mb-4">وصف المنتج</h3>
-                <p className="text-gray-700 leading-relaxed mb-4">
-                  {product.description_ar}
-                </p>
-              </div>
+            {/* 📝 DESCRIPTION TAB (Rendered as HTML) */}
+            <TabsContent value="description" className="mt-8">
+              <div
+                className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900 [&_ul]:list-disc [&_ul]:pr-5 [&_ul]:space-y-1 [&_li]:marker:text-primary"
+                dir="rtl"
+                dangerouslySetInnerHTML={{
+                  __html: product.description_ar || "",
+                }}
+              />
             </TabsContent>
 
-            <TabsContent value="specifications" className="mt-6">
-              <h3 className="mb-4">مواصفات المنتج</h3>
-              {product.specifications ? (
+            {/* 📊 SPECIFICATIONS TAB (Clean Table) */}
+            <TabsContent value="specifications" className="mt-8">
+              {product.specifications &&
+              Object.keys(product.specifications as object).length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm text-right">
-                    <tbody className="divide-y">
+                    <tbody className="divide-y divide-gray-100">
                       {Object.entries(
                         product.specifications as Record<string, unknown>,
                       ).map(([key, value]) => (
-                        <tr key={key} className="bg-white">
-                          <td className="px-6 py-4 font-medium text-gray-900 bg-gray-50 w-1/3">
-                            {key
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                        <tr
+                          key={key}
+                          className="bg-white hover:bg-gray-50/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 font-semibold text-gray-900 bg-gray-50/50 w-1/3 border-l">
+                            {key.replace(/_/g, " ")}
                           </td>
                           <td className="px-6 py-4 text-gray-700">
-                            {typeof value === "object" && value !== null ? (
-                              <div className="flex flex-col gap-1">
-                                {Object.entries(value).map(
-                                  ([subKey, subValue]) => (
-                                    <div
-                                      key={subKey}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <span className="font-medium text-gray-500">
-                                        {subKey
-                                          .replace(/_/g, " ")
-                                          .replace(/\b\w/g, (l) =>
-                                            l.toUpperCase(),
-                                          )}
-                                        :
-                                      </span>
-                                      <span>{String(subValue)}</span>
-                                    </div>
-                                  ),
-                                )}
-                              </div>
-                            ) : (
-                              String(value)
-                            )}
+                            {typeof value === "object" && value !== null
+                              ? JSON.stringify(value)
+                              : String(value)}
                           </td>
                         </tr>
                       ))}
@@ -281,17 +296,26 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   </table>
                 </div>
               ) : (
-                <p className="text-gray-500">
-                  لا توجد مواصفات إضافية لهذا المنتج
-                </p>
+                <div className="text-center py-12 bg-gray-50 rounded-lg text-gray-500">
+                  لا توجد مواصفات إضافية متاحة لهذا المنتج
+                </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="reviews" className="mt-8">
+              <p className="text-gray-500">التقييمات قريباً...</p>
+            </TabsContent>
+
+            <TabsContent value="shipping" className="mt-8">
+              <p className="text-gray-500">سياسة الشحن قريباً...</p>
             </TabsContent>
           </Tabs>
         </div>
 
-        {/* Video */}
-
-        <ProductVideos videos={product.video_urls as unknown as VideoUrls} />
+        {/* Video Section */}
+        {product.video_urls && (
+          <ProductVideos videos={product.video_urls as unknown as VideoUrls} />
+        )}
       </div>
     </div>
   );
