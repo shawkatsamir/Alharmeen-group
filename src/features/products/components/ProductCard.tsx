@@ -80,7 +80,7 @@ export function ProductCard({
   return (
     <div
       onClick={handleCardClick}
-      className="group border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col"
+      className="group rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col cursor-pointer"
     >
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {/* Main Image */}

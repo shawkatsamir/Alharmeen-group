@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { items, clearCart } = useCartStore();
   const router = useRouter();
 
@@ -20,13 +21,13 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (mounted && items.length === 0) {
+    if (mounted && items.length === 0 && !isSuccess) {
       router.replace("/cart");
     }
-  }, [mounted, items, router]);
+  }, [mounted, items, router, isSuccess]);
 
   if (!mounted) return null;
-  if (!mounted || items.length === 0) return null;
+  if ((!mounted || items.length === 0) && !isSuccess) return null;
 
   const handleSubmit = async (data: CheckoutFormValues) => {
     setIsLoading(true);
@@ -34,10 +35,10 @@ export default function CheckoutPage() {
       const result = await createOrder(data, items);
 
       if (result.success) {
+        setIsSuccess(true);
         toast.success("تم استلام طلبك بنجاح!");
         clearCart();
-        // Redirect to success page or order details
-        router.push(`/order-success/${result.orderId}`); // Assuming we will create this page
+        router.replace(`/order-success/${result.orderId}`);
       } else {
         toast.error(result.error || "حدث خطأ أثناء إتمام الطلب");
       }

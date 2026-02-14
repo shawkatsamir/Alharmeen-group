@@ -250,7 +250,7 @@ export default function ProductsClient({
         {/* Loading overlay */}
         <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
