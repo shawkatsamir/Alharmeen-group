@@ -12,9 +12,6 @@ const config: Config = {
       // Your existing theme customization...
     },
   },
-  plugins: [
-    require("tailwindcss-animate"), // If you use Shadcn/ui
-    require("@tailwindcss/typography"), // 👈 Add this line!
-  ],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 };
 export default config;
