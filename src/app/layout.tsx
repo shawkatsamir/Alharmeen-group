@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     creator: "@alharmaingroup", // Placeholder
   },
   verification: {
-    google: "google-site-verification-token", // Placeholder
+    google: "QrAtqQSgGfCYZleJeg3l3j8e-LHZWQHFqTaP9nMxYow",
   },
 };
 
