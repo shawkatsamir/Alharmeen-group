@@ -21,7 +21,8 @@ export async function signupAction(
   // We need the origin to tell Supabase where to redirect after email verification
   // In server actions, 'window' doesn't exist, so we usually use an Env var or header.
   // For now, let's assume standard localhost or production URL.
-  const origin = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const origin =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://alharmaingroup.com";
 
   if (!captchaToken) {
     return { error: "الرجاء التحقق من أنك لست روبوت" }; // "Please verify you are not a robot"
@@ -32,7 +33,7 @@ export async function signupAction(
     password,
     options: {
       captchaToken, // 🛡️ Supabase verifies this with Cloudflare automatically!
-      emailRedirectTo: `${origin}/auth/callback?next=/checkout`,
+      emailRedirectTo: `${origin}/auth/confirm`,
       data: {
         full_name: fullName,
       },

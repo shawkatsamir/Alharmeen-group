@@ -17,7 +17,7 @@ export default async function CustomerLayout({
       <WishlistProvider>
         <Header />
         <main className="flex-1 pb-16 lg:pb-0">{children}</main>
-        <Footer />
+        <Footer categories={categories} />
         <MobileBottomNav categories={categories} />
         <CompareBar />
       </WishlistProvider>
