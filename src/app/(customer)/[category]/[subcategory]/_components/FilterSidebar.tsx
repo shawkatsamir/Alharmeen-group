@@ -100,7 +100,7 @@ function FilterSidebarComponent({
           overflow-y-auto lg:overflow-visible
         `}
       >
-        <div className="bg-white lg:rounded-lg lg:border lg:border-gray-200 p-4 sticky top-0 lg:top-4 h-full lg:h-auto min-h-screen lg:min-h-0">
+        <div className="bg-white lg:rounded-lg lg:border lg:border-gray-200 p-4 sticky top-0 lg:top-24 h-full lg:h-auto min-h-screen lg:min-h-0 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto w-full lg:w-64">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">تصفية النتائج</h3>

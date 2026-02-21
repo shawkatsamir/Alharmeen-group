@@ -1,5 +1,5 @@
 import { Database } from "@/shared/types/database.types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
 import { Img } from "@/shared/components/ui/Image";
@@ -52,12 +52,39 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Sort images by is_primary (true first) then display_order
+  const sortedImages = useMemo(() => {
+    if (!product.images || product.images.length === 0) return [];
+
+    return [...product.images].sort((a, b) => {
+      // First sort by is_primary
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+
+      // Then sort by display_order
+      return (a.display_order || 0) - (b.display_order || 0);
+    });
+  }, [product.images]);
+
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(
+    sortedImages.length > 0 ? sortedImages[0].id : null,
+  );
+
+  const selectedImage = useMemo(() => {
+    if (!selectedImageId && sortedImages.length > 0) return sortedImages[0];
+    return (
+      sortedImages.find((img) => img.id === selectedImageId) || sortedImages[0]
+    );
+  }, [selectedImageId, sortedImages]);
+
   const handleAddToCart = () => {
+    const primaryImage =
+      sortedImages.length > 0 ? sortedImages[0].image_url : "/placeholder.jpg";
     addItem({
       id: product.id,
       name: product.name_ar,
       price: product.price,
-      image: product.images?.[0]?.image_url || "/placeholder.jpg",
+      image: primaryImage,
       slug: product.slug,
       brand: product.brand?.name_ar || "",
     });
@@ -96,8 +123,8 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             {/* Main Image */}
             <div className="relative aspect-square bg-white rounded-lg overflow-hidden border border-gray-200">
               <Img
-                src={product.images?.[0]?.image_url || "/placeholder.jpg"}
-                alt={product.name_ar}
+                src={selectedImage?.image_url || "/placeholder.jpg"}
+                alt={selectedImage?.alt_text_ar || product.name_ar}
                 fill
                 className="object-cover"
               />
@@ -120,6 +147,30 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                 </Button>
               </div>
             </div>
+
+            {/* Thumbnails */}
+            {sortedImages.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto pb-2 smooth-scroll max-w-full w-full">
+                {sortedImages.map((img) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setSelectedImageId(img.id)}
+                    className={`relative w-20 h-20 shrink-0 rounded-md overflow-hidden bg-white border-2 transition-all duration-200 ${
+                      selectedImage?.id === img.id
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-gray-200 hover:border-primary/50"
+                    }`}
+                  >
+                    <Img
+                      src={img.image_url}
+                      alt={img.alt_text_ar || product.name_ar}
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right: Product Info */}

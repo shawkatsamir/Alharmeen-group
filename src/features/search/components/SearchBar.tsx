@@ -32,7 +32,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
   } = useQuery({
     queryKey: ["search-products", debouncedQuery],
     queryFn: () => searchProducts(debouncedQuery),
-    enabled: debouncedQuery.length >= 2,
+    enabled: debouncedQuery.length > 2,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
@@ -45,7 +45,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
 
   // Open dropdown when we have results or are loading
   useEffect(() => {
-    if (debouncedQuery.length >= 2) {
+    if (debouncedQuery.length > 2) {
       setIsOpen(true);
     } else {
       setIsOpen(false);
@@ -80,7 +80,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
     onClose?.();
   };
 
-  const showLoading = isLoading && debouncedQuery.length >= 2;
+  const showLoading = isLoading && debouncedQuery.length > 2;
 
   return (
     <div ref={wrapperRef} className="relative w-full">
@@ -128,13 +128,11 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
           )}
 
           {/* No Results */}
-          {!isFetching &&
-            results.length === 0 &&
-            debouncedQuery.length >= 2 && (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                لا توجد نتائج لـ &quot;{query}&quot;
-              </div>
-            )}
+          {!isFetching && results.length === 0 && debouncedQuery.length > 2 && (
+            <div className="p-4 text-center text-gray-500 text-sm">
+              لا توجد نتائج لـ &quot;{query}&quot;
+            </div>
+          )}
 
           {/* Results List */}
           {results.length > 0 && (
