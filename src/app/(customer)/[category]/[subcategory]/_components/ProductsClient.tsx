@@ -251,8 +251,12 @@ export default function ProductsClient({
         <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {filteredProducts.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  priority={index < 4}
+                />
               ))}
             </div>
           ) : (
