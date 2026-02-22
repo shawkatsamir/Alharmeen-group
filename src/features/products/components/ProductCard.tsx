@@ -17,11 +17,13 @@ import { useRouter } from "next/navigation";
 interface ProductCardProps {
   product: Product;
   isWishlisted?: boolean;
+  priority?: boolean;
 }
 
 export function ProductCard({
   product,
   isWishlisted = false,
+  priority = false,
 }: ProductCardProps) {
   const hasDiscount = product.old_price && product.old_price > product.price;
   const discountPercentage = hasDiscount
@@ -88,6 +90,7 @@ export function ProductCard({
           src={product.images?.[0]?.image_url || "/placeholder.svg"}
           alt={product.name_ar}
           fill
+          priority={priority}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
 

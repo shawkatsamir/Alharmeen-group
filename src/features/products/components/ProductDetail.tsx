@@ -165,6 +165,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                       src={img.image_url}
                       alt={img.alt_text_ar || product.name_ar}
                       fill
+                      preload
                       className="object-cover"
                     />
                   </button>
