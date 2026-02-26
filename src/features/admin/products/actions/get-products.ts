@@ -25,9 +25,9 @@ export async function getAdminProducts(options?: {
     )
     .order("created_at", { ascending: false });
 
-  // Search
+  // Search by SKU
   if (options?.search) {
-    query = query.ilike("name_en", `%${options.search}%`); // Assuming name_en is the primary name, or use 'name' if changed
+    query = query.ilike("sku", `%${options.search}%`);
   }
 
   // Filter by status

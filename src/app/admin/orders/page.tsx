@@ -9,42 +9,42 @@ import {
 } from "@/shared/components/ui/DropdownMenu";
 import OrdersTable from "@/features/orders/components/OrdersTable";
 import { useQuery } from "@tanstack/react-query";
-import { getOrders } from "@/services/client/orders";
+import { getOrderStats } from "@/services/client/orders";
 
 export default function OrderManagement() {
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ["admin-orders"],
-    queryFn: getOrders,
+  const { data: statData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["admin-orders-stats"],
+    queryFn: getOrderStats,
   });
 
   const stats = [
     {
       label: "إجمالي الطلبات",
-      value: "1,240",
-      change: "+14.4%",
-      trend: "up",
-      period: "آخر 7 أيام",
+      value: statData?.all?.toString() || "0",
+      change: "",
+      trend: "none",
+      period: "إجمالي",
     },
     {
       label: "طلبات جديدة",
-      value: "240",
-      change: "+20%",
-      trend: "up",
-      period: "آخر 7 أيام",
+      value: statData?.pending?.toString() || "0",
+      change: "",
+      trend: "none",
+      period: "إجمالي",
     },
     {
       label: "طلبات مكتملة",
-      value: "960",
-      change: "85%",
-      trend: "up",
-      period: "آخر 7 أيام",
+      value: statData?.completed?.toString() || "0",
+      change: "",
+      trend: "none",
+      period: "إجمالي",
     },
     {
       label: "طلبات ملغاة",
-      value: "87",
-      change: "-5%",
-      trend: "down",
-      period: "آخر 7 أيام",
+      value: statData?.canceled?.toString() || "0",
+      change: "",
+      trend: "none",
+      period: "إجمالي",
     },
   ];
 
@@ -57,8 +57,8 @@ export default function OrderManagement() {
             قائمة الطلبات
           </h1>
         </div>
-        <div className="flex items-center space-x-3 space-x-reverse">
-          <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors">
+        <div className="flex items-center space-x-3">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors">
             <Plus className="w-5 h-5" />
             <span className="font-medium">إضافة طلب</span>
           </button>
@@ -102,15 +102,17 @@ export default function OrderManagement() {
               </p>
               <div className="flex items-baseline space-x-2 space-x-reverse">
                 <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {stat.value}
+                  {isStatsLoading ? "..." : stat.value}
                 </h3>
-                <span
-                  className={`text-sm font-medium ${
-                    stat.trend === "up" ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {stat.change}
-                </span>
+                {stat.change && (
+                  <span
+                    className={`text-sm font-medium ${
+                      stat.trend === "up" ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {stat.change}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-400 dark:text-gray-500">
                 {stat.period}
@@ -121,7 +123,7 @@ export default function OrderManagement() {
       </div>
 
       {/* Orders Table */}
-      <OrdersTable orders={orders} isLoading={isLoading} />
+      <OrdersTable stats={statData} />
     </div>
   );
 }

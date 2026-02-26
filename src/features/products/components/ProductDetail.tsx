@@ -245,7 +245,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             {/* Add to Cart Actions */}
             {mounted && quantity > 0 ? (
               <div className="flex items-center gap-3 max-w-fit">
-                <div className="flex items-center justify-between min-w-[140px] border rounded-md h-12 px-2">
+                <div className="flex items-center justify-between min-w-35 border rounded-md h-12 px-2">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -265,7 +265,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
               </div>
             ) : (
               <Button
-                className="w-full md:w-auto min-w-[200px]"
+                className="w-full md:w-auto min-w-50"
                 size="lg"
                 onClick={handleAddToCart}
                 disabled={!product.is_available || product.stock_quantity <= 0}
