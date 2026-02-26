@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
 import {
   Plus,
-  Search,
   SlidersHorizontal,
   MoreVertical,
   FilePenLine,
@@ -16,6 +16,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { getAdminProducts } from "../actions/get-products";
 import { Img } from "@/shared/components/ui/Image";
+import { DebouncedSearchInput } from "@/features/search/components/DebouncedSearchInput";
 
 interface ProductImage {
   id: string;
@@ -63,16 +64,16 @@ export function ProductsTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-products", activeTab, currentPage, searchTerm],
+    queryKey: ["admin-products", activeTab, currentPage, effectiveSearchTerm],
     queryFn: async () => {
       const result = await getAdminProducts({
         page: currentPage,
         limit: 10,
         status: activeTab,
-        search: searchTerm,
+        search: effectiveSearchTerm,
       });
       return result;
     },
@@ -141,7 +142,7 @@ export function ProductsTable() {
             المنتجات
           </h1>
         </div>
-        <div className="flex items-center space-x-3 space-x-reverse">
+        <div className="flex items-center space-x-3">
           <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors">
             <Plus className="w-5 h-5" />
             <span className="font-medium">إضافة منتج</span>
@@ -172,6 +173,8 @@ export function ProductsTable() {
         </div>
       </div>
 
+      <p></p>
+
       {/* Table Container */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -181,7 +184,10 @@ export function ProductsTable() {
               {tabCategories.map((category) => (
                 <button
                   key={category.id}
-                  onClick={() => setActiveTab(category.id as any)}
+                  onClick={() => {
+                    setActiveTab(category.id as any);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === category.id
                       ? "bg-[#4EA674]/10 text-[#4EA674]"
@@ -197,17 +203,15 @@ export function ProductsTable() {
             </div>
 
             {/* Search & Filters */}
-            <div className="flex items-center space-x-3 space-x-reverse">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="بحث عن منتج..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-4 pr-10 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4EA674] focus:border-transparent transition-all w-64 text-right"
-                />
-              </div>
+            <div className="flex items-center space-x-3">
+              <DebouncedSearchInput
+                placeholder="بحث برمز المنتج SKU (3 أحرف على الأقل)"
+                onSearch={(term) => {
+                  setEffectiveSearchTerm(term);
+                  setCurrentPage(1);
+                }}
+                className="w-64"
+              />
               <button className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400">
                 <SlidersHorizontal className="w-5 h-5" />
               </button>

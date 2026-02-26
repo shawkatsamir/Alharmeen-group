@@ -1,7 +1,8 @@
-"use client";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getOrders } from "@/services/client/orders";
+
 import {
-  Search,
   Filter,
   SlidersHorizontal,
   MoreVertical,
@@ -18,10 +19,10 @@ import {
   SelectValue,
 } from "@/shared/components/ui/Select";
 import { Dialog } from "@/shared/components/ui/Dialog";
-import { Img } from "@/shared/components/ui/Image";
 import { Order } from "@/services/server/orders";
 import OrderDetailModalWrapper from "./OrderDetailModalWrapper";
 import { useUpdateOrderStatus } from "@/features/orders/hooks/useUpdateOrderStatus";
+import { DebouncedSearchInput } from "@/features/search/components/DebouncedSearchInput";
 
 const STATUSES = [
   "قيد الانتظار",
@@ -33,18 +34,36 @@ const STATUSES = [
 ] as const;
 
 interface OrdersTableProps {
-  orders?: Order[];
-  isLoading: boolean;
+  stats?: {
+    all: number;
+    pending: number;
+    completed: number;
+    canceled: number;
+    returned: number;
+  };
 }
 
-export default function OrdersTable({
-  orders = [],
-  isLoading,
-}: OrdersTableProps) {
+export default function OrdersTable({ stats }: OrdersTableProps) {
   const [activeTab, setActiveTab] = useState<
     "all" | "completed" | "pending" | "canceled" | "returned"
   >("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-orders", activeTab, currentPage, effectiveSearchTerm],
+    queryFn: async () => {
+      return await getOrders({
+        page: currentPage,
+        limit: 10,
+        status: activeTab,
+        search: effectiveSearchTerm,
+      });
+    },
+  });
+
+  const orders = data?.orders || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / 10);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -73,72 +92,93 @@ export default function OrdersTable({
     updateStatus({ orderId, newStatus });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
   return (
-    <>
+    <div className="space-y-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 space-x-reverse">
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setActiveTab("all")}
+                onClick={() => {
+                  setActiveTab("all");
+                  setCurrentPage(1);
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === "all"
                     ? "bg-[#4EA674]/10 text-[#4EA674]"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
-                الكل <span className="text-xs mr-1">({orders.length})</span>
+                الكل <span className="text-xs mr-1">({stats?.all || 0})</span>
               </button>
               <button
-                onClick={() => setActiveTab("completed")}
+                onClick={() => {
+                  setActiveTab("completed");
+                  setCurrentPage(1);
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === "completed"
                     ? "bg-[#4EA674]/10 text-[#4EA674]"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
-                مكتمل
+                مكتمل{" "}
+                <span className="text-xs mr-1">({stats?.completed || 0})</span>
               </button>
               <button
-                onClick={() => setActiveTab("pending")}
+                onClick={() => {
+                  setActiveTab("pending");
+                  setCurrentPage(1);
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === "pending"
                     ? "bg-[#4EA674]/10 text-[#4EA674]"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
-                معلق
+                معلق{" "}
+                <span className="text-xs mr-1">({stats?.pending || 0})</span>
               </button>
               <button
-                onClick={() => setActiveTab("canceled")}
+                onClick={() => {
+                  setActiveTab("canceled");
+                  setCurrentPage(1);
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === "canceled"
                     ? "bg-[#4EA674]/10 text-[#4EA674]"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
-                ملغي
+                ملغي{" "}
+                <span className="text-xs mr-1">({stats?.canceled || 0})</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("returned");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "returned"
+                    ? "bg-[#4EA674]/10 text-[#4EA674]"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              >
+                مرتجع{" "}
+                <span className="text-xs mr-1">({stats?.returned || 0})</span>
               </button>
             </div>
 
-            <div className="flex items-center space-x-3 space-x-reverse">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="بحث في الطلبات"
-                  className="pr-10 pl-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4EA674]"
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+            <div className="flex items-center space-x-3">
+              <DebouncedSearchInput
+                placeholder="بحث برقم الطلب (3 أحرف على الأقل)"
+                onSearch={(term) => {
+                  setEffectiveSearchTerm(term);
+                  setCurrentPage(1);
+                }}
+                className="w-64"
+              />
               <button className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
                 <Filter className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
@@ -164,7 +204,7 @@ export default function OrdersTable({
                   رقم الطلب
                 </th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  المنتج
+                  العميل
                 </th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">
                   التاريخ
@@ -184,142 +224,125 @@ export default function OrdersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {orders.map((order, index) => (
-                <tr
-                  key={order.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {order.order_number}
-                  </td>
-                  <td className="px-6 py-4">
-                    {/* Just showing the first item as a preview for now */}
-                    {order.items && order.items.length > 0 ? (
-                      <div className="flex items-center space-x-3">
-                        <div className="relative w-10 h-10">
-                          <Img
-                            src={order.items[0].product_image}
-                            alt={order.items[0].product_name}
-                            sizes="48px"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <span className="text-sm text-gray-900 dark:text-white">
-                          {order.items[0].product_name}
-                          {order.items.length > 1 && (
-                            <span className="text-xs text-gray-500 mr-1">
-                              (+{order.items.length - 1})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">No items</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                    {order.total.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          order.payment_status === "paid"
-                            ? "bg-green-500"
-                            : "bg-red-500"
-                        }`}
-                      ></span>
-                      <span className="text-sm text-gray-900 dark:text-white">
-                        {order.payment_status === "paid"
-                          ? "مدفوع"
-                          : "غير مدفوع"}
-                      </span>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center text-gray-500">
+                      <Loader2 className="w-8 h-8 animate-spin text-[#4EA674] mb-2" />
+                      <p>جاري تحميل الطلبات...</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <Select
-                      defaultValue={order.status}
-                      onValueChange={(value) => {
-                        handleStatusChange(order.id, value);
-                      }}
-                    >
-                      <SelectTrigger
-                        className={`w-[130px] h-8 ${getStatusColor(order.status)}`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUSES.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-4">
-                    <button
-                      onClick={() => setSelectedOrder(order)}
-                      className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-6 py-10 text-center text-gray-500"
+                  >
+                    لا توجد طلبات.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                orders.map((order, index) => (
+                  <tr
+                    key={order.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {(currentPage - 1) * 10 + index + 1}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {order.order_number}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {order.customer_name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                      {order.total.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            order.payment_status === "paid"
+                              ? "bg-green-500"
+                              : "bg-red-500"
+                          }`}
+                        ></span>
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          {order.payment_status === "paid"
+                            ? "مدفوع"
+                            : "غير مدفوع"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Select
+                        defaultValue={order.status}
+                        onValueChange={(value) => {
+                          handleStatusChange(order.id, value);
+                        }}
+                      >
+                        <SelectTrigger
+                          className={`w-[130px] h-8 ${getStatusColor(order.status)}`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUSES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="flex items-center space-x-2 space-x-reverse px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-            <span>السابق</span>
-          </button>
-
-          <div className="flex items-center space-x-1">
-            {[1, 2, 3, 4, 5].map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === page
-                    ? "bg-[#4EA674] text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <span className="px-2 text-gray-500">...</span>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <button
-              onClick={() => setCurrentPage(24)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center space-x-2 space-x-reverse px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              24
+              <ChevronRight className="w-4 h-4" />
+              <span>السابق</span>
+            </button>
+
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              صفحة {currentPage} من {totalPages}
+            </span>
+
+            <button
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="flex items-center space-x-2 space-x-reverse px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>التالي</span>
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
-
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            className="flex items-center space-x-2 space-x-reverse px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          >
-            <span>التالي</span>
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        </div>
+        )}
       </div>
 
       <Dialog
@@ -328,6 +351,6 @@ export default function OrdersTable({
       >
         {selectedOrder && <OrderDetailModalWrapper order={selectedOrder} />}
       </Dialog>
-    </>
+    </div>
   );
 }
