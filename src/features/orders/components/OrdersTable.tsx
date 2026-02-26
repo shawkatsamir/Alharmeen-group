@@ -287,7 +287,7 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
                         }}
                       >
                         <SelectTrigger
-                          className={`w-[130px] h-8 ${getStatusColor(order.status)}`}
+                          className={`w-32.5 h-8 ${getStatusColor(order.status)}`}
                         >
                           <SelectValue />
                         </SelectTrigger>
