@@ -1,3 +1,5 @@
+"use client";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/features/orders/actions/order-actions";
 import { toast } from "sonner";
@@ -24,6 +26,9 @@ export function useUpdateOrderStatus() {
     onSuccess: (data) => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      // A status change moves an order between tabs, so the stat cards are
+      // stale too — they were previously left showing the old counts.
+      queryClient.invalidateQueries({ queryKey: ["admin-orders-stats"] });
 
       router.refresh();
     },

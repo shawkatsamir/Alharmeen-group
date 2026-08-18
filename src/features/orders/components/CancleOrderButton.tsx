@@ -13,6 +13,7 @@ import {
 } from "@/shared/components/ui/AlertDialog";
 import { Button } from "@/shared/components/ui/Button";
 import { useCancelOrder } from "../hooks/useCancelOrder";
+import { canCustomerCancel } from "../constants/order-status";
 import { Loader2 } from "lucide-react";
 
 export function CancelOrderButton({
@@ -24,15 +25,8 @@ export function CancelOrderButton({
 }) {
   const { mutate, isPending } = useCancelOrder();
 
-  // Hide button if order is not in a cancelable state
-  const isCancelable = [
-    "pending",
-    "confirmed",
-    "قيد الانتظار",
-    "تم التأكيد",
-  ].includes(status);
-
-  if (!isCancelable) return null;
+  // Same rule the server action enforces: cancellable until the order ships.
+  if (!canCustomerCancel(status)) return null;
 
   return (
     <AlertDialog>
@@ -42,20 +36,19 @@ export function CancelOrderButton({
           size="sm"
           className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
         >
-          Cancel Order
+          إلغاء الطلب
         </Button>
       </AlertDialogTrigger>
 
-      <AlertDialogContent>
+      <AlertDialogContent dir="rtl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. We will stop processing your order
-            immediately.
+            لا يمكن التراجع عن هذا الإجراء. سيتم إيقاف تجهيز طلبك فوراً.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep Order</AlertDialogCancel>
+          <AlertDialogCancel>الاحتفاظ بالطلب</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault(); // Prevent closing immediately to show loading
@@ -66,10 +59,11 @@ export function CancelOrderButton({
           >
             {isPending ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelling...
+                <Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري
+                الإلغاء...
               </>
             ) : (
-              "Yes, Cancel Order"
+              "نعم، إلغاء الطلب"
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

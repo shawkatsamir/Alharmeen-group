@@ -3,48 +3,66 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-// Define valid statuses to match your Database Check Constraint
-const VALID_STATUSES = [
-  "قيد الانتظار",
-  "جاري التجهيز",
-  "تم الشحن",
-  "تم التوصيل",
-  "ملغي",
-  "مرتجع",
-];
+import {
+  canTransition,
+  getNextStatuses,
+  isOrderStatus,
+} from "../constants/order-status";
 
+/**
+ * Admin status change.
+ *
+ * Note there is deliberately NO write to order_status_history here. The
+ * `log_status_change_trigger` on `orders` is the sole writer of that table
+ * (SECURITY DEFINER, so it bypasses RLS). Adding an insert here would produce
+ * a duplicate row for every transition.
+ */
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   const supabase = await createClient();
 
-  // 1. Validation: Ensure status is valid
-  if (!VALID_STATUSES.includes(newStatus)) {
-    return { success: false, message: "Invalid status provided" };
+  if (!isOrderStatus(newStatus)) {
+    return { success: false, message: "حالة الطلب غير صالحة" };
   }
 
   try {
-    // 2. Fetch the CURRENT order to get the "previous_status"
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
-      .select("status, user_id")
+      .select("status")
       .eq("id", orderId)
       .single();
 
     if (fetchError || !currentOrder) {
-      throw new Error("Order not found");
+      return { success: false, message: "الطلب غير موجود" };
     }
 
     const previousStatus = currentOrder.status;
 
-    // Optimization: If status hasn't changed, do nothing
     if (previousStatus === newStatus) {
+      return { success: true, message: `الحالة بالفعل: ${newStatus}` };
+    }
+
+    if (!isOrderStatus(previousStatus)) {
+      // Legacy row holding a value the machine doesn't know (e.g. the old
+      // English "pending"). Refuse rather than guess a transition.
       return {
-        success: true,
-        message: "Status is already set to " + newStatus,
+        success: false,
+        message: `حالة الطلب الحالية غير معروفة: ${previousStatus}`,
       };
     }
 
-    // 3. Update the Order Status
-    // We also set 'delivered_at' if the new status is 'delivered'
+    // The same forward-only machine is enforced by a BEFORE UPDATE trigger in
+    // the database. This check exists so the UI can fail with a readable
+    // message instead of surfacing a raw Postgres exception.
+    if (!canTransition(previousStatus, newStatus)) {
+      const allowed = getNextStatuses(previousStatus);
+      return {
+        success: false,
+        message: allowed.length
+          ? `لا يمكن تغيير الحالة من «${previousStatus}» إلى «${newStatus}». المسموح: ${allowed.join("، ")}`
+          : `«${previousStatus}» حالة نهائية ولا يمكن تغييرها`,
+      };
+    }
+
     const updateData: { status: string; delivered_at?: string } = {
       status: newStatus,
     };
@@ -52,49 +70,33 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
       updateData.delivered_at = new Date().toISOString();
     }
 
-    const { error: updateError } = await supabase
+    // .select().single() matters: without it an UPDATE blocked by RLS returns
+    // no error and zero rows, and this action would report a false success.
+    const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update(updateData)
       .eq("id", orderId)
-      .select()
+      .select("id")
       .single();
 
-    if (updateError) {
-      console.error("[OrderAction] Update Error:", updateError);
-      throw new Error("Failed to update order status: " + updateError.message);
+    if (updateError || !updated) {
+      console.error("[updateOrderStatus] Update failed:", updateError);
+      return {
+        success: false,
+        message: updateError?.message ?? "فشل تحديث حالة الطلب",
+      };
     }
 
-    // 4. Insert into History (The Audit Log)
-    const { error: historyError } = await supabase
-      .from("order_status_history")
-      .insert({
-        order_id: orderId,
-        previous_status: previousStatus,
-        new_status: newStatus,
-        // changed_by: We let Supabase handle this via default Auth context if RLS is set,
-        // OR you can explicitely fetch the admin ID here if needed.
-        // notes: 'Updated via Admin Dashboard'
-      });
-
-    if (historyError) {
-      console.error("History log failed:", historyError);
-      // We don't throw here because the main update succeeded,
-      // but in a strict banking app, we would rollback.
-    }
-
-    // 5. Revalidate Paths
-    // A. Clear the Admin Dashboard list so the dropdown updates
     revalidatePath("/admin/orders");
     revalidatePath("/admin/dashboard");
+    // The customer's own views render the same status, so they must be
+    // revalidated too or the buyer keeps seeing the stale step.
+    revalidatePath("/account/orders");
+    revalidatePath(`/account/orders/${orderId}`);
 
-    // B. Clear the specific Customer Order page (so they see the new progress bar instantly)
-    // Note: We don't know the exact URL unless we know the tracking token,
-    // but usually customer pages are dynamic or use the user's ID.
-    // If you use ISR for public tracking pages, revalidate them here.
-
-    return { success: true, message: "Status updated successfully" };
+    return { success: true, message: "تم تحديث حالة الطلب بنجاح" };
   } catch (error) {
-    console.error("Update Order Status Error:", error);
-    return { success: false, message: "Internal Server Error" };
+    console.error("[updateOrderStatus] Unexpected error:", error);
+    return { success: false, message: "حدث خطأ غير متوقع" };
   }
 }

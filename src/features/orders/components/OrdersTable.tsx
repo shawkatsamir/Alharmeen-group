@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getOrders } from "@/services/client/orders";
@@ -23,15 +25,23 @@ import { Order } from "@/services/server/orders";
 import OrderDetailModalWrapper from "./OrderDetailModalWrapper";
 import { useUpdateOrderStatus } from "@/features/orders/hooks/useUpdateOrderStatus";
 import { DebouncedSearchInput } from "@/features/search/components/DebouncedSearchInput";
-
-const STATUSES = [
-  "قيد الانتظار",
-  "جاري التجهيز",
-  "تم الشحن",
-  "تم التوصيل",
-  "ملغي",
-  "مرتجع",
-] as const;
+import {
+  ADMIN_STATUS_COLORS,
+  getNextStatuses,
+  isOrderStatus,
+  isTerminalStatus,
+  type OrderStatus,
+} from "@/features/orders/constants/order-status";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/AlertDialog";
 
 interface OrdersTableProps {
   stats?: {
@@ -47,6 +57,13 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
   const [activeTab, setActiveTab] = useState<
     "all" | "completed" | "pending" | "canceled" | "returned"
   >("all");
+  // Order awaiting a confirmed status change, held until the admin confirms.
+  const [pendingChange, setPendingChange] = useState<{
+    orderId: string;
+    orderNumber: string;
+    from: OrderStatus;
+    to: OrderStatus;
+  } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("");
   const { data, isLoading } = useQuery({
@@ -67,29 +84,21 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "تم التوصيل":
-        return "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
-      case "قيد الانتظار":
-        return "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400";
-      case "جاري التجهيز":
-        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
-      case "تم الشحن":
-        return "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400";
-      case "ملغي":
-        return "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400";
-      case "مرتجع":
-        return "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400";
-      default:
-        return "text-gray-600 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-400";
-    }
-  };
+  const getStatusColor = (status: string) =>
+    isOrderStatus(status)
+      ? ADMIN_STATUS_COLORS[status]
+      : "text-gray-600 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-400";
 
-  const { mutate: updateStatus } = useUpdateOrderStatus();
+  const { mutate: updateStatus, isPending: isUpdatingStatus } =
+    useUpdateOrderStatus();
 
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    updateStatus({ orderId, newStatus });
+  const confirmStatusChange = () => {
+    if (!pendingChange) return;
+    updateStatus({
+      orderId: pendingChange.orderId,
+      newStatus: pendingChange.to,
+    });
+    setPendingChange(null);
   };
 
   return (
@@ -280,25 +289,53 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Select
-                        defaultValue={order.status}
-                        onValueChange={(value) => {
-                          handleStatusChange(order.id, value);
-                        }}
-                      >
-                        <SelectTrigger
-                          className={`w-32.5 h-8 ${getStatusColor(order.status)}`}
+                      {!isOrderStatus(order.status) ||
+                      isTerminalStatus(order.status) ? (
+                        // Terminal (or unrecognised) statuses cannot move on,
+                        // so render a static badge rather than a dead dropdown.
+                        <span
+                          className={`inline-flex items-center justify-center w-33 h-8 rounded-md text-sm ${getStatusColor(order.status)}`}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
+                          {order.status}
+                        </span>
+                      ) : (
+                        <Select
+                          // Controlled by the server value: a failed mutation
+                          // must not leave the trigger showing the new status.
+                          value={order.status}
+                          disabled={isUpdatingStatus}
+                          onValueChange={(value) => {
+                            if (!isOrderStatus(value)) return;
+                            setPendingChange({
+                              orderId: order.id,
+                              orderNumber: order.order_number,
+                              from: order.status as OrderStatus,
+                              to: value,
+                            });
+                          }}
+                        >
+                          <SelectTrigger
+                            className={`w-33 h-8 ${getStatusColor(order.status)}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* The current status must stay in the list or the
+                                trigger renders empty — but it is not
+                                selectable. */}
+                            <SelectItem value={order.status} disabled>
+                              {order.status}
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            {/* Only legal forward transitions. The same machine
+                                is enforced by a DB trigger. */}
+                            {getNextStatuses(order.status).map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </td>
                     <td className="p-4">
                       <button
@@ -351,6 +388,42 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
       >
         {selectedOrder && <OrderDetailModalWrapper order={selectedOrder} />}
       </Dialog>
+
+      {/* Status changes are one-way and cannot be undone, so make the admin
+          confirm rather than acting on a single mis-click. */}
+      <AlertDialog
+        open={!!pendingChange}
+        onOpenChange={(open) => !open && setPendingChange(null)}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد تغيير حالة الطلب</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingChange && (
+                <>
+                  سيتم تغيير حالة الطلب{" "}
+                  <span className="font-semibold">
+                    {pendingChange.orderNumber}
+                  </span>{" "}
+                  من «{pendingChange.from}» إلى «{pendingChange.to}».
+                  <br />
+                  لا يمكن التراجع عن هذا الإجراء — حالات الطلب تتحرك في اتجاه
+                  واحد فقط.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className="bg-[#4EA674] hover:bg-[#3d8a5e] text-white"
+            >
+              تأكيد
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { ChevronLeft } from "lucide-react";
 import { OrderTracker } from "./OrderTracker";
 import { CancelOrderButton } from "./CancleOrderButton";
+import type { OrderStatus } from "../constants/order-status";
 
 interface OrderItem {
   id: string;
@@ -17,7 +18,9 @@ export interface Order {
   id: string;
   number: string;
   date: string;
-  status: "قيد الانتظار" | "جاري التجهيز" | "تم الشحن" | "تم التوصيل" | "ملغي";
+  // Previously a hand-written union missing مرتجع and تم التأكيد, which the
+  // orders page then defeated with an `as` cast.
+  status: OrderStatus;
   total: number;
   items: OrderItem[];
 }
@@ -25,15 +28,6 @@ export interface Order {
 interface OrderCardProps {
   order: Order;
 }
-
-// Minimal mapping if needed, but we try to use direct values now
-const statusMap: Record<string, string> = {
-  "قيد الانتظار": "قيد الانتظار",
-  "جاري التجهيز": "جاري التجهيز",
-  "تم الشحن": "تم الشحن",
-  "تم التوصيل": "تم التوصيل",
-  ملغي: "ملغي",
-};
 
 export function OrderCard({ order }: OrderCardProps) {
   const isCancelled = order.status === "ملغي";

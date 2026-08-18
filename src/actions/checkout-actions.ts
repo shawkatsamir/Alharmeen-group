@@ -97,13 +97,9 @@ export async function createOrder(
     return { success: false, error: "فشل في إضافة المنتجات للطلب" };
   }
 
-  // 5. Track Status
-  await supabase.from("order_status_history").insert({
-    order_id: order.id,
-    status: "قيد الانتظار",
-    notes: "Order placed by customer",
-    changed_by: user?.id || null,
-  });
+  // 5. Status history is written by the `log_status_change_trigger` on
+  // `orders`, which now fires on INSERT as well as UPDATE. Inserting here too
+  // would duplicate the first step (and RLS blocks this client anyway).
 
   return { success: true, orderId: order.id };
 }

@@ -1,10 +1,14 @@
 import { createClient } from "@/lib/supabase/client";
+import {
+  ADMIN_TAB_STATUSES,
+  type AdminOrderTab,
+} from "@/features/orders/constants/order-status";
 import { Order } from "../server/orders";
 
 export interface GetOrdersOptions {
   page?: number;
   limit?: number;
-  status?: string;
+  status?: AdminOrderTab;
   search?: string;
 }
 
@@ -27,15 +31,9 @@ export async function getOrders(options?: GetOrdersOptions) {
     .order("created_at", { ascending: false });
 
   if (options?.status && options.status !== "all") {
-    if (options.status === "pending") {
-      query = query.in("status", ["قيد الانتظار", "جاري التجهيز"]);
-    } else if (options.status === "completed") {
-      query = query.eq("status", "تم التوصيل");
-    } else if (options.status === "canceled") {
-      query = query.eq("status", "ملغي");
-    } else if (options.status === "returned") {
-      query = query.eq("status", "مرتجع");
-    }
+    // Tab -> status groups come from the shared registry so no status can fall
+    // through every tab (تم الشحن used to be invisible in the admin list).
+    query = query.in("status", [...ADMIN_TAB_STATUSES[options.status]]);
   }
 
   if (options?.search) {
@@ -56,24 +54,19 @@ export async function getOrders(options?: GetOrdersOptions) {
 export async function getOrderStats() {
   const supabase = createClient();
 
+  // Same groups as the list query above — counts and rows must agree.
+  const countByTab = (tab: Exclude<AdminOrderTab, "all">) =>
+    supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .in("status", [...ADMIN_TAB_STATUSES[tab]]);
+
   const [total, pending, completed, canceled, returned] = await Promise.all([
     supabase.from("orders").select("*", { count: "exact", head: true }),
-    supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["قيد الانتظار", "جاري التجهيز"]),
-    supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "تم التوصيل"),
-    supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "ملغي"),
-    supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "مرتجع"),
+    countByTab("pending"),
+    countByTab("completed"),
+    countByTab("canceled"),
+    countByTab("returned"),
   ]);
 
   return {

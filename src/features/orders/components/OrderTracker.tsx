@@ -1,33 +1,13 @@
-import {
-  ChevronsRight,
-  Package,
-  Truck,
-  CheckCircle2,
-  XCircle,
-  Clock,
-} from "lucide-react";
+import { RotateCcw, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HAPPY_PATH, STATUS_LABELS } from "../constants/order-status";
+import { STATUS_ICONS } from "../constants/order-status-icons";
 
-// 1. Define the steps sequence
-const STEPS = [
-  { id: "قيد الانتظار", label: "تم الطلب" },
-  { id: "جاري التجهيز", label: "جاري التجهيز" },
-  { id: "تم الشحن", label: "تم الشحن" },
-  { id: "تم التوصيل", label: "تم التوصيل" },
-];
+// The tracker shows the happy path only; terminal branches short-circuit below.
+const STEPS = HAPPY_PATH.map((id) => ({ id, label: STATUS_LABELS[id] }));
 
 export function OrderTracker({ currentStatus }: { currentStatus: string }) {
-  const getCurrentStepIndex = () => {
-    if (currentStatus === "mlghy" || currentStatus === "ملغي") return -1;
-
-    // Find index of current status
-    const index = STEPS.findIndex((s) => s.id === currentStatus);
-    return index === -1 ? 0 : index;
-  };
-
-  const currentStepIndex = getCurrentStepIndex();
-
-  if (currentStatus === "mlghy" || currentStatus === "ملغي") {
+  if (currentStatus === "ملغي") {
     return (
       <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
         <XCircle className="w-5 h-5" />
@@ -35,6 +15,19 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
       </div>
     );
   }
+
+  if (currentStatus === "مرتجع") {
+    return (
+      <div className="bg-amber-50 text-amber-700 p-4 rounded-lg flex items-center gap-2">
+        <RotateCcw className="w-5 h-5" />
+        <span className="font-semibold">تم إرجاع الطلب</span>
+      </div>
+    );
+  }
+
+  // An unrecognised status shows step 1 rather than a broken bar.
+  const foundIndex = STEPS.findIndex((s) => s.id === currentStatus);
+  const currentStepIndex = foundIndex === -1 ? 0 : foundIndex;
 
   return (
     <div className="w-full py-6" dir="rtl">
@@ -52,7 +45,6 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
         {/* Steps Bubbles */}
         {STEPS.map((step, index) => {
           const isCompleted = index <= currentStepIndex;
-          const isCurrent = index === currentStepIndex;
 
           return (
             <div
@@ -68,15 +60,12 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
                 )}
               >
                 {isCompleted ? (
-                  index === 3 ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : index === 2 ? (
-                    <Truck className="w-4 h-4" />
-                  ) : index === 1 ? (
-                    <Package className="w-4 h-4" />
-                  ) : (
-                    <Clock className="w-4 h-4" />
-                  )
+                  (() => {
+                    // Icon comes from the status registry — hardcoded indices
+                    // silently broke when a step was added to the path.
+                    const Icon = STATUS_ICONS[step.id];
+                    return <Icon className="w-4 h-4" />;
+                  })()
                 ) : (
                   <span>{index + 1}</span>
                 )}

@@ -21,6 +21,11 @@ export function createAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      // No session to keep on the server; without this the client starts a
+      // refresh timer that keeps the process alive during build tasks.
+      auth: { autoRefreshToken: false, persistSession: false },
+    }
   );
 }

@@ -1,79 +1,76 @@
 "use server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js"; // Admin Client library
 import { revalidatePath } from "next/cache";
 
+import {
+  canCustomerCancel,
+  CUSTOMER_CANCELABLE_STATUSES,
+} from "../constants/order-status";
+
+/**
+ * Customer-initiated cancellation.
+ *
+ * Allowed until the order ships; after that the correction path is مرتجع.
+ * The service-role client is needed because `orders` has no customer UPDATE
+ * policy — every ownership and business rule is therefore checked here, above,
+ * before that client is used.
+ *
+ * No order_status_history write: `log_status_change_trigger` handles it.
+ */
 export async function cancelMyOrder(orderId: string) {
   const supabase = await createClient();
   const user = (await supabase.auth.getUser()).data.user;
 
-  if (!user) return { success: false, message: "Unauthorized" };
+  if (!user) return { success: false, message: "يجب تسجيل الدخول أولاً" };
 
-  // 1. Fetch current status to ensure it's safe to cancel
   const { data: order, error: fetchError } = await supabase
     .from("orders")
     .select("status")
     .eq("id", orderId)
-    .eq("user_id", user.id) // Ensure ownership
+    .eq("user_id", user.id) // ownership
     .single();
 
   if (fetchError || !order) {
-    return { success: false, message: "Order not found" };
+    return { success: false, message: "الطلب غير موجود" };
   }
 
-  // 2. The Business Rule Check
-  // Statuses are stored in Arabic in the database based on OrderCard.tsx
-  const CANCELABLE_STATUSES = [
-    "pending",
-    "confirmed",
-    "قيد الانتظار",
-    "تم التأكيد",
-  ];
-
-  if (!CANCELABLE_STATUSES.includes(order.status)) {
+  if (!canCustomerCancel(order.status)) {
     return {
       success: false,
-      message:
-        "Cannot cancel order because it is already being processed or shipped.",
+      message: `لا يمكن إلغاء الطلب في حالة «${order.status}». الإلغاء متاح فقط قبل الشحن (${CUSTOMER_CANCELABLE_STATUSES.join("، ")}).`,
     };
   }
 
-  // This client has "God Mode" permissions. We only use it after passing all checks above.
-  const supabaseAdmin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    },
-  );
-
-  // 3. Perform the Cancellation
-  // We use a transaction-like approach: Update Status + Log History
-  const { error: updateError } = await supabaseAdmin
-    .from("orders")
-    .update({ status: "ملغي" })
-    .eq("id", orderId);
-
-  if (updateError) {
-    return { success: false, message: "Failed to cancel order" };
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // createAdminClient() would silently fall back to the publishable key,
+    // which RLS then blocks — surface the misconfiguration instead.
+    console.error("[cancelMyOrder] SUPABASE_SERVICE_ROLE_KEY is not set");
+    return { success: false, message: "تعذر إلغاء الطلب حالياً" };
   }
 
-  // 4. Log to History
-  // Since we don't have a specific 'admin' here, we can leave 'changed_by' null
-  // or your database trigger will handle it.
-  await supabaseAdmin.from("order_status_history").insert({
-    order_id: orderId,
-    previous_status: order.status,
-    new_status: "ملغي",
-    // notes: 'Cancelled by customer'
-  });
+  const supabaseAdmin = createAdminClient();
 
-  // 5. Refresh UI
+  // .eq("user_id") is redundant given the check above, but this client bypasses
+  // RLS entirely — defense in depth is cheap here. .select().single() ensures a
+  // no-op update can't be reported as success.
+  const { data: cancelled, error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({ status: "ملغي" })
+    .eq("id", orderId)
+    .eq("user_id", user.id)
+    .select("id")
+    .single();
+
+  if (updateError || !cancelled) {
+    console.error("[cancelMyOrder] Update failed:", updateError);
+    return { success: false, message: "فشل إلغاء الطلب" };
+  }
+
   revalidatePath("/account/orders");
+  revalidatePath(`/account/orders/${orderId}`);
+  revalidatePath("/admin/orders");
 
-  return { success: true, message: "Order cancelled successfully" };
+  return { success: true, message: "تم إلغاء الطلب بنجاح" };
 }
