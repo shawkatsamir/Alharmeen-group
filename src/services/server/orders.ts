@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { OrderStatus } from "@/features/orders/constants/order-status";
 
 export interface OrderItem {
   id: string;
@@ -12,13 +13,16 @@ export interface OrderItem {
   brand_name?: string;
 }
 
+/** Mirrors the real `order_status_history` columns. There is no
+ * `previous_status`/`new_status` pair — the previous status is simply the
+ * preceding row. */
 export interface OrderStatusHistory {
   id: string;
   order_id: string;
-  previous_status: string;
-  new_status: string;
+  status: OrderStatus;
+  changed_by: string | null;
   created_at: string;
-  notes?: string;
+  notes?: string | null;
 }
 
 export interface Order {
@@ -35,13 +39,7 @@ export interface Order {
   shipping_cost: number;
   discount_amount: number;
   total: number;
-  status:
-    | "قيد الانتظار"
-    | "جاري التجهيز"
-    | "تم الشحن"
-    | "تم التوصيل"
-    | "ملغي"
-    | "مرتجع";
+  status: OrderStatus;
   payment_method: string;
   payment_status: string;
   created_at: string;
@@ -97,12 +95,13 @@ export async function getOrderById(orderId: string) {
     return null;
   }
 
-  // Sort history by creation date descending (newest first)
+  // Oldest first: the timeline renders top-down as a progression, so newest
+  // first would read backwards.
   const order = data as Order;
   if (order.history) {
     order.history.sort(
       (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
   }
 

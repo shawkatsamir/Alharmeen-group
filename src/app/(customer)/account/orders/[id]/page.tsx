@@ -1,52 +1,49 @@
 import {
-  Package,
-  Truck,
-  CheckCircle2,
   Clock,
   MapPin,
   Calendar,
   CreditCard,
   ChevronRight,
-  XCircle,
-  RotateCcw,
+  Package,
 } from "lucide-react";
-import { getOrderById, Order } from "@/services/server/orders";
+import {
+  isOrderStatus,
+  STATUS_LABELS,
+} from "@/features/orders/constants/order-status";
+import {
+  STATUS_ICONS,
+  STATUS_ICON_COLORS,
+} from "@/features/orders/constants/order-status-icons";
+import { getOrderById } from "@/services/server/orders";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Img } from "@/shared/components/ui/Image";
 import { OrderTimeline } from "@/features/orders/components/OrderTimeline";
-import { Button } from "@/shared/components/ui/Button";
+import { CancelOrderButton } from "@/features/orders/components/CancleOrderButton";
 
-// Helper to map status to icon and label
+// Maps a status to its icon/label/colour using the shared status registry, so
+// this page can never drift from the state machine.
 const getStatusConfig = (status: string) => {
-  switch (status) {
-    case "قيد الانتظار":
-      return { icon: Clock, label: "تم الطلب", color: "text-orange-500" };
-    case "جاري التجهيز":
-      return { icon: Package, label: "جاري التجهيز", color: "text-blue-500" };
-    case "تم الشحن":
-      return { icon: Truck, label: "تم الشحن", color: "text-purple-500" };
-    case "تم التوصيل":
-      return {
-        icon: CheckCircle2,
-        label: "تم التوصيل",
-        color: "text-green-500",
-      };
-    case "ملغي":
-      return { icon: XCircle, label: "ملغي", color: "text-red-500" };
-    case "مرتجع":
-      return { icon: RotateCcw, label: "مرتجع", color: "text-red-500" };
-    default:
-      return { icon: Clock, label: status, color: "text-gray-500" };
+  if (!isOrderStatus(status)) {
+    return { icon: Clock, label: status, color: "text-gray-500" };
   }
+  return {
+    icon: STATUS_ICONS[status],
+    label: STATUS_LABELS[status],
+    color: STATUS_ICON_COLORS[status],
+  };
 };
 
 export default async function OrderDetailsPage({
   params,
 }: {
-  params: { id: string };
+  // Next 16: params is a Promise. Reading `.id` off it directly yields
+  // undefined, which sent every visit to this page to notFound().
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,7 +53,7 @@ export default async function OrderDetailsPage({
     redirect("/auth/login");
   }
 
-  const order = await getOrderById(params.id);
+  const order = await getOrderById(id);
 
   if (!order || order.user_id !== user.id) {
     notFound();
@@ -65,7 +62,7 @@ export default async function OrderDetailsPage({
   // Construct Timeline Steps from History
   const historySteps =
     order.history?.map((entry) => {
-      const config = getStatusConfig(entry.new_status);
+      const config = getStatusConfig(entry.status);
       return {
         id: entry.id,
         label: config.label,
@@ -76,7 +73,7 @@ export default async function OrderDetailsPage({
           hour: "2-digit",
           minute: "2-digit",
         }),
-        description: entry.notes,
+        description: entry.notes ?? undefined,
         status: "completed" as const, // History items are always completed events
         icon: config.icon,
       };
@@ -207,6 +204,11 @@ export default async function OrderDetailsPage({
                 </p>
               </div>
             )}
+
+            {/* Renders itself only while the order is still cancellable. */}
+            <div className="mt-6 flex justify-center">
+              <CancelOrderButton orderId={order.id} status={order.status} />
+            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
