@@ -1,14 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
-import { Database } from "@/shared/types/database.types";
+import type { Brand, Category, Product } from "@/features/products/types";
 
-type Product = Database["public"]["Tables"]["products"]["Row"] & {
-  brand?: Database["public"]["Tables"]["brands"]["Row"];
-  category?: Database["public"]["Tables"]["categories"]["Row"];
-  images?: Database["public"]["Tables"]["product_images"]["Row"][];
-};
-
-type Brand = Database["public"]["Tables"]["brands"]["Row"];
-type Category = Database["public"]["Tables"]["categories"]["Row"];
+export type { Product };
 
 export async function getProducts(options?: {
   limit?: number;

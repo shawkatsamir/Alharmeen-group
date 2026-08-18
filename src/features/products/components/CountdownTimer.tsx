@@ -72,7 +72,7 @@ function CountdownTimerComponent({
 
   if (timeLeft.expired) {
     return (
-      <span className={`text-red-500 text-xs font-medium ${className}`}>
+      <span className={`text-sale text-xs font-medium ${className}`}>
         انتهى العرض
       </span>
     );
@@ -81,27 +81,28 @@ function CountdownTimerComponent({
   // Format single digits with leading zero
   const pad = (n: number) => n.toString().padStart(2, "0");
 
+  const units = [
+    { value: timeLeft.days, label: "ي" },
+    { value: timeLeft.hours, label: "س" },
+    { value: timeLeft.minutes, label: "د" },
+    { value: timeLeft.seconds, label: "ث" },
+  ];
+
   return (
-    <div className={`flex items-center gap-1 text-xs ${className}`}>
-      <div className="flex items-center gap-0.5 bg-red-500 text-white px-1.5 py-0.5 rounded">
-        <span className="font-mono font-bold">{pad(timeLeft.days)}</span>
-        <span className="text-[10px] opacity-80">ي</span>
-      </div>
-      <span className="text-red-500 font-bold">:</span>
-      <div className="flex items-center gap-0.5 bg-red-500 text-white px-1.5 py-0.5 rounded">
-        <span className="font-mono font-bold">{pad(timeLeft.hours)}</span>
-        <span className="text-[10px] opacity-80">س</span>
-      </div>
-      <span className="text-red-500 font-bold">:</span>
-      <div className="flex items-center gap-0.5 bg-red-500 text-white px-1.5 py-0.5 rounded">
-        <span className="font-mono font-bold">{pad(timeLeft.minutes)}</span>
-        <span className="text-[10px] opacity-80">د</span>
-      </div>
-      <span className="text-red-500 font-bold">:</span>
-      <div className="flex items-center gap-0.5 bg-red-500 text-white px-1.5 py-0.5 rounded">
-        <span className="font-mono font-bold">{pad(timeLeft.seconds)}</span>
-        <span className="text-[10px] opacity-80">ث</span>
-      </div>
+    <div
+      className={`flex items-center gap-0.5 text-xs ${className}`}
+      // LTR so the largest unit stays on the left, as clocks are read.
+      dir="ltr"
+    >
+      {units.map((unit, i) => (
+        <div key={unit.label} className="flex items-center gap-0.5">
+          {i > 0 && <span className="font-bold text-sale">:</span>}
+          <span className="flex items-center gap-0.5 rounded bg-sale px-1 py-0.5 text-sale-foreground">
+            <span className="font-bold tabular-nums">{pad(unit.value)}</span>
+            <span className="text-[10px] opacity-80">{unit.label}</span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

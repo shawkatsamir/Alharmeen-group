@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
-  getProductBySlug,
   getAllProductSlugs,
+  getProductBySlug,
+  getRelatedProducts,
 } from "@/services/server/products";
-import ProductClient from "./_components/ProductClient";
+import { ProductDetail } from "@/features/products/components/ProductDetail";
+import ProductSlider from "@/features/products/components/ProductSlider";
+import { toPlainTextExcerpt } from "@/features/products/lib/rich-content";
 
 export const revalidate = 3600;
 
@@ -29,22 +32,31 @@ export async function generateMetadata({
     return { title: "المنتج غير موجود" };
   }
 
+  const name = product.name_ar.trim();
   const canonicalUrl = `https://alharmaingroup.com/product/${slug}`;
   const primaryImage =
     product.images?.find((img) => img.is_primary)?.image_url ??
     product.images?.[0]?.image_url;
 
+  /*
+   * `description_ar` is 3,000-6,000 characters of HTML, which made an unusable
+   * meta description when passed through raw. Prefer the curated
+   * `meta_description_ar`, else a plain-text excerpt of the description.
+   */
+  const description =
+    product.meta_description_ar?.trim() ||
+    toPlainTextExcerpt(product.description_ar, 160) ||
+    `تسوق ${name} من الحرمين جروب بأفضل الأسعار في مصر`;
+
   return {
-    title: product.name_ar,
-    description:
-      product.description_ar ??
-      `تسوق ${product.name_ar} من الحرمين جروب بأفضل الأسعار في مصر`,
+    title: product.meta_title_ar?.trim() || name,
+    description,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: product.name_ar,
-      description: product.description_ar ?? undefined,
+      title: name,
+      description,
       url: canonicalUrl,
       type: "website",
       images: primaryImage ? [{ url: primaryImage }] : undefined,
@@ -60,11 +72,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const related = await getRelatedProducts(product, 10);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name_ar,
-    description: product.description_ar,
+    name: product.name_ar.trim(),
+    // Structured data wants plain text, not the raw HTML blob.
+    description:
+      product.meta_description_ar?.trim() ||
+      toPlainTextExcerpt(product.description_ar, 300),
     sku: product.sku,
     url: `https://alharmaingroup.com/product/${slug}`,
     image: product.images?.map((img) => img.image_url) ?? [],
@@ -82,13 +99,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
       url: `https://alharmaingroup.com/product/${slug}`,
     },
     additionalProperty: product.specifications
-      ? Object.entries(
-          product.specifications as Record<string, string>,
-        ).map(([key, value]) => ({
-          "@type": "PropertyValue",
-          name: key,
-          value: value,
-        }))
+      ? Object.entries(product.specifications as Record<string, string>).map(
+          ([key, value]) => ({
+            "@type": "PropertyValue",
+            name: key,
+            value: value,
+          }),
+        )
       : undefined,
   };
 
@@ -98,7 +115,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductClient product={product} />
+      <ProductDetail
+        product={product}
+        relatedSlot={
+          related.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border border-border">
+              <ProductSlider title="منتجات مشابهة" products={related} />
+            </div>
+          ) : null
+        }
+      />
     </>
   );
 }

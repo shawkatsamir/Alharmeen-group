@@ -21,15 +21,25 @@ export default function CompareBar() {
   const compareUrl = `/compare?products=${ids.join(",")}`;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white shadow-xl border rounded-full px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-5">
-      <span className="font-medium text-sm">تم اختيار {ids.length} منتجات</span>
+    // `bottom-safe-nav` clears the h-16 MobileBottomNav (both are z-50, so the
+    // pill used to sit on top of it); `lg:bottom-6` drops back down where the
+    // bottom nav is hidden.
+    <div className="fixed bottom-safe-nav left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-surface-raised px-5 py-3 shadow-xl animate-in slide-in-from-bottom-5 lg:bottom-6">
+      <span className="text-sm font-medium whitespace-nowrap">
+        تم اختيار {ids.length}{" "}
+        {ids.length === 1 ? "منتج" : ids.length === 2 ? "منتجين" : "منتجات"}
+      </span>
 
       <Button asChild size="sm" variant="default">
         <Link href={compareUrl}>قارن الآن</Link>
       </Button>
 
-      <button onClick={clear} className="text-gray-400 hover:text-red-500">
-        <X className="w-4 h-4" />
+      <button
+        onClick={clear}
+        aria-label="إلغاء المقارنة"
+        className="text-muted-foreground transition-colors hover:text-sale"
+      >
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

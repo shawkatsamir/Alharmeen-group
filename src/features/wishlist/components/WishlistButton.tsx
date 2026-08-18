@@ -26,15 +26,17 @@ export default function WishlistButton({ productId }: WishlistButtonProps) {
 
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="icon"
       onClick={handleToggle}
       disabled={isLoading}
-      className="hover:text-red-500"
+      aria-pressed={isWishlisted}
+      aria-label={isWishlisted ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+      className="rounded-full shadow-sm hover:text-sale"
     >
       <Heart
-        className={`w-6 h-6 transition-colors ${
-          isWishlisted ? "fill-red-500 text-red-500" : "text-gray-500"
+        className={`w-4 h-4 transition-colors ${
+          isWishlisted ? "fill-sale text-sale" : "text-muted-foreground"
         }`}
       />
     </Button>

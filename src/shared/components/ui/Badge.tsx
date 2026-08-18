@@ -17,6 +17,13 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        // Discounts only — kept distinct from `accent` so deals keep their signal.
+        sale: "border-transparent bg-sale text-sale-foreground",
+        saleSoft: "border-transparent bg-sale-soft text-sale",
+        accent: "border-transparent bg-accent text-accent-foreground",
+        accentSoft: "border-transparent bg-accent-soft text-accent-foreground",
+        success: "border-transparent bg-success text-success-foreground",
+        successSoft: "border-transparent bg-success-soft text-success",
       },
     },
     defaultVariants: {

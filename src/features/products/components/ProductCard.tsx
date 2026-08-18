@@ -5,14 +5,13 @@ import { useEffect, useState } from "react";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Img } from "@/shared/components/ui/Image";
-import { ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Product } from "../types";
 import { toast } from "sonner";
 import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "./CompareToggle";
-import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Product;
@@ -52,6 +51,14 @@ export function ProductCard({
     return () => clearTimeout(timer);
   }, []);
 
+  const outOfStock =
+    product.stock_quantity !== undefined && product.stock_quantity <= 0;
+  const lowStock =
+    !outOfStock &&
+    product.stock_quantity !== undefined &&
+    product.stock_quantity > 0 &&
+    product.stock_quantity <= 2;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -74,120 +81,145 @@ export function ProductCard({
     }
   };
 
-  const router = useRouter();
-  const handleCardClick = () => {
-    router.push(`/product/${product.slug}`);
-  };
-
   return (
-    <div
-      onClick={handleCardClick}
-      className="group rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white h-full flex flex-col cursor-pointer"
-    >
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
-        {/* Main Image */}
+    /*
+     * `group/card` is named on purpose. A bare `group` would also be matched by
+     * any ancestor that carries `.group` (Tailwind's group-* compiles to a
+     * descendant selector), which is what made hovering a rail light up every
+     * sibling card. Naming it makes this card immune to ancestor hover state.
+     *
+     * `relative hover:z-10` keeps the hover shadow above the next sibling's
+     * opaque background instead of being painted underneath it.
+     */
+    <div className="group/card relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface-raised transition-[box-shadow,border-color,transform] duration-200 hover:z-10 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_8px_28px_-8px_oklch(0.42_0.128_255/0.25)] focus-within:z-10">
+      <div className="relative aspect-square overflow-hidden bg-white">
+        {/*
+         * No link here on purpose — the title below carries a stretched
+         * `after:inset-0` overlay that makes the whole card clickable with a
+         * single, properly-labelled link.
+         */}
         <Img
           src={product.images?.[0]?.image_url || "/placeholder.svg"}
-          alt={product.name_ar}
+          alt={product.images?.[0]?.alt_text_ar || product.name_ar}
           fill
           priority={priority}
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 260px"
+          className="object-contain p-4 transition-transform duration-300 group-hover/card:scale-[1.04]"
         />
 
         {/* Badges */}
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+        <div className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-1.5">
+          {hasDiscount && <Badge variant="sale">خصم {discountPercentage}%</Badge>}
           {product.is_new && !hasDiscount && (
-            <Badge variant="default">جديد</Badge>
+            <Badge variant="accent">جديد</Badge>
           )}
-          {hasDiscount && (
-            <Badge variant="destructive">وفر {discountPercentage}%</Badge>
-          )}
+          {outOfStock && <Badge variant="secondary">غير متوفر</Badge>}
         </div>
 
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-
-        <div className="absolute top-3 left-3 z-10 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2">
+        {/* Quick actions. Always visible on touch, hover-revealed on desktop. */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2 opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover/card:opacity-100 lg:group-focus-within/card:opacity-100">
           <WishlistButton productId={product.id} isWishlisted={isWishlisted} />
           <CompareToggle productId={product.id} />
         </div>
       </div>
 
-      <div className="p-4 flex flex-col grow">
-        <h3 className="font-semibold mb-2 line-clamp-2 min-h-12">
-          {product.name_ar}
+      <div className="flex grow flex-col p-4">
+        {product.brand?.name_ar && (
+          <span className="mb-1 text-xs font-medium text-muted-foreground">
+            {product.brand.name_ar}
+          </span>
+        )}
+
+        <h3 className="mb-2 min-h-10 text-sm leading-snug font-semibold sm:text-[0.95rem]">
+          <Link
+            href={`/product/${product.slug}`}
+            className="line-clamp-2 after:absolute after:inset-0 after:z-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {product.name_ar}
+          </Link>
         </h3>
-        <div className="flex flex-col gap-1 mb-3 mt-auto">
-          <div className="flex items-center gap-2">
+
+        <div className="mt-auto flex flex-col gap-1">
+          <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-lg font-bold text-primary">
-              {product.price.toLocaleString()} ج.م
+              {product.price.toLocaleString("en-EG")} ج.م
             </span>
             {hasDiscount && (
-              <span className="text-sm text-gray-400 line-through">
-                {product.old_price!.toLocaleString()} ج.م
+              <span className="text-sm text-muted-foreground line-through">
+                {product.old_price!.toLocaleString("en-EG")} ج.م
               </span>
             )}
           </div>
-          {hasTimedOffer && <CountdownTimer endDate={product.sale_end_date!} />}
+
+          {/*
+           * Fixed-height slots. These rows are conditional, and cards sit in a
+           * `align-items: stretch` flex row, so letting them collapse made one
+           * card's countdown/low-stock line resize every sibling in the rail —
+           * and the countdown is client-only, so siblings reflowed on hydration.
+           */}
+          <div className="h-5">
+            {hasTimedOffer && (
+              <CountdownTimer endDate={product.sale_end_date!} />
+            )}
+          </div>
+          <div className="h-4">
+            {lowStock && (
+              <span className="text-xs font-bold text-sale">
+                {product.stock_quantity === 1
+                  ? "متبقي قطعة واحدة فقط"
+                  : "متبقي قطعتين فقط"}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          {product.stock_quantity === 2 && (
-            <span className="text-red-500 text-xs font-bold w-full text-center">
-              متبقي قطعتين فقط
-            </span>
-          )}
-          {product.stock_quantity !== undefined &&
-          product.stock_quantity <= 0 ? (
-            <Button
-              className="w-full bg-gray-300 pointer-events-none text-gray-500"
-              size="lg"
-              disabled
-            >
-              غير متوفر حاليا
+        {/* z-10 lifts the controls above the card-wide link overlay. */}
+        <div className="relative z-10 mt-3">
+          {outOfStock ? (
+            <Button className="w-full" size="lg" variant="secondary" disabled>
+              غير متوفر حالياً
             </Button>
           ) : mounted && quantity > 0 ? (
-            <div className="flex items-center gap-3 w-full">
-              <div className="flex items-center justify-between w-full border rounded-md h-11 px-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleUpdateQuantity(quantity - 1);
-                  }}
-                >
-                  -
-                </Button>
-                <span className="font-medium">{quantity}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-black"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    // Optionally check stock limit here too
-                    if (
-                      product.stock_quantity !== undefined &&
-                      quantity >= product.stock_quantity
-                    ) {
-                      toast.error("عفوا، الكمية المطلوبة غير متوفرة");
-                      return;
-                    }
-                    handleUpdateQuantity(quantity + 1);
-                  }}
-                >
-                  +
-                </Button>
-              </div>
+            <div className="flex h-11 w-full items-center justify-between rounded-md border border-border px-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="إنقاص الكمية"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleUpdateQuantity(quantity - 1);
+                }}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold tabular-nums">{quantity}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="زيادة الكمية"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (
+                    product.stock_quantity !== undefined &&
+                    quantity >= product.stock_quantity
+                  ) {
+                    toast.error("عفواً، الكمية المطلوبة غير متوفرة");
+                    return;
+                  }
+                  handleUpdateQuantity(quantity + 1);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <Button className="w-full" size="lg" onClick={handleAddToCart}>
-              <ShoppingCart className="w-4 h-4 ml-2" />
-              اضف للسلة
+              <ShoppingCart className="ml-2 h-4 w-4" />
+              أضف للسلة
             </Button>
           )}
         </div>
