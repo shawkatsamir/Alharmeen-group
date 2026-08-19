@@ -6,8 +6,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* Cairo is loaded in app/layout.tsx as a CSS variable font. */
+  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -37,6 +40,22 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Commerce semantics that shadcn's default set does not provide. */
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-hover: var(--accent-hover);
+  --color-sale: var(--sale);
+  --color-sale-foreground: var(--sale-foreground);
+  --color-sale-soft: var(--sale-soft);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -48,71 +67,135 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+
+  /*
+   * Height of the sticky header. Anything that sticks below it (filter
+   * sidebar, product anchor rail, buy box) offsets by this instead of
+   * hardcoding a guess — `lg:top-24` used to assume 96px, which was wrong.
+   * Mobile: py-3 + 40px logo. Desktop adds the category nav row.
+   */
+  --header-h: 4rem;
+
+  /* Page + cards --------------------------------------------------------- */
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.205 0.028 265);
+  --surface: oklch(0.975 0.004 250);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.955 0.006 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.205 0.028 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(25.584% 0.04334 268.077);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --popover-foreground: oklch(0.205 0.028 265);
+
+  /* Primary — deep "authorized dealer" blue ------------------------------ */
+  --primary: oklch(0.42 0.128 255);
+  --primary-foreground: oklch(0.99 0.003 250);
+  --primary-hover: oklch(0.36 0.124 255);
+  --primary-soft: oklch(0.955 0.021 254);
+
+  /* Accent — amber. Commerce accent: CTAs, prices, deal chips. ------------ */
+  --accent: oklch(0.79 0.148 76);
+  --accent-foreground: oklch(0.245 0.045 70);
+  --accent-hover: oklch(0.73 0.152 70);
+  --accent-soft: oklch(0.965 0.036 84);
+
+  /* Sale — reserved for discounts only, must stay distinct from accent. --- */
+  --sale: oklch(0.575 0.213 27.5);
+  --sale-foreground: oklch(0.99 0.003 250);
+  --sale-soft: oklch(0.96 0.026 25);
+
+  /* Success — stock / confirmation --------------------------------------- */
+  --success: oklch(0.545 0.118 162);
+  --success-foreground: oklch(0.99 0.003 250);
+  --success-soft: oklch(0.955 0.032 165);
+
+  --secondary: oklch(0.962 0.007 250);
+  --secondary-foreground: oklch(0.275 0.035 265);
+  --muted: oklch(0.962 0.007 250);
+  --muted-foreground: oklch(0.545 0.026 258);
+
+  --destructive: oklch(0.575 0.213 27.5);
+
+  --border: oklch(0.918 0.008 253);
+  --input: oklch(0.918 0.008 253);
+  --ring: oklch(0.42 0.128 255);
+
+  --chart-1: oklch(0.42 0.128 255);
+  --chart-2: oklch(0.79 0.148 76);
+  --chart-3: oklch(0.545 0.118 162);
+  --chart-4: oklch(0.575 0.213 27.5);
+  --chart-5: oklch(0.62 0.09 258);
+
+  --sidebar: oklch(0.99 0.002 250);
+  --sidebar-foreground: oklch(0.205 0.028 265);
+  --sidebar-primary: oklch(0.42 0.128 255);
+  --sidebar-primary-foreground: oklch(0.99 0.003 250);
+  --sidebar-accent: oklch(0.955 0.021 254);
+  --sidebar-accent-foreground: oklch(0.36 0.124 255);
+  --sidebar-border: oklch(0.918 0.008 253);
+  --sidebar-ring: oklch(0.42 0.128 255);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.278 0.033 256.848);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.278 0.033 256.848);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: oklch(0.185 0.026 265);
+  --foreground: oklch(0.975 0.004 250);
+  --surface: oklch(0.185 0.026 265);
+  --surface-raised: oklch(0.245 0.03 263);
+  --surface-sunken: oklch(0.155 0.024 265);
+  --card: oklch(0.245 0.03 263);
+  --card-foreground: oklch(0.975 0.004 250);
+  --popover: oklch(0.245 0.03 263);
+  --popover-foreground: oklch(0.975 0.004 250);
+
+  --primary: oklch(0.68 0.132 250);
+  --primary-foreground: oklch(0.165 0.028 265);
+  --primary-hover: oklch(0.75 0.12 250);
+  --primary-soft: oklch(0.3 0.052 256);
+
+  --accent: oklch(0.79 0.148 76);
+  --accent-foreground: oklch(0.205 0.04 70);
+  --accent-hover: oklch(0.845 0.132 82);
+  --accent-soft: oklch(0.315 0.058 72);
+
+  --sale: oklch(0.665 0.196 25);
+  --sale-foreground: oklch(0.165 0.028 265);
+  --sale-soft: oklch(0.305 0.078 25);
+
+  --success: oklch(0.685 0.132 163);
+  --success-foreground: oklch(0.165 0.028 265);
+  --success-soft: oklch(0.295 0.058 165);
+
+  --secondary: oklch(0.285 0.033 262);
+  --secondary-foreground: oklch(0.975 0.004 250);
+  --muted: oklch(0.285 0.033 262);
+  --muted-foreground: oklch(0.715 0.026 258);
+
+  --destructive: oklch(0.665 0.196 25);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.68 0.132 250);
+
+  --chart-1: oklch(0.68 0.132 250);
+  --chart-2: oklch(0.79 0.148 76);
+  --chart-3: oklch(0.685 0.132 163);
+  --chart-4: oklch(0.665 0.196 25);
+  --chart-5: oklch(0.72 0.07 258);
+
+  --sidebar: oklch(0.215 0.028 265);
+  --sidebar-foreground: oklch(0.975 0.004 250);
+  --sidebar-primary: oklch(0.68 0.132 250);
+  --sidebar-primary-foreground: oklch(0.165 0.028 265);
+  --sidebar-accent: oklch(0.3 0.052 256);
+  --sidebar-accent-foreground: oklch(0.975 0.004 250);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.68 0.132 250);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 7.5rem;
+  }
 }
 
 @layer base {
@@ -121,61 +204,170 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Arabic numerals stay latin-shaped so prices read consistently. */
+  [dir="rtl"] {
+    font-variant-numeric: lining-nums tabular-nums;
   }
 }
 
-@layer base {
-  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
-    h1 {
-      font-size: var(--text-2xl);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
+/* Utilities that markup already referenced but that never existed. -------- */
 
-    h2 {
-      font-size: var(--text-xl);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    h3 {
-      font-size: var(--text-lg);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    h4 {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    p {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-normal);
-      line-height: 1.5;
-    }
-
-    label {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    button {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    input {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-normal);
-      line-height: 1.5;
-    }
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-html {
-  font-size: var(--font-size);
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility pb-safe-nav {
+  /* Mobile bottom nav (h-16) plus the iOS home indicator. */
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility bottom-safe-nav {
+  bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+/*
+ * Rich product content.
+ *
+ * `description_ar` is hand-authored HTML stored in Supabase. Tailwind v4 scans
+ * source files, not the database, so any utility classes typed into that field
+ * are never compiled. The renderer strips class/style attributes and relies on
+ * these element styles instead, so every product's prose looks identical.
+ */
+@layer components {
+  .rich-content {
+    color: var(--foreground);
+    line-height: 1.85;
+    font-size: 1rem;
+  }
+
+  .rich-content > * + * {
+    margin-block-start: 1rem;
+  }
+
+  .rich-content h2 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-block: 2rem 0.75rem;
+    padding-inline-start: 0.75rem;
+    border-inline-start: 3px solid var(--primary);
+  }
+
+  .rich-content h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.45;
+    margin-block: 1.5rem 0.5rem;
+  }
+
+  .rich-content h4,
+  .rich-content h5,
+  .rich-content h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-block: 1.25rem 0.375rem;
+  }
+
+  .rich-content > :first-child {
+    margin-block-start: 0;
+  }
+
+  .rich-content p {
+    margin-block: 0.75rem;
+  }
+
+  .rich-content strong,
+  .rich-content b {
+    font-weight: 700;
+    color: var(--foreground);
+  }
+
+  .rich-content ul,
+  .rich-content ol {
+    margin-block: 0.875rem;
+    padding-inline-start: 1.5rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .rich-content ul {
+    list-style: disc;
+  }
+
+  .rich-content ol {
+    list-style: decimal;
+  }
+
+  .rich-content li::marker {
+    color: var(--primary);
+  }
+
+  .rich-content a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .rich-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    margin-block: 1.5rem;
+  }
+
+  .rich-content blockquote {
+    margin-block: 1.5rem;
+    padding: 0.875rem 1rem;
+    border-inline-start: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+  }
+
+  .rich-content table {
+    width: 100%;
+    margin-block: 1.5rem;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+
+  .rich-content th,
+  .rich-content td {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--border);
+    text-align: start;
+  }
+
+  .rich-content th {
+    background: var(--surface-sunken);
+    font-weight: 600;
+  }
+
+  .rich-content hr {
+    margin-block: 2rem;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
 }

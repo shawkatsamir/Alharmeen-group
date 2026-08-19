@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { Facebook, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { NavigationCategory } from "@/services/server/categories";
 
@@ -6,118 +6,71 @@ interface FooterProps {
   categories?: NavigationCategory[];
 }
 
+/*
+ * Only routes that exist are linked. This list previously also carried
+ * /faq, /shipping, /returns, /terms and /privacy — none of which are
+ * implemented, so all five 404'd. They need real policy copy from the business
+ * before they can be linked again.
+ */
+const QUICK_LINKS = [
+  { href: "/about-us", label: "من نحن" },
+  { href: "/contact", label: "اتصل بنا" },
+  { href: "/offers", label: "العروض" },
+  { href: "/best-sellers", label: "الأكثر مبيعاً" },
+];
+
 export default function Footer({ categories = [] }: FooterProps) {
   const displayedCategories = categories.slice(0, 7);
 
   return (
-    <footer className="bg-gray-900 text-gray-300 mt-20">
+    <footer className="mt-16 bg-foreground text-background/75">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          {/* Column 1: Brand */}
+        <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div>
-                <div className="text-white font-bold text-lg">
-                  الحرمين للأجهزة الكهربائية و المنزلية
-                </div>
-              </div>
-            </div>
-            <p className="text-sm mb-4 leading-relaxed">
-              شريكك الموثوق للأجهزة الكهربائية و المنزلية. وكيل معتمد لأفضل
-              شركات الأجهزة الكهربائية و المنزلية
+            <p className="mb-4 text-lg font-bold text-background">
+              الحرمين للأجهزة الكهربائية والمنزلية
+            </p>
+            <p className="mb-4 text-sm leading-relaxed">
+              شريكك الموثوق للأجهزة الكهربائية والمنزلية. وكيل معتمد لأفضل شركات
+              الأجهزة الكهربائية والمنزلية.
             </p>
             <div className="flex gap-3">
               <a
                 href="https://www.facebook.com/share/17zDjvxrcJ/"
-                className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors"
+                aria-label="فيسبوك"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent hover:text-accent-foreground"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Instagram className="w-4 h-4" />
+                <Facebook className="h-4 w-4" />
               </a>
             </div>
           </div>
 
-          {/* Column 2: Quick Links */}
           <div>
-            <h3 className="text-white mb-4 font-semibold">روابط سريعة</h3>
+            <h3 className="mb-4 font-semibold text-background">روابط سريعة</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/about-us"
-                  className="hover:text-primary transition-colors"
-                >
-                  من نحن
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="hover:text-primary transition-colors"
-                >
-                  اتصل بنا
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faq"
-                  className="hover:text-primary transition-colors"
-                >
-                  الأسئلة الشائعة
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/shipping"
-                  className="hover:text-primary transition-colors"
-                >
-                  الشحن والتوصيل
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/returns"
-                  className="hover:text-primary transition-colors"
-                >
-                  المرتجعات والاسترداد
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="hover:text-primary transition-colors"
-                >
-                  الشروط والأحكام
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/privacy"
-                  className="hover:text-primary transition-colors"
-                >
-                  سياسة الخصوصية
-                </Link>
-              </li>
+              {QUICK_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="transition-colors hover:text-accent"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Column 3: Categories */}
           <div>
-            <h3 className="text-white mb-4 font-semibold">الفئات</h3>
+            <h3 className="mb-4 font-semibold text-background">الأقسام</h3>
             <ul className="space-y-2 text-sm">
               {displayedCategories.map((category) => (
                 <li key={category.id}>
                   <Link
                     href={`/${category.slug}`}
-                    className="hover:text-primary transition-colors"
+                    className="transition-colors hover:text-accent"
                   >
                     {category.name}
                   </Link>
@@ -126,52 +79,54 @@ export default function Footer({ categories = [] }: FooterProps) {
             </ul>
           </div>
 
-          {/* Column 4: Contact Info */}
           <div>
-            <h3 className="text-white mb-4 font-semibold">معلومات التواصل</h3>
+            <h3 className="mb-4 font-semibold text-background">
+              معلومات التواصل
+            </h3>
             <ul className="space-y-3 text-sm">
               <li className="flex gap-2">
-                <MapPin className="w-5 h-5 text-primary shrink-0" />
+                <MapPin className="h-5 w-5 shrink-0 text-accent" />
                 <span>شارع الكنيسة طريق الابراهيمية، ديرب نجم، الشرقية</span>
               </li>
-              <li className="flex gap-2 items-start">
-                <Phone className="w-5 h-5 text-primary shrink-0 mt-1" />
-                <div className="flex flex-col gap-1">
+              <li className="flex items-start gap-2">
+                <Phone className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+                <span className="flex flex-col gap-1">
                   <a
                     href="tel:01031722719"
-                    className="hover:text-primary transition-colors dir-ltr font-medium"
+                    dir="ltr"
+                    className="font-medium transition-colors hover:text-accent"
                   >
                     01031722719
                   </a>
                   <a
                     href="https://wa.me/201031722719"
-                    className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                    className="text-xs text-success transition-colors hover:text-accent"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     تواصل عبر واتساب
                   </a>
-                </div>
+                </span>
               </li>
               <li className="flex gap-2">
-                <Mail className="w-5 h-5 text-primary shrink-0" />
+                <Mail className="h-5 w-5 shrink-0 text-accent" />
                 <a
                   href="mailto:support@alharmaingroup.com"
-                  className="hover:text-primary transition-colors"
+                  className="transition-colors hover:text-accent"
                 >
                   support@alharmaingroup.com
                 </a>
               </li>
             </ul>
-            <div className="mt-6 border-t border-gray-800 pt-4">
-              <p className="text-sm mb-2 text-gray-400">ساعات العمل:</p>
+            <div className="mt-6 border-t border-white/10 pt-4">
+              <p className="mb-2 text-sm text-background/60">ساعات العمل:</p>
               <p className="text-sm">السبت - الخميس: 9:00 ص - 10:00 م</p>
               <p className="text-sm">الجمعة: 2:00 م - 10:00 م</p>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-8 mt-8 text-center text-sm text-gray-400">
+        <div className="mt-8 border-t border-white/10 pt-8 text-center text-sm text-background/60">
           <p>© {new Date().getFullYear()} الحرمين جروب. جميع الحقوق محفوظة.</p>
         </div>
       </div>

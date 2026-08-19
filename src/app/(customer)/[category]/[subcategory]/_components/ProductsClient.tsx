@@ -2,18 +2,13 @@
 
 import { useMemo, useCallback, useTransition } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Database } from "@/shared/types/database.types";
-import { ProductCard } from "@/features/products/components/ProductCard";
+import { ProductGrid } from "@/shared/components/ui/ProductGrid";
 import { FilterSidebar } from "./FilterSidebar";
 import { FilterOptions } from "@/services/server/products";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
-type Product = Database["public"]["Tables"]["products"]["Row"] & {
-  category?: { slug: string };
-  brand?: { id: string; name_ar: string; slug: string };
-  images?: { image_url: string }[];
-};
+import type { Product } from "@/features/products/types";
 
 interface ProductsClientProps {
   initialProducts: Product[];
@@ -250,15 +245,7 @@ export default function ProductsClient({
         {/* Loading overlay */}
         <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredProducts.map((product, index) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  priority={index < 4}
-                />
-              ))}
-            </div>
+            <ProductGrid products={filteredProducts} />
           ) : (
             <div className="text-center py-12 text-gray-500">
               <p className="text-lg mb-2">لا توجد منتجات مطابقة</p>

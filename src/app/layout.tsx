@@ -5,7 +5,11 @@ import { Toaster } from "@/shared/components/ui/Sonner";
 import { Providers } from "@/providers/QueryProvider";
 import { Analytics } from "@vercel/analytics/next";
 
-const cairo = Cairo({ subsets: ["arabic", "latin"] });
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  display: "swap",
+  variable: "--font-cairo",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://alharmaingroup.com"),
@@ -79,18 +83,23 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
+    <html
+      lang="ar"
+      dir="rtl"
+      suppressHydrationWarning
+      className={cairo.variable}
+    >
       <head>
         <link
           rel="preconnect"
-          href="https://ztkndqpsmscyowbtyrye.supabase.co"
+          href="https://zhpkzslvzifaaehdfnha.supabase.co"
         />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={cairo.className}>
+      <body className="font-sans antialiased">
         <Providers>
           {children}
           <Toaster position="top-center" />

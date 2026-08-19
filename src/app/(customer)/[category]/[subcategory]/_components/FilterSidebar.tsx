@@ -46,6 +46,27 @@ function FilterSidebarComponent({
     setLocalPrice([priceRange.min, priceRange.max]);
   }, [priceRange.min, priceRange.max]);
 
+  // Lock body scroll while the mobile drawer is open, matching MobileBottomNav's
+  // category overlay — without this the page scrolls behind the drawer.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [isOpen]);
+
+  // Escape closes the drawer.
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   // Handle slider change (dragging)
   const handleSliderChange = (value: number[]) => {
     setLocalPrice(value);
@@ -100,7 +121,8 @@ function FilterSidebarComponent({
           overflow-y-auto lg:overflow-visible
         `}
       >
-        <div className="bg-white lg:rounded-lg lg:border lg:border-gray-200 p-4 sticky top-0 lg:top-24 h-full lg:h-auto min-h-screen lg:min-h-0 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto w-full lg:w-64">
+        {/* Sticky offset comes from --header-h so it tracks the real header. */}
+        <div className="sticky top-0 h-full min-h-screen w-full bg-surface-raised p-4 lg:top-[calc(var(--header-h)+1rem)] lg:h-auto lg:max-h-[calc(100vh-var(--header-h)-2rem)] lg:w-64 lg:min-h-0 lg:overflow-y-auto lg:rounded-lg lg:border lg:border-border">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">تصفية النتائج</h3>

@@ -373,7 +373,9 @@ export type Database = {
       products: {
         Row: {
           brand_id: string;
+          buying_price: number | null;
           category_id: string;
+          content_blocks: Json | null;
           created_at: string;
           description_ar: string | null;
           description_en: string | null;
@@ -406,7 +408,9 @@ export type Database = {
         };
         Insert: {
           brand_id: string;
+          buying_price?: number | null;
           category_id: string;
+          content_blocks?: Json | null;
           created_at?: string;
           description_ar?: string | null;
           description_en?: string | null;
@@ -439,7 +443,9 @@ export type Database = {
         };
         Update: {
           brand_id?: string;
+          buying_price?: number | null;
           category_id?: string;
+          content_blocks?: Json | null;
           created_at?: string;
           description_ar?: string | null;
           description_en?: string | null;
@@ -566,7 +572,9 @@ export type Database = {
         Args: { limit_count?: number; search_term: string };
         Returns: {
           brand_id: string;
+          buying_price: number | null;
           category_id: string;
+          content_blocks: Json | null;
           created_at: string;
           description_ar: string | null;
           description_en: string | null;

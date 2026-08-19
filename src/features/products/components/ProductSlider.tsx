@@ -47,19 +47,25 @@ export default function ProductSlider({
           )}
         </div>
 
-        <div className="relative group">
+        {/*
+          Named group. A bare `group` here would also match every ProductCard's
+          `group-hover:` utilities, because Tailwind compiles those to a
+          descendant selector against *any* `.group` ancestor — which made
+          hovering anywhere in the rail light up every card at once.
+        */}
+        <div className="relative group/rail">
           <button
             onClick={() => scroll("left")}
-            className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg border rounded-full p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            aria-label="Scroll Left"
+            className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 bg-surface-raised shadow-lg border rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary hidden md:flex opacity-0 group-hover/rail:opacity-100 focus-visible:opacity-100 transition-opacity duration-300"
+            aria-label="التمرير لليسار"
           >
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
 
           <button
             onClick={() => scroll("right")}
-            className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg border rounded-full p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            aria-label="Scroll Right"
+            className="absolute -right-4 top-1/2 -translate-y-1/2 z-20 bg-surface-raised shadow-lg border rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary hidden md:flex opacity-0 group-hover/rail:opacity-100 focus-visible:opacity-100 transition-opacity duration-300"
+            aria-label="التمرير لليمين"
           >
             <ChevronRight className="w-6 h-6" />
           </button>

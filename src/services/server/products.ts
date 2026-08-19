@@ -1,13 +1,18 @@
 import { createStaticClient } from "@/lib/supabase/server";
-import { Database } from "@/shared/types/database.types";
+import type { Brand, Product } from "@/features/products/types";
 
-type Product = Database["public"]["Tables"]["products"]["Row"] & {
-  brand?: Database["public"]["Tables"]["brands"]["Row"];
-  category?: Database["public"]["Tables"]["categories"]["Row"];
-  images?: Database["public"]["Tables"]["product_images"]["Row"][];
-};
+export type { Product };
 
-type Brand = Database["public"]["Tables"]["brands"]["Row"];
+/**
+ * Every product read in this module returns the same relation shape, which is
+ * what `features/products/types.ts#Product` declares. Keep them in step.
+ */
+const PRODUCT_SELECT = `
+      *,
+      brand:brands(*),
+      category:categories(*),
+      images:product_images(*)
+    ` as const;
 
 export async function getProducts(options?: {
   limit?: number;
@@ -30,6 +35,10 @@ export async function getProducts(options?: {
   if (options?.featured) {
     query = query.eq("is_featured", true);
   }
+
+  // Deterministic order — otherwise the homepage rails reshuffle between
+  // ISR regenerations.
+  query = query.order("created_at", { ascending: false });
 
   if (options?.limit) {
     query = query.limit(options.limit);
@@ -57,17 +66,24 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from("products")
     .select(
+      /*
+       * Embeds the parent category too, so the detail page can build the
+       * `/[category]/[subcategory]` breadcrumb without a second round trip.
+       *
+       * `parent:parent_id(*)` — hinting the FK *column* — is what resolves the
+       * self-reference as to-one. Hinting the table (`categories!parent_id`)
+       * resolves it as to-many and returns the (empty) children array instead.
+       */
       `
       *,
       brand:brands(*),
-      category:categories(*),
+      category:categories(*, parent:parent_id(*)),
       images:product_images(*)
     `,
     )
     .eq("slug", slug)
     .single();
 
-  console.log(data);
   if (error) {
     console.error(`Error fetching product with slug ${slug}:`, error);
     return null;
@@ -151,7 +167,11 @@ export async function getBestSellerProducts(
     `,
     )
     .eq("is_best_seller", true)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // Without an explicit order Postgres returns rows in an arbitrary order,
+    // so the rail reshuffled on every ISR regeneration.
+    .order("sales_count", { ascending: false })
+    .order("created_at", { ascending: false });
 
   if (options.limit) {
     query = query.limit(options.limit);
@@ -192,7 +212,10 @@ export async function getOffers(
     `,
     )
     .eq("is_special_offer", true)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // Soonest-ending offers first; stable tiebreak so ISR output is repeatable.
+    .order("sale_end_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
 
   if (options.limit) {
     query = query.limit(options.limit);
@@ -229,6 +252,73 @@ export async function getBrands(): Promise<Brand[]> {
   }
 
   return data;
+}
+
+export async function getBrandBySlug(slug: string): Promise<Brand | null> {
+  const supabase = await createStaticClient();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`Error fetching brand with slug ${slug}:`, error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Products from the same category, excluding the current one.
+ *
+ * Falls back to same-brand products when the category is too thin to fill a
+ * rail — several categories hold only 1-3 products, and an empty "منتجات
+ * مشابهة" rail is worse than none.
+ */
+export async function getRelatedProducts(
+  product: Pick<Product, "id" | "category_id" | "brand_id">,
+  limit = 10,
+): Promise<Product[]> {
+  const supabase = await createStaticClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("category_id", product.category_id)
+    .eq("is_active", true)
+    .neq("id", product.id)
+    .order("is_best_seller", { ascending: false })
+    .order("sales_count", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error(`Error fetching related products for ${product.id}:`, error);
+    return [];
+  }
+
+  const related = (data ?? []) as Product[];
+  if (related.length >= 4 || !product.brand_id) return related;
+
+  // Top up from the same brand, skipping anything already included.
+  const excluded = [product.id, ...related.map((p) => p.id)];
+  const { data: brandData, error: brandError } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("brand_id", product.brand_id)
+    .eq("is_active", true)
+    .not("id", "in", `(${excluded.join(",")})`)
+    .order("sales_count", { ascending: false })
+    .limit(limit - related.length);
+
+  if (brandError) {
+    console.error(`Error topping up related products for ${product.id}:`, brandError);
+    return related;
+  }
+
+  return [...related, ...((brandData ?? []) as Product[])];
 }
 
 export async function getProductsBySubcategory(

@@ -24,14 +24,14 @@ export default function CompareToggle({ productId }: { productId: string }) {
 
     if (isSelected) {
       removeItem(productId);
-      toast.info("Removed from comparison");
+      toast.info("تم إزالة المنتج من المقارنة");
     } else {
       if (ids.length >= 4) {
-        toast.error("Max 4 items allowed");
+        toast.error("يمكنك مقارنة 4 منتجات كحد أقصى");
         return;
       }
       addItem(productId);
-      toast.success("Added to comparison");
+      toast.success("تم إضافة المنتج إلى المقارنة");
     }
   };
 
@@ -40,7 +40,9 @@ export default function CompareToggle({ productId }: { productId: string }) {
       size="icon"
       variant={isSelected ? "default" : "outline"}
       onClick={handleToggle}
-      className={isSelected ? "bg-blue-600 hover:bg-blue-700" : ""}
+      aria-pressed={isSelected}
+      aria-label={isSelected ? "إزالة من المقارنة" : "إضافة إلى المقارنة"}
+      className="rounded-full shadow-sm"
     >
       <ArrowRightLeft className="w-4 h-4" />
     </Button>
