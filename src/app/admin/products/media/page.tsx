@@ -1,14 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { ProductsTable } from "@/features/admin/products/components/ProductsTable";
+import { MediaLibrary } from "@/features/admin/products/components/media/MediaLibrary";
 
-/**
- * `src/app/admin/layout.tsx` is a client component, so it cannot guard auth —
- * every admin page checks for itself. Without this the archive controls render
- * for anonymous visitors and only fail once the action is called.
- */
-export default async function ProductsPage() {
+export default async function ProductMediaPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,5 +19,5 @@ export default async function ProductsPage() {
 
   if (profile?.role !== "admin") redirect("/");
 
-  return <ProductsTable />;
+  return <MediaLibrary />;
 }

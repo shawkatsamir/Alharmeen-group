@@ -8,6 +8,7 @@ import {
 import { ProductDetail } from "@/features/products/components/ProductDetail";
 import ProductSlider from "@/features/products/components/ProductSlider";
 import { toPlainTextExcerpt } from "@/features/products/lib/rich-content";
+import { contentBlocksToPlainText } from "@/features/products/lib/content-blocks";
 
 export const revalidate = 3600;
 
@@ -41,10 +42,16 @@ export async function generateMetadata({
   /*
    * `description_ar` is 3,000-6,000 characters of HTML, which made an unusable
    * meta description when passed through raw. Prefer the curated
-   * `meta_description_ar`, else a plain-text excerpt of the description.
+   * `meta_description_ar`, else a plain-text excerpt.
+   *
+   * Blocks come before `description_ar` for the same reason the page renders
+   * them first: they supersede the legacy HTML. Products authored in the admin
+   * editor have no `description_ar` at all, so without this they would all fall
+   * through to the generic fallback below.
    */
   const description =
     product.meta_description_ar?.trim() ||
+    toPlainTextExcerpt(contentBlocksToPlainText(product.content_blocks), 160) ||
     toPlainTextExcerpt(product.description_ar, 160) ||
     `تسوق ${name} من الحرمين جروب بأفضل الأسعار في مصر`;
 

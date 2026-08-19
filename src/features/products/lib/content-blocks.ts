@@ -176,3 +176,59 @@ export function parseContentBlocks(raw: unknown): ContentBlock[] {
 export function hasContentBlocks(raw: unknown): boolean {
   return parseContentBlocks(raw).length > 0;
 }
+
+/**
+ * Flatten the authored copy into plain text.
+ *
+ * Products created through the admin editor have no `description_ar` at all, so
+ * the `<meta name="description">` chain would fall straight through to the
+ * generic "تسوق … بأفضل الأسعار" string. Pulling the prose out of the blocks
+ * gives those products a real description without asking the author to write
+ * one twice.
+ *
+ * Only prose-bearing fields are included — a bare URL or an image alt would make
+ * a worse snippet than none.
+ */
+export function contentBlocksToPlainText(raw: unknown): string {
+  const parts: string[] = [];
+
+  for (const block of parseContentBlocks(raw)) {
+    switch (block.type) {
+      case "heading":
+      case "paragraph":
+        parts.push(block.text);
+        break;
+      case "callout":
+        if (block.title) parts.push(block.title);
+        parts.push(block.text);
+        break;
+      case "list":
+        if (block.title) parts.push(block.title);
+        parts.push(block.items.join("، "));
+        break;
+      case "feature":
+        if (block.title) parts.push(block.title);
+        if (block.body) parts.push(block.body);
+        break;
+      case "feature_grid":
+        if (block.title) parts.push(block.title);
+        for (const item of block.items) {
+          parts.push(item.body ? `${item.title}: ${item.body}` : item.title);
+        }
+        break;
+      case "spec_highlight":
+        parts.push(
+          block.items.map((item) => `${item.label}: ${item.value}`).join("، "),
+        );
+        break;
+      case "image":
+        if (block.caption) parts.push(block.caption);
+        break;
+      case "video":
+      case "gallery":
+        break;
+    }
+  }
+
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}

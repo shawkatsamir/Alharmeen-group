@@ -108,7 +108,24 @@ Rules to respect when touching orders:
 
 Historical note: before this rebuild, the app wrote `previous_status`/`new_status` (columns that never existed), the failures were swallowed, and 18 of 33 orders had no history at all.
 
-`supabase/` holds `config.toml` (project id `alharmeen-group`) and, since 2026-08-18, tracked migrations in `supabase/migrations/`. There is no local Supabase stack — `npx supabase db push` applies them to the hosted project. The remote migration history started empty, so **don't generate a baseline schema dump**; `db push` would try to recreate existing objects. Add forward-only migrations.
+### Admin product authoring (added 2026-08-19)
+
+Full-page create and edit at `/admin/products/new` and `/admin/products/[id]/edit`, plus a content-image library at `/admin/products/media`. The old `UpdateProductModal` / `useUpdateProduct` / `update-product.ts` trio is gone — there is now exactly one write path for product details.
+
+- **`src/features/admin/products/schema.ts` is the single source of truth** for what a product form can contain. `toProductRow()` maps it to columns; anything writing `products` from the admin should go through it.
+- **`price` is the *effective* price; `old_price` is the pre-offer price.** All offer maths lives in `lib/pricing.ts` (`normalizeOfferPricing` / `toOfferFormValues`), which also owns `is_special_offer` — `getOffers()` selects on that flag alone, so it must move with `old_price`.
+- `contentBlockSchema` is asserted assignable to the storefront's `ContentBlock` union via `CONTENT_BLOCKS_MATCH_RENDERER`. If the editor and `content-blocks.ts` drift, **`npm run typecheck` fails** instead of blocks silently vanishing at render time.
+- Column traps encoded in `toProductRow`: `fts` is GENERATED (never send it), `buying_price` is checked `> 0` (empty → `null`, never `0`), `content_blocks` must be `null` not `[]`, `features` is `text[]`, `video_urls` is an object keyed `unboxing|features|troubleshooting`.
+- **Specification keys are suggested per category** (`actions/spec-suggestions.ts`), not free text. `groupSpecifications()` matches keys by exact string, so one `السعه` instead of `السعة` drops the row out of its group and out of the buy-box chips, and makes two products incomparable.
+- **Delete is a soft delete** (`is_active = false`) — `order_items.product_id` references `products`, so a hard delete would orphan order history. Archived products get their own tab.
+- **Images upload browser-direct to Storage** (`lib/storage.ts`), because Server Actions cap the request body below a typical product photo. `product_images.storage_path` is now populated so deletes remove the file too.
+- Every mutation calls `requireAdmin()` (`src/features/admin/lib/require-admin.ts`) and revalidates through `lib/revalidate-product.ts`, which covers the category/subcategory listings and `/sitemap.xml` that the old action missed.
+
+Migration `20260819090000_admin_product_image_write_access` added the admin INSERT/UPDATE/DELETE policies on `product_images` and on `storage.objects` for the `products` bucket — **both were SELECT-only, so image writes were impossible**; the 93 existing rows were created through the dashboard, which bypasses RLS. It also added a `unique (product_id) where is_primary` index (3 products had two primaries, 21 had none).
+
+`supabase/` holds `config.toml` (project id `alharmeen-group`) and, since 2026-08-18, tracked migrations in `supabase/migrations/`. There is no local Supabase stack, and the CLI is **not linked** (no `supabase/.temp/project-ref`). The remote migration history started empty, so **don't generate a baseline schema dump**. Add forward-only migrations.
+
+**Don't run `npx supabase db push`.** The remote history records different version numbers than the local filenames (local `20260818090000_order_status_history_integrity.sql` vs remote `20260818055857`), because migrations have been applied through the Supabase MCP `apply_migration` tool, which stamps its own timestamp. `db push` would therefore consider every local file unapplied and try to re-run all of them. Apply new migrations the same way they have been so far — via `apply_migration` — and keep the `.sql` file in `supabase/migrations/` as the tracked record.
 
 ## Environment
 

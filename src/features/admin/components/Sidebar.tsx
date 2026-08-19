@@ -9,7 +9,6 @@ import {
   Plus,
   Image as ImageIcon,
   List,
-  MessageSquare,
   User,
   Shield,
   ChevronLeft,
@@ -49,14 +48,9 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
   ];
 
   const productItems = [
-    { icon: Plus, label: "إضافة منتج", href: "/admin/products/add" },
+    { icon: Plus, label: "إضافة منتج", href: "/admin/products/new" },
     { icon: ImageIcon, label: "وسائط المنتج", href: "/admin/products/media" },
     { icon: List, label: "قائمة المنتجات", href: "/admin/products" },
-    {
-      icon: MessageSquare,
-      label: "مراجعات المنتجات",
-      href: "/admin/products/reviews",
-    },
   ];
 
   const adminItems = [
