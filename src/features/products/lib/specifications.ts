@@ -214,7 +214,7 @@ export function countSpecs(groups: SpecGroup[]): number {
  * table. Returns at most `limit` entries, in priority order, skipping any that
  * the product doesn't have.
  */
-const HIGHLIGHT_PRIORITY = [
+export const HIGHLIGHT_PRIORITY = [
   "السعة",
   "capacity_liters",
   "capacity",

@@ -1,44 +1,49 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import {
   Plus,
-  SlidersHorizontal,
   MoreVertical,
   FilePenLine,
-  Trash2,
+  Archive,
+  ArchiveRestore,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { UpdateProductModal } from "../components/UpdateProductModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { getAdminProducts } from "../actions/get-products";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import { Img } from "@/shared/components/ui/Image";
 import { DebouncedSearchInput } from "@/features/search/components/DebouncedSearchInput";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/AlertDialog";
 
-interface ProductImage {
-  id: string;
-  image_url: string;
-  is_primary: boolean;
-}
+import { archiveProduct, restoreProduct } from "../actions/archive-product";
+import {
+  getAdminProductCounts,
+  getAdminProducts,
+  type AdminProductStatus,
+} from "../actions/get-products";
 
 interface Product {
   id: string;
   name: string;
   image: string;
   createdDate: string;
-  order: number;
   price: number;
-  oldPrice: number | null;
-  saleEndDate: string | null;
-  bestSeller: boolean;
-  isNew: boolean;
-  featured: boolean;
-  specialOffer: boolean;
   stockQuantity: number;
-  images: ProductImage[];
+  isActive: boolean;
 }
 
 interface RawProduct {
@@ -48,90 +53,72 @@ interface RawProduct {
   created_at: string;
   stock_quantity: number;
   price: number;
-  old_price: number | null;
-  sale_end_date: string | null;
-  is_best_seller: boolean;
-  is_new: boolean;
-  is_featured: boolean;
-  is_special_offer: boolean;
-  images: Array<{ image_url: string }>;
+  is_active: boolean;
+  images: { image_url: string; is_primary: boolean }[];
 }
 
+const TABS: { id: AdminProductStatus; name: string }[] = [
+  { id: "all", name: "كل المنتجات" },
+  { id: "featured", name: "مميزة" },
+  { id: "onSale", name: "عروض" },
+  { id: "outOfStock", name: "نفذت الكمية" },
+  { id: "archived", name: "مؤرشف" },
+];
+
 export function ProductsTable() {
-  const [activeTab, setActiveTab] = useState<
-    "all" | "featured" | "onSale" | "outOfStock"
-  >("all");
+  const [activeTab, setActiveTab] = useState<AdminProductStatus>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("");
+  const [pendingArchive, setPendingArchive] = useState<Product | null>(null);
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-products", activeTab, currentPage, effectiveSearchTerm],
-    queryFn: async () => {
-      const result = await getAdminProducts({
+    queryFn: () =>
+      getAdminProducts({
         page: currentPage,
         limit: 10,
         status: activeTab,
         search: effectiveSearchTerm,
-      });
+      }),
+  });
+
+  const { data: counts } = useQuery({
+    queryKey: ["admin-product-counts", effectiveSearchTerm],
+    queryFn: () => getAdminProductCounts(effectiveSearchTerm),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      const result = archived ? await restoreProduct(id) : await archiveProduct(id);
+      if (!result.success) throw new Error(result.message);
       return result;
     },
+    onSuccess: (result) => {
+      toast.success(result.message);
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-product-counts"] });
+    },
+    onError: (error) => toast.error(error.message),
+    onSettled: () => setPendingArchive(null),
   });
 
   const products: Product[] =
     (data?.products as unknown as RawProduct[])?.map((p) => ({
       id: p.id,
-      name: p.name_ar || p.name_en || "", // Prefer Arabic name
-      image: p.images?.[0]?.image_url || "/placeholder.jpg", // Use first image or placeholder
+      name: p.name_ar || p.name_en || "",
+      image:
+        p.images?.find((img) => img.is_primary)?.image_url ||
+        p.images?.[0]?.image_url ||
+        "/placeholder.jpg",
       createdDate: new Date(p.created_at).toLocaleDateString("ar-EG"),
-      order: p.stock_quantity, // Mapping stock to order column
       price: p.price,
-      oldPrice: p.old_price,
-      saleEndDate: p.sale_end_date,
-      bestSeller: p.is_best_seller,
-      isNew: p.is_new,
-      featured: p.is_featured,
-      specialOffer: p.is_special_offer,
       stockQuantity: p.stock_quantity,
-      images: (p.images as any) || [], // Keep as any for now or map correctly if structure matches
+      isActive: p.is_active,
     })) || [];
 
   const totalPages = Math.ceil((data?.count || 0) / 10);
-
-  const handleEditProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setUpdateModalOpen(true);
-  };
-
-  const handleDeleteProduct = (productId: string) => {
-    if (confirm("هل أنت متأكد أنك تريد حذف هذا المنتج؟")) {
-      console.log("Delete product", productId);
-    }
-  };
-
-  const tabCategories = [
-    {
-      id: "all",
-      name: "كل المنتجات",
-      count: data?.count || 0,
-    },
-    {
-      id: "featured",
-      name: "مميزة",
-      count: 0,
-    },
-    {
-      id: "onSale",
-      name: "عروض",
-      count: 0,
-    },
-    {
-      id: "outOfStock",
-      name: "نفذت الكمية",
-      count: 0,
-    },
-  ];
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
@@ -143,10 +130,13 @@ export function ProductsTable() {
           </h1>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors">
+          <Link
+            href="/admin/products/new"
+            className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors"
+          >
             <Plus className="w-5 h-5" />
             <span className="font-medium">إضافة منتج</span>
-          </button>
+          </Link>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -161,11 +151,13 @@ export function ProductsTable() {
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 min-w-[160px]"
                 align="end"
               >
-                <DropdownMenu.Item className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer outline-none text-right">
-                  تصدير المنتجات
-                </DropdownMenu.Item>
-                <DropdownMenu.Item className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer outline-none text-right">
-                  استيراد المنتجات
+                <DropdownMenu.Item asChild>
+                  <Link
+                    href="/admin/products/media"
+                    className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer outline-none text-right"
+                  >
+                    وسائط المنتجات
+                  </Link>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
@@ -173,36 +165,34 @@ export function ProductsTable() {
         </div>
       </div>
 
-      <p></p>
-
       {/* Table Container */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             {/* Tabs */}
             <div className="flex items-center space-x-2 space-x-reverse">
-              {tabCategories.map((category) => (
+              {TABS.map((tab) => (
                 <button
-                  key={category.id}
+                  key={tab.id}
                   onClick={() => {
-                    setActiveTab(category.id as any);
+                    setActiveTab(tab.id);
                     setCurrentPage(1);
                   }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === category.id
+                    activeTab === tab.id
                       ? "bg-[#4EA674]/10 text-[#4EA674]"
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  {category.name}{" "}
-                  {category.id === "all" && (
-                    <span className="text-xs mr-1">({category.count})</span>
+                  {tab.name}
+                  {counts && (
+                    <span className="text-xs mr-1">({counts[tab.id]})</span>
                   )}
                 </button>
               ))}
             </div>
 
-            {/* Search & Filters */}
+            {/* Search */}
             <div className="flex items-center space-x-3">
               <DebouncedSearchInput
                 placeholder="بحث برمز المنتج SKU (3 أحرف على الأقل)"
@@ -212,9 +202,6 @@ export function ProductsTable() {
                 }}
                 className="w-64"
               />
-              <button className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400">
-                <SlidersHorizontal className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
@@ -224,21 +211,16 @@ export function ProductsTable() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  اسم المنتج
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  السعر
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  المخزون
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  الحالة
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  تاريخ الإضافة
-                </th>
+                {["اسم المنتج", "السعر", "المخزون", "الحالة", "تاريخ الإضافة"].map(
+                  (heading) => (
+                    <th
+                      key={heading}
+                      className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    >
+                      {heading}
+                    </th>
+                  ),
+                )}
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   إجراءات
                 </th>
@@ -283,9 +265,12 @@ export function ProductsTable() {
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <Link
+                            href={`/admin/products/${product.id}/edit`}
+                            className="text-sm font-medium text-gray-900 hover:text-[#4EA674] dark:text-white"
+                          >
                             {product.name}
-                          </div>
+                          </Link>
                         </div>
                       </div>
                     </td>
@@ -300,7 +285,11 @@ export function ProductsTable() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {product.stockQuantity > 0 ? (
+                      {!product.isActive ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                          مؤرشف
+                        </span>
+                      ) : product.stockQuantity > 0 ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                           متوفر
                         </span>
@@ -317,20 +306,35 @@ export function ProductsTable() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2 space-x-reverse">
-                        <button
-                          onClick={() => handleEditProduct(product)}
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
                           className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-[#4EA674]"
                           title="تعديل"
                         >
                           <FilePenLine className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-red-500"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Link>
+                        {product.isActive ? (
+                          <button
+                            onClick={() => setPendingArchive(product)}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-red-500"
+                            title="أرشفة"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              archiveMutation.mutate({
+                                id: product.id,
+                                archived: true,
+                              })
+                            }
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-[#4EA674]"
+                            title="استعادة"
+                          >
+                            <ArchiveRestore className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -370,15 +374,32 @@ export function ProductsTable() {
         )}
       </div>
 
-      <UpdateProductModal
-        open={updateModalOpen}
-        onOpenChange={setUpdateModalOpen}
-        product={selectedProduct}
-        onUpdate={() => {
-          setUpdateModalOpen(false);
-          setSelectedProduct(null);
-        }}
-      />
+      <AlertDialog
+        open={pendingArchive !== null}
+        onOpenChange={(open) => !open && setPendingArchive(null)}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>أرشفة المنتج؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيختفي «{pendingArchive?.name}» من المتجر ومن نتائج البحث، لكن
+              بياناته وطلباته السابقة تبقى محفوظة. يمكنك استعادته في أي وقت من
+              تبويب «مؤرشف».
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                pendingArchive &&
+                archiveMutation.mutate({ id: pendingArchive.id, archived: false })
+              }
+            >
+              أرشفة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
