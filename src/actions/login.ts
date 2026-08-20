@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { describeAuthError } from "./auth-errors";
 
 // Update the Return Type
 interface LoginResult {
@@ -30,7 +31,11 @@ export async function loginAction(
   });
 
   if (error) {
-    return { error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" };
+    // Reporting every failure as bad credentials hid two real ones: a rejected
+    // captcha token, and an unconfirmed email address — which Supabase refuses
+    // outright, so those users were told their correct password was wrong.
+    console.error("[loginAction]", error.code ?? error.status, error.message);
+    return { error: describeAuthError(error).message };
   }
 
   // 3. Check Admin Role 🛡️
