@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { Turnstile } from "@marsidev/react-turnstile"; // 👈 Import Turnstile
 import { signupAction } from "@/actions/signup"; // 👈 Import your new action
+import { CaptchaField, type CaptchaFieldHandle } from "./CaptchaField";
 
 // Shadcn UI Imports
 import { cn } from "@/lib/utils";
@@ -56,6 +56,7 @@ export function SignUpForm({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const captcha = useRef<CaptchaFieldHandle>(null);
 
   // --- 2. Initialize Hook Form ---
   const form = useForm<z.infer<typeof formSchema>>({
@@ -86,14 +87,17 @@ export function SignUpForm({
 
       if (result.error) {
         setServerError(result.error);
-        // If the token failed, we should reset it so the user can try again
-        form.setValue("captchaToken", "");
+        // Supabase already spent the token on siteverify, so clearing the form
+        // value is not enough — the widget has to render a fresh challenge or
+        // the next attempt submits nothing.
+        captcha.current?.reset();
       } else {
         // Success!
         router.push("/auth/sign-up-success");
       }
-    } catch (err) {
+    } catch {
       setServerError("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً");
+      captcha.current?.reset();
     } finally {
       setIsLoading(false);
     }
@@ -181,13 +185,12 @@ export function SignUpForm({
                   render={() => (
                     <FormItem>
                       <FormControl>
-                        <Turnstile
-                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                          onSuccess={(token) => {
+                        <CaptchaField
+                          ref={captcha}
+                          onChange={(token) => {
                             form.setValue("captchaToken", token);
-                            form.clearErrors("captchaToken");
+                            if (token) form.clearErrors("captchaToken");
                           }}
-                          onExpire={() => form.setValue("captchaToken", "")}
                         />
                       </FormControl>
                       <FormMessage />

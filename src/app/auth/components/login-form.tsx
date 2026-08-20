@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { Turnstile } from "@marsidev/react-turnstile"; // 👈 Import Turnstile
 import { loginAction } from "@/actions/login"; // 👈 Import Action
+import { CaptchaField, type CaptchaFieldHandle } from "./CaptchaField";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/Button";
@@ -44,6 +44,7 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   // Router is usually not needed if Action redirects, but good for refresh
   const router = useRouter();
+  const captcha = useRef<CaptchaFieldHandle>(null);
 
   // 2. Initialize Form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -70,7 +71,11 @@ export function LoginForm({
 
       if (result?.error) {
         setServerError(result.error);
-        form.setValue("captchaToken", "");
+        // Supabase spent the token calling siteverify, so it is dead whatever
+        // the failure was. Reset the widget rather than only clearing the value,
+        // otherwise the next attempt submits an empty token and the user is
+        // stuck until they reload.
+        captcha.current?.reset();
       } else if (result?.redirectUrl) {
         router.push(result.redirectUrl);
         router.refresh();
@@ -78,6 +83,7 @@ export function LoginForm({
     } catch (err) {
       console.error(err);
       setServerError("حدث خطأ غير متوقع");
+      captcha.current?.reset();
     } finally {
       setIsLoading(false);
     }
@@ -145,13 +151,12 @@ export function LoginForm({
                   render={() => (
                     <FormItem>
                       <FormControl>
-                        <Turnstile
-                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                          onSuccess={(token) => {
+                        <CaptchaField
+                          ref={captcha}
+                          onChange={(token) => {
                             form.setValue("captchaToken", token);
-                            form.clearErrors("captchaToken");
+                            if (token) form.clearErrors("captchaToken");
                           }}
-                          onExpire={() => form.setValue("captchaToken", "")}
                         />
                       </FormControl>
                       <FormMessage />

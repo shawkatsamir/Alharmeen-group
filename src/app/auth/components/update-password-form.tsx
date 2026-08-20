@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { describeAuthError } from "@/actions/auth-errors";
 import { Button } from "@/shared/components/ui/Button";
 import {
   Card,
@@ -33,10 +34,12 @@ export function UpdatePasswordForm({
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      // Was "/protected", a route that does not exist in this app, so a
+      // successful password reset ended on a 404.
+      router.push("/account");
+      router.refresh();
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(describeAuthError(error as { code?: string; message?: string }).message);
     } finally {
       setIsLoading(false);
     }
