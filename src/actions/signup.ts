@@ -2,12 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getSiteOrigin } from "@/lib/site-url";
-import { describeAuthError } from "./auth-errors";
+import { describeAuthError, isExistingEmailSignup } from "./auth-errors";
 
 // We define a simple type for the data we expect
 interface SignupState {
   error?: string | null;
   success?: boolean;
+  /** Lets the form offer a link to sign in instead of just showing the error. */
+  emailAlreadyRegistered?: boolean;
 }
 
 export async function signupAction(
@@ -29,7 +31,7 @@ export async function signupAction(
     return { error: "الرجاء التحقق من أنك لست روبوت" }; // "Please verify you are not a robot"
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -47,6 +49,29 @@ export async function signupAction(
     // Arabic-first site.
     console.error("[signupAction]", error.code ?? error.status, error.message);
     return { error: describeAuthError(error).message };
+  }
+
+  /*
+   * Supabase deliberately does **not** error when the email already belongs to a
+   * confirmed account: it returns a success with an obfuscated user so an
+   * attacker cannot probe which addresses are registered. The give-away is an
+   * empty `identities` array — a genuinely new sign-up always gets exactly one
+   * identity (verified: all 14 existing users have exactly one).
+   *
+   * Left unhandled, the customer saw "check your email", no email ever arrived
+   * because none was sent, and they could not sign in either.
+   *
+   * Detecting it here trades a little email-enumeration resistance for a flow
+   * the customer can actually complete. The message deliberately points at
+   * signing in or resetting the password rather than confirming the address
+   * exists in so many words.
+   */
+  if (isExistingEmailSignup(data.user)) {
+    return {
+      error:
+        "هذا البريد الإلكتروني مسجل بالفعل. سجّل الدخول، أو استخدم «نسيت كلمة المرور؟» إذا نسيتها.",
+      emailAlreadyRegistered: true,
+    };
   }
 
   // If successful, we can redirect or return success to show a message

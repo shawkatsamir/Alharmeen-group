@@ -13,6 +13,7 @@ import { CaptchaField, type CaptchaFieldHandle } from "./CaptchaField";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
+import { PasswordInput } from "@/shared/components/ui/PasswordInput";
 import {
   Card,
   CardContent,
@@ -136,7 +137,10 @@ export function LoginForm({
                       </Link>
                     </div>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <PasswordInput
+                        autoComplete="current-password"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

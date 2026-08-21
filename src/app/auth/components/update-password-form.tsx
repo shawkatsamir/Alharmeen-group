@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/Card";
-import { Input } from "@/shared/components/ui/Input";
+import { PasswordInput } from "@/shared/components/ui/PasswordInput";
 import { Label } from "@/shared/components/ui/Label";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -58,11 +58,11 @@ export function UpdatePasswordForm({
           <form onSubmit={handleForgotPassword}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="password">New password</Label>
-                <Input
+                <Label htmlFor="password">كلمة المرور الجديدة</Label>
+                <PasswordInput
                   id="password"
-                  type="password"
-                  placeholder="New password"
+                  placeholder="كلمة المرور الجديدة"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

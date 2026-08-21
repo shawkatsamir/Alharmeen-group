@@ -19,6 +19,27 @@
  * Import-free by design so it can be unit-tested with no mocks.
  */
 
+/**
+ * Detect the "email already registered" case that Supabase reports as a success.
+ *
+ * With email confirmation enabled, `signUp` for an address that already belongs
+ * to a confirmed account returns **no error** — it hands back an obfuscated user
+ * so an attacker cannot enumerate registered addresses. No email is sent.
+ *
+ * The tell is an empty `identities` array; a real new sign-up always gets
+ * exactly one identity (verified against all 14 existing accounts). `undefined`
+ * is treated as "not a duplicate", because an older client that omits the field
+ * should not block a legitimate sign-up.
+ *
+ * Import-free, like the rest of this module.
+ */
+export function isExistingEmailSignup(
+  user: { identities?: unknown[] | null } | null | undefined,
+): boolean {
+  if (!user) return false;
+  return Array.isArray(user.identities) && user.identities.length === 0;
+}
+
 export interface AuthErrorLike {
   code?: string | null;
   message?: string | null;

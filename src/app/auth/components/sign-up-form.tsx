@@ -14,6 +14,7 @@ import { CaptchaField, type CaptchaFieldHandle } from "./CaptchaField";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
+import { PasswordInput } from "@/shared/components/ui/PasswordInput";
 import {
   Card,
   CardContent,
@@ -54,6 +55,7 @@ export function SignUpForm({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   const [serverError, setServerError] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const captcha = useRef<CaptchaFieldHandle>(null);
@@ -87,6 +89,7 @@ export function SignUpForm({
 
       if (result.error) {
         setServerError(result.error);
+        setEmailTaken(Boolean(result.emailAlreadyRegistered));
         // Supabase already spent the token on siteverify, so clearing the form
         // value is not enough — the widget has to render a fresh challenge or
         // the next attempt submits nothing.
@@ -155,7 +158,7 @@ export function SignUpForm({
                   <FormItem>
                     <FormLabel>كلمة المرور</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <PasswordInput autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -170,7 +173,7 @@ export function SignUpForm({
                   <FormItem>
                     <FormLabel>تأكيد كلمة المرور</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <PasswordInput autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -201,8 +204,24 @@ export function SignUpForm({
 
               {/* Server Error Message */}
               {serverError && (
-                <div className="text-sm text-red-500 bg-red-50 p-2 rounded text-center border border-red-200">
-                  {serverError}
+                <div className="space-y-2 rounded border border-red-200 bg-red-50 p-2 text-center text-sm text-red-500">
+                  <p>{serverError}</p>
+                  {emailTaken && (
+                    <div className="flex items-center justify-center gap-3">
+                      <Link
+                        href="/auth/login"
+                        className="font-medium underline underline-offset-4"
+                      >
+                        تسجيل الدخول
+                      </Link>
+                      <Link
+                        href="/auth/forgot-password"
+                        className="font-medium underline underline-offset-4"
+                      >
+                        نسيت كلمة المرور؟
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 

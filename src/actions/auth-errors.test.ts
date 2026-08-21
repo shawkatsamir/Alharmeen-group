@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { describeAuthError } from "./auth-errors";
+import { describeAuthError, isExistingEmailSignup } from "./auth-errors";
+
+describe("isExistingEmailSignup", () => {
+  it("detects the obfuscated user Supabase returns for a taken email", () => {
+    // No error is raised and no email is sent; the empty identities array is the
+    // only signal that the sign-up did nothing.
+    expect(isExistingEmailSignup({ identities: [] })).toBe(true);
+  });
+
+  it("treats a genuine new sign-up as fine", () => {
+    // A real sign-up always gets exactly one identity.
+    expect(isExistingEmailSignup({ identities: [{ id: "abc" }] })).toBe(false);
+  });
+
+  it("does not block a sign-up when the field is absent or null", () => {
+    // Failing open matters here: a false positive would tell a brand-new
+    // customer their email is already taken and stop them registering at all.
+    expect(isExistingEmailSignup({})).toBe(false);
+    expect(isExistingEmailSignup({ identities: null })).toBe(false);
+    expect(isExistingEmailSignup(null)).toBe(false);
+    expect(isExistingEmailSignup(undefined)).toBe(false);
+  });
+});
 
 describe("describeAuthError", () => {
   it("returns a generic Arabic message for nothing useful", () => {
