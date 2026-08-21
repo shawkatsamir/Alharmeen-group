@@ -15,7 +15,7 @@ export function useCancelOrder() {
       return result;
     },
     onSuccess: () => {
-      toast.success("Order cancelled");
+      toast.success("تم إلغاء الطلب");
       router.refresh(); // Refreshes the Server Component (Order List)
     },
     onError: (err) => {

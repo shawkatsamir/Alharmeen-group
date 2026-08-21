@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "./CompareToggle";
+import { formatCurrency } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -142,11 +143,11 @@ export function ProductCard({
         <div className="mt-auto flex flex-col gap-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-lg font-bold text-primary">
-              {product.price.toLocaleString("en-EG")} ج.م
+              {formatCurrency(product.price)}
             </span>
             {hasDiscount && (
               <span className="text-sm text-muted-foreground line-through">
-                {product.old_price!.toLocaleString("en-EG")} ج.م
+                {formatCurrency(product.old_price!)}
               </span>
             )}
           </div>

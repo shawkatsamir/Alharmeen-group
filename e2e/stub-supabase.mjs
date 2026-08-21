@@ -20,6 +20,46 @@ let captured = [];
 const ORDER_ID = "00000000-0000-4000-8000-000000000001";
 const ORDER_NUMBER = "ORD-9001";
 
+/**
+ * Catalogue rows. `createOrder` re-reads every price from the database rather
+ * than trusting the browser cart, so the stub has to serve the product the
+ * spec seeds into localStorage or checkout rejects the order.
+ */
+const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
+const PRODUCTS = [
+  {
+    id: PRODUCT_ID,
+    name_ar: "ثلاجة هيتاشي انفرتر 316 لتر",
+    price: 25000,
+    is_active: true,
+    is_available: true,
+    brand: { name_ar: "هيتاشي" },
+    images: [{ image_url: "https://example.test/fridge.jpg", is_primary: true }],
+  },
+];
+
+/** Mirrors the seeded rates for the two governorates the specs use. */
+const GOVERNORATES = [
+  {
+    id: 1,
+    name_ar: "القاهرة",
+    shipping_cost: 60,
+    is_deliverable: true,
+    display_order: 1,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  },
+  {
+    id: 2,
+    name_ar: "الجيزة",
+    shipping_cost: 60,
+    is_deliverable: true,
+    display_order: 2,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  },
+];
+
 /** Rows the stub pretends to hold, rebuilt on each /__reset. */
 let createdOrder = null;
 let createdItems = [];
@@ -92,6 +132,56 @@ const server = createServer(async (req, res) => {
     return json(res, 401, { message: "no session" });
   }
 
+  // Catalogue reads that checkout depends on.
+  if (path === "/rest/v1/products" && req.method === "GET") {
+    /*
+     * Only answer checkout's `.in("id", [...])` lookup. Every other product
+     * query — generateStaticParams, the catalogue pages — must keep resolving
+     * to [] as it did before, or the production build tries to prerender
+     * /product/[slug] from these rows and fails on the missing slug.
+     */
+    const idFilter = url.searchParams.get("id");
+    if (idFilter?.startsWith("in.")) {
+      const ids = idFilter.slice(3).replace(/[()"]/g, "").split(",");
+      return respondRows(
+        req,
+        res,
+        PRODUCTS.filter((p) => ids.includes(p.id)),
+      );
+    }
+    return respondRows(req, res, []);
+  }
+
+  if (path === "/rest/v1/governorates" && req.method === "GET") {
+    // The action looks one up with `.eq("name_ar", ...).maybeSingle()`, so the
+    // filter has to be honoured — returning all rows makes PostgREST's
+    // single-object mode fail with PGRST116.
+    const nameFilter = url.searchParams.get("name_ar");
+    const rows = nameFilter?.startsWith("eq.")
+      ? GOVERNORATES.filter(
+          (g) => g.name_ar === decodeURIComponent(nameFilter.slice(3)),
+        )
+      : GOVERNORATES;
+    return respondRows(req, res, rows);
+  }
+
+  if (path === "/rest/v1/app_settings" && req.method === "GET") {
+    // Free shipping disabled, so every order is charged its governorate rate.
+    // Wallet numbers left blank, matching a freshly seeded project.
+    return respondRows(req, res, [
+      { key: "free_shipping_threshold", value: null },
+      { key: "payment_vodafone_cash_number", value: "" },
+      { key: "payment_instapay_handle", value: "" },
+      { key: "payment_bank_account", value: "" },
+      { key: "contact_whatsapp_number", value: "" },
+    ]);
+  }
+
+  if (path === "/rest/v1/order_payments" && req.method === "GET") {
+    // No payments recorded during checkout; the ledger starts empty.
+    return respondRows(req, res, []);
+  }
+
   if (path === "/rest/v1/orders") {
     if (req.method === "POST") {
       const row = Array.isArray(body) ? body[0] : body;
@@ -99,6 +189,9 @@ const server = createServer(async (req, res) => {
         id: ORDER_ID,
         order_number: ORDER_NUMBER,
         created_at: new Date().toISOString(),
+        // Derived by trigger in the real database; a new order has no
+        // payments, so the success page must see 0 rather than undefined.
+        amount_paid: 0,
         ...row,
       };
       return respondRows(req, res, [createdOrder]);

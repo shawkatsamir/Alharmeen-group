@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { OrderTracker } from "./OrderTracker";
 import { CancelOrderButton } from "./CancleOrderButton";
 import type { OrderStatus } from "../constants/order-status";
+import { formatCurrency } from "@/lib/utils";
 
 interface OrderItem {
   id: string;
@@ -30,7 +31,6 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order }: OrderCardProps) {
-  const isCancelled = order.status === "ملغي";
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="p-4 sm:p-6">
@@ -50,7 +50,7 @@ export function OrderCard({ order }: OrderCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-gray-900 dark:text-white">
-              {order.total.toFixed(2)} ج.م
+              {formatCurrency(order.total)}
             </span>
           </div>
 
@@ -77,7 +77,7 @@ export function OrderCard({ order }: OrderCardProps) {
                   {item.name}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {item.quantity} x {item.price.toFixed(2)} ر.س
+                  {item.quantity} x {formatCurrency(item.price)}
                 </p>
               </div>
             </div>

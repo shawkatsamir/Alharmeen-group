@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Loader2,
   Eye,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Select,
@@ -33,6 +34,14 @@ import {
   type OrderStatus,
 } from "@/features/orders/constants/order-status";
 import {
+  ADMIN_PAYMENT_STATUS_COLORS,
+  PAYMENT_STATUS_LABELS,
+  amountRemaining,
+  isPaymentStatus,
+  isPrepaidMethod,
+  needsRefund,
+} from "@/features/orders/constants/payment";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -42,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/AlertDialog";
+import { formatCurrency } from "@/lib/utils";
 
 interface OrdersTableProps {
   stats?: {
@@ -63,6 +73,11 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
     orderNumber: string;
     from: OrderStatus;
     to: OrderStatus;
+    // Carried so the confirm dialog can warn about money without refetching.
+    paymentStatus: string;
+    paymentMethod: string;
+    amountPaid: number;
+    total: number;
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("");
@@ -270,22 +285,33 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                      {order.total.toFixed(2)}
+                      {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
+                      {/* Was a binary paid/unpaid dot, which had nowhere to put
+                          a partial payment. Show the amount too, because what
+                          the admin needs on the phone is the balance owed. */}
+                      <div className="flex flex-col gap-1">
                         <span
-                          className={`w-2 h-2 rounded-full ${
-                            order.payment_status === "paid"
-                              ? "bg-green-500"
-                              : "bg-red-500"
+                          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            isPaymentStatus(order.payment_status)
+                              ? ADMIN_PAYMENT_STATUS_COLORS[
+                                  order.payment_status
+                                ]
+                              : "text-gray-600 bg-gray-50"
                           }`}
-                        ></span>
-                        <span className="text-sm text-gray-900 dark:text-white">
-                          {order.payment_status === "paid"
-                            ? "مدفوع"
-                            : "غير مدفوع"}
+                        >
+                          {isPaymentStatus(order.payment_status)
+                            ? PAYMENT_STATUS_LABELS[order.payment_status]
+                            : order.payment_status}
                         </span>
+                        {order.amount_paid > 0 &&
+                          order.amount_paid < order.total && (
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {formatCurrency(order.amount_paid)} /{" "}
+                              {formatCurrency(order.total)}
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -311,6 +337,10 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
                               orderNumber: order.order_number,
                               from: order.status as OrderStatus,
                               to: value,
+                              paymentStatus: order.payment_status,
+                              paymentMethod: order.payment_method,
+                              amountPaid: order.amount_paid,
+                              total: order.total,
                             });
                           }}
                         >
@@ -412,6 +442,45 @@ export default function OrdersTable({ stats }: OrdersTableProps) {
                 </>
               )}
             </AlertDialogDescription>
+
+            {/*
+              Advisory only — the admin can still proceed. A hard block would
+              make a trusted-customer COD order unshippable, and the storefront
+              advertises الدفع عند الاستلام.
+            */}
+            {pendingChange?.to === "تم الشحن" &&
+              pendingChange.paymentStatus !== "paid" && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    {pendingChange.amountPaid > 0
+                      ? `لم يُدفع كامل المبلغ — المتبقي ${formatCurrency(
+                          amountRemaining(
+                            pendingChange.total,
+                            pendingChange.amountPaid,
+                          ),
+                        )}.`
+                      : "لم يتم دفع أي مبلغ لهذا الطلب."}
+                    {isPrepaidMethod(pendingChange.paymentMethod)
+                      ? " العميل اختار الدفع المسبق، يُفضل تحصيل المبلغ قبل الشحن."
+                      : " الطلب بالدفع عند الاستلام."}
+                  </span>
+                </div>
+              )}
+
+            {/* Money already taken on an order being cancelled or returned is
+                a refund the shop owes; never let that pass silently. */}
+            {pendingChange &&
+              needsRefund(pendingChange.amountPaid, pendingChange.to) && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    هذا الطلب مدفوع بمبلغ{" "}
+                    {formatCurrency(pendingChange.amountPaid)} ويحتاج استرجاع
+                    بعد {pendingChange.to}.
+                  </span>
+                </div>
+              )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>

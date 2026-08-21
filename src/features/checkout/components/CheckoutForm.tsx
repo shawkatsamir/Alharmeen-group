@@ -12,17 +12,44 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/Form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/Select";
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { formatCurrency } from "@/lib/utils";
+import type { Governorate } from "@/services/client/shipping";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHODS,
+  isPrepaidMethod,
+  type PaymentMethod,
+} from "@/features/orders/constants/payment";
 
 import { checkoutFormSchema, CheckoutFormValues } from "../schema";
 
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutFormValues) => void;
   id?: string;
+  /** Deliverable governorates; empty while the list is still loading. */
+  governorates: Governorate[];
+  /** Lifted so the order summary can price delivery as the user picks. */
+  onGovernorateChange: (name: string) => void;
+  /** Wallet numbers to display for prepaid methods; blank when unconfigured. */
+  paymentDestinations?: Partial<Record<PaymentMethod, string>>;
 }
 
-export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
+export function CheckoutForm({
+  onSubmit,
+  id,
+  governorates,
+  onGovernorateChange,
+  paymentDestinations,
+}: CheckoutFormProps) {
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
@@ -33,6 +60,7 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
       city: "",
       address: "",
       notes: "",
+      paymentMethod: "cod",
     },
   });
 
@@ -119,9 +147,44 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>المحافظة</FormLabel>
-                <FormControl>
-                  <Input placeholder="القاهرة" {...field} />
-                </FormControl>
+                <Select
+                  dir="rtl"
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onGovernorateChange(value);
+                  }}
+                  disabled={governorates.length === 0}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          governorates.length === 0
+                            ? "جاري التحميل..."
+                            : "اختر المحافظة"
+                        }
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {governorates.map((governorate) => (
+                      <SelectItem
+                        key={governorate.id}
+                        value={governorate.name_ar}
+                      >
+                        <span className="flex w-full items-center justify-between gap-4">
+                          <span>{governorate.name_ar}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {governorate.shipping_cost === 0
+                              ? "شحن مجاني"
+                              : `شحن ${formatCurrency(governorate.shipping_cost)}`}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -156,6 +219,78 @@ export function CheckoutForm({ onSubmit, id }: CheckoutFormProps) {
               <FormMessage />
             </FormItem>
           )}
+        />
+
+        <FormField
+          control={form.control}
+          name="paymentMethod"
+          render={({ field }) => {
+            // Read off `field` rather than form.watch(): watch() is a
+            // subscription the React Compiler cannot follow, and using it here
+            // made it skip compiling this entire component.
+            const destination = paymentDestinations?.[field.value]?.trim();
+
+            return (
+              <FormItem>
+                <FormLabel>طريقة الدفع</FormLabel>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PAYMENT_METHODS.map((method) => {
+                    const isSelected = field.value === method;
+                    return (
+                      <label
+                        key={method}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                          isSelected
+                            ? "border-[#4EA674] bg-[#4EA674]/5"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          className="accent-[#4EA674]"
+                          value={method}
+                          checked={isSelected}
+                          onChange={() => field.onChange(method)}
+                          name={field.name}
+                        />
+                        <span>{PAYMENT_METHOD_LABELS[method]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/*
+                  Prepaid methods need somewhere to send the money. The number
+                  is hidden entirely when the admin has not configured that
+                  wallet yet, rather than showing an empty account line.
+                */}
+                {isPrepaidMethod(field.value) && (
+                  <div className="mt-3 rounded-lg border border-[#4EA674]/30 bg-[#4EA674]/5 p-4 text-sm">
+                    {destination ? (
+                      <>
+                        <p className="text-gray-600">
+                          حوّل المبلغ إلى {PAYMENT_METHOD_LABELS[field.value]}:
+                        </p>
+                        <p dir="ltr" className="mt-1 text-right font-bold text-lg">
+                          {destination}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-gray-600">
+                        سنرسل لك بيانات التحويل عند التواصل معك.
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      سنتواصل معك على الهاتف أو واتساب لتأكيد الطلب بعد استلام
+                      المبلغ.
+                    </p>
+                  </div>
+                )}
+
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         <FormField

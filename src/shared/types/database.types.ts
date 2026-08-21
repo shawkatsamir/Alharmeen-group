@@ -14,6 +14,38 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          description: string | null;
+          key: string;
+          updated_at: string;
+          updated_by: string | null;
+          value: Json;
+        };
+        Insert: {
+          description?: string | null;
+          key: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value: Json;
+        };
+        Update: {
+          description?: string | null;
+          key?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       brands: {
         Row: {
           created_at: string;
@@ -99,6 +131,44 @@ export type Database = {
             columns: ["parent_id"];
             isOneToOne: false;
             referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      governorates: {
+        Row: {
+          display_order: number;
+          id: number;
+          is_deliverable: boolean;
+          name_ar: string;
+          shipping_cost: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          display_order?: number;
+          id?: number;
+          is_deliverable?: boolean;
+          name_ar: string;
+          shipping_cost?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          display_order?: number;
+          id?: number;
+          is_deliverable?: boolean;
+          name_ar?: string;
+          shipping_cost?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "governorates_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -198,6 +268,54 @@ export type Database = {
           },
         ];
       };
+      order_payments: {
+        Row: {
+          amount: number;
+          created_at: string;
+          id: string;
+          method: string;
+          notes: string | null;
+          order_id: string;
+          recorded_by: string | null;
+          reference: string | null;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          id?: string;
+          method: string;
+          notes?: string | null;
+          order_id: string;
+          recorded_by?: string | null;
+          reference?: string | null;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          id?: string;
+          method?: string;
+          notes?: string | null;
+          order_id?: string;
+          recorded_by?: string | null;
+          reference?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_payments_recorded_by_fkey";
+            columns: ["recorded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       order_status_history: {
         Row: {
           changed_by: string | null;
@@ -243,6 +361,7 @@ export type Database = {
       orders: {
         Row: {
           admin_notes: string | null;
+          amount_paid: number;
           created_at: string;
           customer_email: string;
           customer_name: string;
@@ -268,6 +387,7 @@ export type Database = {
         };
         Insert: {
           admin_notes?: string | null;
+          amount_paid?: number;
           created_at?: string;
           customer_email: string;
           customer_name: string;
@@ -293,6 +413,7 @@ export type Database = {
         };
         Update: {
           admin_notes?: string | null;
+          amount_paid?: number;
           created_at?: string;
           customer_email?: string;
           customer_name?: string;
@@ -567,7 +688,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      derive_payment_status: {
+        Args: { p_has_refund: boolean; p_paid: number; p_total: number };
+        Returns: string;
+      };
+      governorate_order_stats: {
+        Args: never;
+        Returns: {
+          governorate: string;
+          order_count: number;
+          revenue: number;
+        }[];
+      };
       is_admin: { Args: never; Returns: boolean };
+      normalize_governorate_name: { Args: { p_name: string }; Returns: string };
       search_products: {
         Args: { limit_count?: number; search_term: string };
         Returns: {

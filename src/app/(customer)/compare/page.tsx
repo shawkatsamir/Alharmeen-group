@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { Img } from "@/shared/components/ui/Image";
 import { Check, XCircle } from "lucide-react";
 import RemoveCompareButton from "@/features/products/components/RemoveCompareButton";
+import { formatCurrency } from "@/lib/utils";
 
 const getCachedProduct = unstable_cache(
   async (id: string) => {
@@ -120,10 +121,7 @@ export default async function ComparePage({ searchParams }: Props) {
                   key={p.id}
                   className="p-4 text-center border-l text-green-600 font-bold text-xl dir-rtl"
                 >
-                  {new Intl.NumberFormat("ar-SA", {
-                    style: "currency",
-                    currency: "SAR",
-                  }).format(p.price)}
+                  {formatCurrency(p.price)}
                 </td>
               ))}
             </tr>

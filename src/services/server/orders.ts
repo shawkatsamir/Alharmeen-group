@@ -41,7 +41,10 @@ export interface Order {
   total: number;
   status: OrderStatus;
   payment_method: string;
+  /** Derived from the order_payments ledger by trigger — never written by app code. */
   payment_status: string;
+  /** Net of the order_payments ledger, likewise trigger-maintained. */
+  amount_paid: number;
   created_at: string;
   items: OrderItem[];
   history?: OrderStatusHistory[];

@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { MapPin, Phone, Mail, User, Package } from "lucide-react";
 import { Order, OrderItem } from "@/services/server/orders";
 import { Img } from "@/shared/components/ui/Image";
+import { OrderPaymentPanel } from "./OrderPaymentPanel";
 
 interface OrderDetailModalProps {
   order: Order;
@@ -55,6 +56,16 @@ export function OrderDetailModal({ order, items }: OrderDetailModalProps) {
               </p>
             </div>
           </div>
+
+          <OrderPaymentPanel
+            orderId={order.id}
+            orderNumber={order.order_number || order.id.slice(0, 8)}
+            orderStatus={order.status}
+            total={order.total}
+            amountPaid={order.amount_paid}
+            paymentStatus={order.payment_status}
+            paymentMethod={order.payment_method}
+          />
         </div>
 
         {/* LEFT COLUMN: Order Items */}

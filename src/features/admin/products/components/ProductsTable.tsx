@@ -35,6 +35,7 @@ import {
   getAdminProducts,
   type AdminProductStatus,
 } from "../actions/get-products";
+import { formatCurrency } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -276,7 +277,7 @@ export function ProductsTable() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-white">
-                        {product.price.toFixed(2)} ج.م
+                        {formatCurrency(product.price)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

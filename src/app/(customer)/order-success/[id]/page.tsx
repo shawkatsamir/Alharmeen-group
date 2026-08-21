@@ -10,6 +10,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { CheckCircle2, Package, Truck, MapPin } from "lucide-react";
+import { PaymentInstructions } from "@/features/orders/components/PaymentInstructions";
+import { getPaymentSettings } from "@/services/server/payment-settings";
 
 export default async function OrderSuccessPage({
   params,
@@ -30,6 +32,8 @@ export default async function OrderSuccessPage({
     notFound();
   }
 
+  const paymentSettings = await getPaymentSettings();
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-3xl mx-auto">
@@ -47,6 +51,19 @@ export default async function OrderSuccessPage({
           <p className="text-gray-600">
             شكراً لتسوقك معنا. سنقوم بمراجعة طلبك والتواصل معك قريباً.
           </p>
+        </div>
+
+        {/* What the customer has to do next. Rendered here rather than pushed
+            through the notifications table, which has no recipient column and
+            so cannot address a guest order at all. */}
+        <div className="mb-8">
+          <PaymentInstructions
+            orderNumber={order.order_number}
+            total={order.total}
+            amountPaid={order.amount_paid}
+            paymentMethod={order.payment_method}
+            settings={paymentSettings}
+          />
         </div>
 
         <div className="grid gap-8 md:grid-cols-2">

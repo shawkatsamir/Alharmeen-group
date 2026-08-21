@@ -37,7 +37,7 @@ Storefront is Arabic-first: `<html lang="ar" dir="rtl">`, Cairo font, and **all 
 ### Route groups
 
 - `src/app/(customer)/` — public storefront. Its layout fetches `getNavigationCategories()` server-side and wraps children in `WishlistProvider`, `Header`, `Footer`, `MobileBottomNav`, `CompareBar`.
-- `src/app/admin/` — dashboard. The layout is a **client** component (sidebar state + `next-themes`), so it cannot guard auth; each admin page must check auth itself (see `src/app/admin/page.tsx`: `getUser()` → `profiles.role !== "admin"` → redirect).
+- `src/app/admin/` — dashboard. The layout is a **client** component (sidebar state + `next-themes`), so it cannot guard auth; each admin page must check auth itself (see `src/app/admin/page.tsx` or `src/app/admin/shipping/page.tsx`: `getUser()` → `profiles.role !== "admin"` → redirect). Note `/admin/orders` and `/admin/dashboard` are client components with **no page-level guard** and still rely on RLS alone.
 - `src/app/auth/` — Supabase auth flows plus route handlers `auth/confirm` and `auth/sign-out`.
 
 Catalog URLs are `/[category]/[subcategory]` (two-level self-referencing `categories.parent_id`) and `/product/[slug]`.
@@ -81,7 +81,7 @@ Admin identity = `profiles.role === "admin"`; there is also an `is_admin()` Post
 
 ## Database
 
-Tables: `products`, `product_images`, `categories` (self-referencing), `brands`, `orders`, `order_items`, `order_status_history`, `profiles`, `wishlists`, `notifications`. RPC: `search_products(search_term, limit_count)` — search goes through this function, not ILIKE queries.
+Tables: `products`, `product_images`, `categories` (self-referencing), `brands`, `orders`, `order_items`, `order_status_history`, `order_payments`, `governorates`, `app_settings`, `profiles`, `wishlists`, `notifications`. RPCs: `search_products(search_term, limit_count)` — search goes through this function, not ILIKE queries — and `governorate_order_stats()` (admin-only, SECURITY DEFINER).
 
 Arabic text columns are suffixed `_ar` (`name_ar`, `description_ar`) and are what the UI renders. Product flags drive the storefront sections: `is_active`, `is_featured`, `is_best_seller`, `is_special_offer`, `is_new`.
 
@@ -107,6 +107,31 @@ Rules to respect when touching orders:
 - Any UPDATE on `orders` that must not silently no-op needs `.select().single()` — without it, an RLS-blocked update returns no error and zero rows.
 
 Historical note: before this rebuild, the app wrote `previous_status`/`new_status` (columns that never existed), the failures were swallowed, and 18 of 33 orders had no history at all.
+
+### Money: currency, shipping, payments (added 2026-08-22)
+
+**Currency is EGP and there is exactly one formatter** — `formatCurrency` in `lib/utils.ts`. Do not hand-roll `` `${n.toLocaleString()} ج.م` ``; that drift is what left `ر.س` (Saudi riyal) rendering on the customer order page. It deliberately does **not** use `Intl` currency style, which emits Arabic-Indic digits that clash with the Latin numerals the rest of the site uses.
+
+**Shipping cost is per governorate, admin-editable.** `governorates` (27 rows, seeded) holds `shipping_cost` + `is_deliverable`; `/admin/shipping` edits them alongside real order traffic from `governorate_order_stats()`. `app_settings` is a public-readable key/value table for site-wide values (free-shipping threshold, wallet numbers, WhatsApp number) — **never put secrets there.** `resolveShippingCost` in `features/checkout/lib/shipping.ts` is import-free and runs on both server and client so the quoted and charged numbers cannot diverge.
+
+**`orders.shipping_governorate` stays free text** (an order snapshots the name it was placed under), but checkout now picks from the table. `normalize_governorate_name()` collapses the Arabic spelling variants — 9 distinct strings for 5 governorates existed before this landed, which made traffic grouping useless.
+
+**Checkout recomputes every total server-side.** `createOrder` re-reads prices from `products` and the rate from `governorates`; the browser cart is treated as nothing more than a list of (product id, quantity). It previously summed the client's `item.price`, so a crafted request bought anything for 1 EGP. There is a Playwright regression test for this.
+
+#### Payment status is derived, never set
+
+- **`order_payments` is an append-only ledger** and the sole input to `orders.payment_status` and `orders.amount_paid`. `sync_order_payment_totals_trigger` recomputes both on **every** write to `orders`, so application code cannot set them — whatever it sends is overwritten. Same discipline as `log_status_change_trigger` owning `order_status_history`.
+- Because it fires on every `orders` write, **changing `total` re-derives payment status.** Adding shipping to a paid order correctly drops it back to `partially_paid`; without that the shop silently under-collects.
+- **Never delete or edit a payment row.** Corrections and refunds are compensating **negative** rows (`voidPayment` does this), which preserves `recorded_by` and the original timestamp — the two things that make a dispute resolvable later.
+- **`src/features/orders/constants/payment.ts` is the single source of truth**, import-free and unit-tested, mirroring `orders_payment_status_check`, `orders_payment_method_check` and `derive_payment_status()`. **Change the TS and the SQL in the same commit.** Icons live in `payment-icons.ts`.
+- **Values are English tokens with Arabic labels in the registry** — the one deliberate departure from the order-status convention, because the column already held `unpaid`/`paid` behind a live constraint and these map onto what a gateway (Paymob/Fawry) would return.
+- **Payment status is orthogonal to order status.** An order is legitimately `جاري التجهيز` *and* `مدفوعة جزئياً`. Do not add payment states to `ORDER_STATUSES` — it would turn 7 states into ~28 and break the acyclicity that `UNIQUE (order_id, status)` depends on.
+- Shipping an unpaid order is **warned about, not blocked** (`OrdersTable`'s confirm dialog). A hard rule would make a trusted-customer COD order unshippable, and the storefront advertises الدفع عند الاستلام.
+- The partial unique index on `(order_id, reference)` catches the "admin submitted the same transfer twice" mistake; `recordPayment` turns the 23505 into an Arabic message.
+
+**Customer payment instructions live on the page** (`/order-success/[id]` and `/account/orders/[id]`), not in `notifications`. That table has **no recipient column** — it is a single global admin feed — and checkout supports guest orders with no user account, which a per-user feed could never reach.
+
+**`updateOrderStatus` now calls `requireAdmin()`.** It was an unguarded exported Server Action relying solely on whatever `orders` UPDATE policy exists in the dashboard.
 
 ### Admin product authoring (added 2026-08-19)
 

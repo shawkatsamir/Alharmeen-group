@@ -14,6 +14,7 @@ import { ShareButton } from "./ShareButton";
 import { Check, Minus, Plus, ShoppingCart, X } from "lucide-react";
 import type { Product } from "../../types";
 import { pickSpecHighlights } from "../../lib/specifications";
+import { formatCurrency } from "@/lib/utils";
 
 interface ProductBuyBoxProps {
   product: Product;
@@ -82,14 +83,14 @@ export function ProductBuyBox({ product }: ProductBuyBoxProps) {
   const priceBlock = (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <span className="text-3xl font-bold text-primary">
-        {product.price.toLocaleString("en-EG")} ج.م
+        {formatCurrency(product.price)}
       </span>
       {hasDiscount && (
         <>
           <span className="text-lg text-muted-foreground line-through">
-            {product.old_price!.toLocaleString("en-EG")} ج.م
+            {formatCurrency(product.old_price!)}
           </span>
-          <Badge variant="sale">وفر {saving.toLocaleString("en-EG")} ج.م</Badge>
+          <Badge variant="sale">وفر {formatCurrency(saving)}</Badge>
         </>
       )}
     </div>
@@ -228,7 +229,7 @@ export function ProductBuyBox({ product }: ProductBuyBoxProps) {
             {product.name_ar.trim()}
           </p>
           <p className="text-lg font-bold text-primary">
-            {product.price.toLocaleString("en-EG")} ج.م
+            {formatCurrency(product.price)}
           </p>
         </div>
         {mounted && quantity > 0 ? (

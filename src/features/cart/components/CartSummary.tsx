@@ -2,12 +2,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
+import { formatCurrency } from "@/lib/utils";
 
 export function CartSummary() {
   const { total, items } = useCartStore();
   const subtotal = total();
-  // We can add shipping logic later if needed
-  const shipping: number = 0;
 
   const router = useRouter();
   const supabase = createClient();
@@ -31,17 +30,17 @@ export function CartSummary() {
       <div className="space-y-4 mb-6">
         <div className="flex justify-between text-gray-600">
           <span>المجموع الفرعي</span>
-          <span>{subtotal.toLocaleString()} ج.م</span>
+          <span>{formatCurrency(subtotal)}</span>
         </div>
+        {/* The rate depends on the governorate, which is only collected at
+            checkout — so quote it there rather than promising "مجاني" here. */}
         <div className="flex justify-between text-gray-600">
           <span>الشحن</span>
-          <span>
-            {shipping === 0 ? "مجاني" : `${shipping.toLocaleString()} ج.م`}
-          </span>
+          <span className="text-sm text-gray-500">يُحسب عند إتمام الطلب</span>
         </div>
         <div className="border-t border-gray-200 pt-4 mt-4 font-bold flex justify-between text-lg">
           <span>الإجمالي</span>
-          <span>{(subtotal + shipping).toLocaleString()} ج.م</span>
+          <span>{formatCurrency(subtotal)}</span>
         </div>
       </div>
 

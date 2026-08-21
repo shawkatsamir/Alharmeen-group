@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { FilterOptions } from "@/services/server/products";
 import { Slider } from "@/shared/components/ui/Slider";
+import { formatCurrency } from "@/lib/utils";
 
 // Add isOpen and onClose to props
 interface FilterSidebarProps {
@@ -224,8 +225,8 @@ function FilterSidebarComponent({
                 />
 
                 <div className="text-xs text-gray-400 text-center">
-                  {availablePriceRange.min.toLocaleString()} -{" "}
-                  {availablePriceRange.max.toLocaleString()} ج.م
+                  {availablePriceRange.min.toLocaleString("en-EG")} -{" "}
+                  {formatCurrency(availablePriceRange.max)}
                 </div>
               </div>
             </div>

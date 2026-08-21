@@ -5,6 +5,8 @@ import {
   CreditCard,
   ChevronRight,
   Package,
+  RotateCcw,
+  Wallet,
 } from "lucide-react";
 import {
   isOrderStatus,
@@ -14,8 +16,22 @@ import {
   STATUS_ICONS,
   STATUS_ICON_COLORS,
 } from "@/features/orders/constants/order-status-icons";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_RECORD_METHOD_LABELS,
+  PAYMENT_STATUS_COLORS,
+  PAYMENT_STATUS_LABELS,
+  amountRemaining,
+  isPaymentMethod,
+  isPaymentRecordMethod,
+  isPaymentStatus,
+} from "@/features/orders/constants/payment";
+import { PaymentInstructions } from "@/features/orders/components/PaymentInstructions";
 import { getOrderById } from "@/services/server/orders";
+import { getOrderPayments } from "@/services/server/payments";
+import { getPaymentSettings } from "@/services/server/payment-settings";
 import { createClient } from "@/lib/supabase/server";
+import { formatCurrency } from "@/lib/utils";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Img } from "@/shared/components/ui/Image";
@@ -58,6 +74,33 @@ export default async function OrderDetailsPage({
   if (!order || order.user_id !== user.id) {
     notFound();
   }
+
+  const [payments, paymentSettings] = await Promise.all([
+    getOrderPayments(order.id),
+    getPaymentSettings(),
+  ]);
+
+  // Reuse the presentational timeline the status history already uses, so the
+  // payment record reads exactly like the order record beside it.
+  const paymentSteps = payments.map((payment) => {
+    const isRefund = payment.amount < 0;
+    return {
+      id: payment.id,
+      label: `${isRefund ? "استرجاع" : "دفعة"} ${formatCurrency(Math.abs(payment.amount))}`,
+      date: new Date(payment.created_at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      description: isPaymentRecordMethod(payment.method)
+        ? PAYMENT_RECORD_METHOD_LABELS[payment.method]
+        : payment.method,
+      status: "completed" as const,
+      icon: isRefund ? RotateCcw : Wallet,
+    };
+  });
 
   // Construct Timeline Steps from History
   const historySteps =
@@ -133,11 +176,11 @@ export default async function OrderDetailsPage({
                         {item.product_name}
                       </h3>
                       <span className="font-bold text-gray-900 dark:text-white">
-                        {item.total_price.toFixed(2)} ر.س
+                        {formatCurrency(item.total_price)}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {item.quantity} x {item.unit_price.toFixed(2)} ر.س
+                      {item.quantity} x {formatCurrency(item.unit_price)}
                     </p>
                   </div>
                 </div>
@@ -148,19 +191,21 @@ export default async function OrderDetailsPage({
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">المجموع الفرعي</span>
                 <span className="font-medium">
-                  {order.subtotal.toFixed(2)} ر.س
+                  {formatCurrency(order.subtotal)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">الشحن</span>
                 <span className="font-medium">
-                  {order.shipping_cost.toFixed(2)} ر.س
+                  {order.shipping_cost === 0
+                    ? "مجاني"
+                    : formatCurrency(order.shipping_cost)}
                 </span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
                 <span>الإجمالي</span>
                 <span className="text-[#4EA674]">
-                  {order.total.toFixed(2)} ر.س
+                  {formatCurrency(order.total)}
                 </span>
               </div>
             </div>
@@ -220,21 +265,61 @@ export default async function OrderDetailsPage({
               <div className="flex justify-between">
                 <span className="text-gray-500">طريقة الدفع</span>
                 <span className="font-medium">
-                  {order.payment_method === "cod"
-                    ? "الدفع عند الاستلام"
+                  {isPaymentMethod(order.payment_method)
+                    ? PAYMENT_METHOD_LABELS[order.payment_method]
                     : order.payment_method}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">حالة الدفع</span>
                 <span
-                  className={`font-medium px-2 py-0.5 rounded-full text-xs ${order.payment_status === "paid" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                  className={`font-medium px-2 py-0.5 rounded-full text-xs border ${
+                    isPaymentStatus(order.payment_status)
+                      ? PAYMENT_STATUS_COLORS[order.payment_status]
+                      : "bg-gray-100 text-gray-700 border-gray-200"
+                  }`}
                 >
-                  {order.payment_status === "paid" ? "تم الدفع" : "معلق"}
+                  {isPaymentStatus(order.payment_status)
+                    ? PAYMENT_STATUS_LABELS[order.payment_status]
+                    : order.payment_status}
+                </span>
+              </div>
+
+              {/* The balance owed is the number the customer actually needs —
+                  previously the card showed only a paid/pending badge. */}
+              <div className="flex justify-between">
+                <span className="text-gray-500">المدفوع</span>
+                <span className="font-medium text-green-600">
+                  {formatCurrency(order.amount_paid)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-gray-100 dark:border-gray-700 pt-2">
+                <span className="text-gray-500">المتبقي</span>
+                <span className="font-bold text-[#4EA674]">
+                  {formatCurrency(
+                    amountRemaining(order.total, order.amount_paid),
+                  )}
                 </span>
               </div>
             </div>
+
+            {payments.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  سجل المدفوعات
+                </h3>
+                <OrderTimeline steps={paymentSteps} />
+              </div>
+            )}
           </div>
+
+          <PaymentInstructions
+            orderNumber={order.order_number || order.id.slice(0, 8)}
+            total={order.total}
+            amountPaid={order.amount_paid}
+            paymentMethod={order.payment_method}
+            settings={paymentSettings}
+          />
         </div>
       </div>
     </div>
