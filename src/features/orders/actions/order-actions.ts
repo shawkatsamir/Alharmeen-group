@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+import { requireAdmin } from "@/features/admin/lib/require-admin";
 import {
   canTransition,
   getNextStatuses,
@@ -18,7 +18,13 @@ import {
  * a duplicate row for every transition.
  */
 export async function updateOrderStatus(orderId: string, newStatus: string) {
-  const supabase = await createClient();
+  // Previously unguarded: this is an exported Server Action, so it was
+  // callable by any authenticated user and relied entirely on whatever UPDATE
+  // policy `orders` happens to have configured in the dashboard.
+  const guard = await requireAdmin();
+  if (!guard.ok) return { success: false, message: guard.message };
+
+  const supabase = guard.supabase;
 
   if (!isOrderStatus(newStatus)) {
     return { success: false, message: "حالة الطلب غير صالحة" };

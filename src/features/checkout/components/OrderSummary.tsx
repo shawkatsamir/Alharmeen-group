@@ -3,16 +3,37 @@
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { resolveShippingCost } from "../lib/shipping";
 
 interface OrderSummaryProps {
   isLoading: boolean;
   onPlaceOrder?: () => void;
+  /** The chosen governorate's rate, or null before one is picked. */
+  shippingRate: number | null;
+  freeShippingThreshold: number | null;
 }
 
-export function OrderSummary({ isLoading, onPlaceOrder }: OrderSummaryProps) {
+export function OrderSummary({
+  isLoading,
+  onPlaceOrder,
+  shippingRate,
+  freeShippingThreshold,
+}: OrderSummaryProps) {
   const { total, items } = useCartStore();
   const subtotal = total();
-  const shipping: number = 0; // Fixed for now
+
+  // Until a governorate is chosen there is no rate to quote. Showing "مجاني"
+  // in that gap — which is what this component used to do unconditionally —
+  // promises free delivery the order then charges for.
+  const quote =
+    shippingRate === null
+      ? null
+      : resolveShippingCost({
+          rate: shippingRate,
+          subtotal,
+          freeShippingThreshold,
+        });
 
   if (items.length === 0) return null;
 
@@ -26,7 +47,7 @@ export function OrderSummary({ isLoading, onPlaceOrder }: OrderSummaryProps) {
             <span className="text-gray-600">
               {item.quantity}x {item.name}
             </span>
-            <span>{(item.price * item.quantity).toLocaleString()} ج.م</span>
+            <span>{formatCurrency(item.price * item.quantity)}</span>
           </div>
         ))}
       </div>
@@ -36,17 +57,31 @@ export function OrderSummary({ isLoading, onPlaceOrder }: OrderSummaryProps) {
       <div className="space-y-4 mb-6">
         <div className="flex justify-between text-gray-600">
           <span>المجموع الفرعي</span>
-          <span>{subtotal.toLocaleString()} ج.م</span>
+          <span>{formatCurrency(subtotal)}</span>
         </div>
         <div className="flex justify-between text-gray-600">
           <span>الشحن</span>
           <span>
-            {shipping === 0 ? "مجاني" : `${shipping.toLocaleString()} ج.م`}
+            {quote === null ? (
+              <span className="text-sm text-gray-500">اختر المحافظة</span>
+            ) : quote.isFree ? (
+              "مجاني"
+            ) : (
+              formatCurrency(quote.cost)
+            )}
           </span>
         </div>
+        {quote === null &&
+          freeShippingThreshold !== null &&
+          subtotal < freeShippingThreshold && (
+            <p className="text-xs text-[#4EA674]">
+              أضف {formatCurrency(freeShippingThreshold - subtotal)} للحصول على
+              شحن مجاني
+            </p>
+          )}
         <div className="border-t border-gray-200 pt-4 mt-4 font-bold flex justify-between text-lg">
           <span>الإجمالي</span>
-          <span>{(subtotal + shipping).toLocaleString()} ج.م</span>
+          <span>{formatCurrency(subtotal + (quote?.cost ?? 0))}</span>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRealtimePrice } from "../hooks/useRealtimePrice";
-import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface Props {
@@ -24,7 +24,7 @@ export function LivePrice({ product }: Props) {
     <div className="space-y-2">
       <div className="flex items-end gap-2">
         <h2 className="text-3xl font-bold text-gray-900">
-          {currentPrice.toLocaleString()} EGP
+          {formatCurrency(currentPrice)}
         </h2>
 
         {/* Subtle Loading Indicator for the admin/dev to know it's checking */}
@@ -36,15 +36,15 @@ export function LivePrice({ product }: Props) {
       {/* Stock Status */}
       {isOutOfStock ? (
         <span className="inline-block px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
-          Out of Stock
+          غير متوفر
         </span>
       ) : stock < 5 ? (
         <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
-          Only {stock} left!
+          باقي {stock} فقط!
         </span>
       ) : (
         <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-          In Stock
+          متوفر
         </span>
       )}
     </div>

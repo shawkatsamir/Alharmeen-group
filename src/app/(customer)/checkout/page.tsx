@@ -8,13 +8,28 @@ import { CheckoutFormValues } from "@/features/checkout/schema";
 import { OrderSummary } from "@/features/checkout/components/OrderSummary";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getShippingOptions } from "@/services/client/shipping";
 
 export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [governorate, setGovernorate] = useState<string>("");
   const { items, clearCart } = useCartStore();
   const router = useRouter();
+
+  // Rates change rarely and only from the admin dashboard, so this is cheap to
+  // hold for the length of a checkout session.
+  const { data: shipping } = useQuery({
+    queryKey: ["shipping-options"],
+    queryFn: getShippingOptions,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const selectedRate =
+    shipping?.governorates.find((g) => g.name_ar === governorate)
+      ?.shipping_cost ?? null;
 
   useEffect(() => {
     setMounted(true);
@@ -59,7 +74,13 @@ export default function CheckoutPage() {
         <div className="lg:col-span-2">
           <div className="bg-white p-6 rounded-lg border border-gray-100">
             <h2 className="text-xl font-semibold mb-6">بيانات الشحن</h2>
-            <CheckoutForm id="checkout-form" onSubmit={handleSubmit} />
+            <CheckoutForm
+              id="checkout-form"
+              onSubmit={handleSubmit}
+              governorates={shipping?.governorates ?? []}
+              onGovernorateChange={setGovernorate}
+              paymentDestinations={shipping?.paymentDestinations}
+            />
           </div>
         </div>
 
@@ -67,6 +88,8 @@ export default function CheckoutPage() {
         <div className="lg:col-span-1">
           <OrderSummary
             isLoading={isLoading}
+            shippingRate={selectedRate}
+            freeShippingThreshold={shipping?.freeShippingThreshold ?? null}
             onPlaceOrder={() => {
               // Trigger form submission from outside the form
               const form = document.getElementById(

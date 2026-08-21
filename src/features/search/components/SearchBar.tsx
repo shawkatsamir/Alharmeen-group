@@ -7,6 +7,7 @@ import { Search, Loader2, X } from "lucide-react";
 import { useDebounce } from "@/features/search/hooks/useDebounce";
 import { searchProducts } from "@/features/search/actions/search-products";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils";
 
 interface SearchBarProps {
   onClose?: () => void;
@@ -153,7 +154,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
                   >
                     <div className="text-left">
                       <p className="text-sm font-bold text-primary">
-                        {product.price.toLocaleString("ar-EG")} ج.م
+                        {formatCurrency(product.price)}
                       </p>
                     </div>
                     <div className="text-right">

@@ -2,6 +2,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { Img } from "@/shared/components/ui/Image";
+import { formatCurrency } from "@/lib/utils";
 
 interface CartItemProps {
   item: {
@@ -33,7 +34,7 @@ export function CartItem({ item }: CartItemProps) {
             <p className="text-sm text-gray-500 mt-1">{item.brand}</p>
           </div>
           <p className="font-bold whitespace-nowrap">
-            {item.price.toLocaleString()} ج.م
+            {formatCurrency(item.price)}
           </p>
         </div>
 
@@ -75,8 +76,7 @@ export function CartItem({ item }: CartItemProps) {
         {item.quantity > 1 && (
           <div className="mt-2 pt-2 border-t">
             <p className="text-sm text-muted-foreground">
-              الإجمالي: {(item.price * item.quantity).toLocaleString("ar-EG")}{" "}
-              جنيه
+              الإجمالي: {formatCurrency(item.price * item.quantity)}
             </p>
           </div>
         )}
