@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { ProductCard } from "./ProductCard";
+import { collapseVariants } from "../lib/variant-group";
 import { Product } from "../types";
 
 interface ProductSliderProps {
@@ -75,14 +76,20 @@ export default function ProductSlider({
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scroll-smooth no-scrollbar"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {products.map((product) => (
+            {/*
+              Collapsed for the same reason as ProductGrid: a rail that shows
+              the same fridge in three finishes wastes three of its handful of
+              visible slots on one product.
+            */}
+            {collapseVariants(products).map(({ representative, members }) => (
               <div
-                key={product.id}
+                key={representative.id}
                 className="flex-none w-[200px] md:w-[240px] lg:w-[260px] snap-start"
               >
                 <ProductCard
-                  product={product}
-                  isWishlisted={wishlistIds?.includes(product.id)}
+                  product={representative}
+                  variants={members}
+                  isWishlisted={wishlistIds?.includes(representative.id)}
                 />
               </div>
             ))}

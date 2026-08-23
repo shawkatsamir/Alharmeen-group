@@ -149,6 +149,19 @@ const specRowSchema = z.object({
   value: z.string().trim().min(1, "قيمة المواصفة مطلوبة"),
 });
 
+/**
+ * One axis value, e.g. `{ axis: "اللون", value: "سيلفر" }`.
+ *
+ * Edited as ordered rows for the same reason specifications are: the axis order
+ * is the group's, and jsonb key order is not author-controllable.
+ */
+const variantValueRowSchema = z.object({
+  axis: z.string().trim().min(1, "اسم الخاصية مطلوب"),
+  value: z.string().trim().min(1, "قيمة الخاصية مطلوبة"),
+});
+
+export type VariantValueRow = z.infer<typeof variantValueRowSchema>;
+
 export const VIDEO_KEYS = ["unboxing", "features", "troubleshooting"] as const;
 export type VideoKey = (typeof VIDEO_KEYS)[number];
 
@@ -189,6 +202,15 @@ export const productFormSchema = z
       .number()
       .int("الحد يجب أن يكون رقماً صحيحاً")
       .min(0, "الحد لا يمكن أن يكون سالباً"),
+
+    /*
+     * Variant group. Both fields move together: a product either belongs to a
+     * group and carries a value for every one of that group's axes, or belongs
+     * to no group and carries none. The cross-field rule is enforced in
+     * `superRefine` below, because Zod cannot express it field-by-field.
+     */
+    group_id: z.string().uuid().nullable().optional(),
+    variant_values: z.array(variantValueRowSchema),
 
     // Flags. `is_special_offer` is derived from the offer section, not set here.
     is_active: z.boolean(),
@@ -264,6 +286,44 @@ export const productFormSchema = z
       }
       seen.add(key);
     });
+
+    /*
+     * Group membership and axis values move together.
+     *
+     * A grouped product with no axis value is the failure that matters: it
+     * would render as a swatch with no label, and — because the DB's
+     * `unique (group_id, variant_values)` index treats NULLs as distinct — a
+     * second such product would not even collide. The group would quietly hold
+     * two indistinguishable variants.
+     */
+    const axisSeen = new Set<string>();
+    data.variant_values.forEach((row, i) => {
+      const axis = row.axis.trim();
+      if (axisSeen.has(axis)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "هذه الخاصية مكررة",
+          path: ["variant_values", i, "axis"],
+        });
+      }
+      axisSeen.add(axis);
+    });
+
+    if (data.group_id && data.variant_values.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "حدد قيمة الخاصية التي يتميز بها هذا المنتج داخل المجموعة",
+        path: ["variant_values"],
+      });
+    }
+
+    if (!data.group_id && data.variant_values.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "اختر المجموعة أولاً",
+        path: ["group_id"],
+      });
+    }
   });
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -281,6 +341,8 @@ export interface ProductRowPayload {
   category_id: string;
   brand_id: string;
   warranty_info: string | null;
+  group_id: string | null;
+  variant_values: Record<string, string> | null;
   price: number;
   old_price: number | null;
   sale_end_date: string | null;
@@ -347,6 +409,24 @@ export function toProductRow(values: ProductFormValues): ProductRowPayload {
     .map((f) => f.trim())
     .filter((f) => f.length > 0);
 
+  /*
+   * Axis rows collapse into a jsonb object, exactly like `specifications`.
+   *
+   * Values are stored as typed. Colour spellings are steered at the input
+   * instead — the axis field offers the canonical values of the group's
+   * existing variants as a datalist — so what the admin sees saved is what
+   * they wrote, and `normalize_color_name()` handles comparison.
+   */
+  const variantValues = values.variant_values.reduce<Record<string, string>>(
+    (acc, row) => {
+      const axis = row.axis.trim();
+      const value = row.value.trim();
+      if (axis && value) acc[axis] = value;
+      return acc;
+    },
+    {},
+  );
+
   const videoUrls = VIDEO_KEYS.reduce<Record<string, string>>((acc, key) => {
     const url = values.video_urls[key]?.trim();
     if (url) acc[key] = url;
@@ -361,6 +441,15 @@ export function toProductRow(values: ProductFormValues): ProductRowPayload {
     category_id: values.category_id,
     brand_id: values.brand_id,
     warranty_info: nullIfBlank(values.warranty_info),
+
+    group_id: values.group_id ?? null,
+    // Must be null rather than `{}` when ungrouped: the partial unique index on
+    // `(group_id, variant_values)` would otherwise see every ungrouped product
+    // as the same empty combination.
+    variant_values:
+      values.group_id && Object.keys(variantValues).length > 0
+        ? variantValues
+        : null,
 
     ...offer,
 

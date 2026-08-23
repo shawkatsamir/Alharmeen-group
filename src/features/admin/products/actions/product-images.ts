@@ -6,6 +6,7 @@ import type { Database } from "@/shared/types/database.types";
 import { requireAdmin } from "@/features/admin/lib/require-admin";
 import {
   CONTEXT_SELECT,
+  fetchSiblingSlugs,
   toContext,
   type ProductContextRow,
 } from "../lib/product-context";
@@ -272,6 +273,12 @@ async function revalidateProductById(
     .single();
 
   if (data) {
-    revalidateProduct(toContext(data as unknown as ProductContextRow));
+    const context = toContext(data as unknown as ProductContextRow);
+    revalidateProduct({
+      ...context,
+      // The colour switcher renders each sibling's primary image, so changing
+      // or reordering this product's images changes their pages too.
+      siblingSlugs: await fetchSiblingSlugs(supabase, context.groupId, productId),
+    });
   }
 }

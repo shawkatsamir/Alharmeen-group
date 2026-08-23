@@ -11,16 +11,22 @@ import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "../CompareToggle";
 import { CountdownTimer } from "../CountdownTimer";
 import { ShareButton } from "./ShareButton";
+import { VariantSelector } from "./VariantSelector";
 import { Check, Minus, Plus, ShoppingCart, X } from "lucide-react";
-import type { Product } from "../../types";
+import type { Product, VariantSibling } from "../../types";
 import { pickSpecHighlights } from "../../lib/specifications";
 import { formatCurrency } from "@/lib/utils";
 
 interface ProductBuyBoxProps {
   product: Product;
+  /**
+   * Other active variants of this product's group, this one included. Empty
+   * when the product has no siblings, which is the common case.
+   */
+  siblings?: VariantSibling[];
 }
 
-export function ProductBuyBox({ product }: ProductBuyBoxProps) {
+export function ProductBuyBox({ product, siblings = [] }: ProductBuyBoxProps) {
   const addItem = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -151,6 +157,12 @@ export function ProductBuyBox({ product }: ProductBuyBoxProps) {
             كود المنتج: <span className="font-medium">{product.sku}</span>
           </p>
         )}
+
+        <VariantSelector
+          axes={product.group?.axes ?? []}
+          siblings={siblings}
+          activeId={product.id}
+        />
 
         <Separator className="my-5" />
 

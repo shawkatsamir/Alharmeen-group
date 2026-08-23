@@ -9,6 +9,7 @@ import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import type { Product } from "@/features/products/types";
+import { collapseVariants } from "@/features/products/lib/variant-group";
 
 interface ProductsClientProps {
   initialProducts: Product[];
@@ -133,8 +134,21 @@ export default function ProductsClient({
     return count;
   }, [selectedBrands, priceRange, offersOnly, filterOptions.priceRange]);
 
-  // Filter and sort products using useMemo
-  const filteredProducts = useMemo(() => {
+  /*
+   * Filter first, then group, then sort the GROUPS.
+   *
+   * Order matters twice over:
+   *
+   *  - Filtering must precede grouping. If the shopper asks for ٥٠٠٠–٨٠٠٠ ج.م
+   *    and only the silver variant qualifies, silver is what the card must
+   *    show; grouping first would pick a representative the filter excluded.
+   *
+   *  - Sorting must follow grouping. A card advertises its *representative's*
+   *    price, so sorting the raw variants would place a group at its cheapest
+   *    member's position while displaying a different, higher price — the grid
+   *    would look mis-sorted.
+   */
+  const visibleGroups = useMemo(() => {
     let result = [...initialProducts];
 
     // Filter by brands
@@ -154,28 +168,48 @@ export default function ProductsClient({
       result = result.filter((p) => p.old_price && p.old_price > p.price);
     }
 
-    // Sort
+    const groups = collapseVariants(result);
+
+    // Sort, always on the variant the card actually shows.
     switch (sortBy) {
       case "price_asc":
-        result.sort((a, b) => a.price - b.price);
+        groups.sort((a, b) => a.representative.price - b.representative.price);
         break;
       case "price_desc":
-        result.sort((a, b) => b.price - a.price);
+        groups.sort((a, b) => b.representative.price - a.representative.price);
         break;
       case "best_seller":
-        result.sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
+        groups.sort(
+          (a, b) =>
+            (b.representative.sales_count || 0) -
+            (a.representative.sales_count || 0),
+        );
         break;
       case "newest":
       default:
-        result.sort(
+        groups.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+            new Date(b.representative.created_at).getTime() -
+            new Date(a.representative.created_at).getTime(),
         );
         break;
     }
 
-    return result;
+    return groups;
   }, [initialProducts, selectedBrands, priceRange, offersOnly, sortBy]);
+
+  /**
+   * Flattened back to a product list for `ProductGrid`, which re-groups it.
+   *
+   * Members stay contiguous and groups stay in the order chosen above, and
+   * `collapseVariants` surfaces each group at its first member's position — so
+   * the grid reconstructs exactly this ordering, and the cards still receive
+   * their siblings for the swatch row.
+   */
+  const orderedProducts = useMemo(
+    () => visibleGroups.flatMap((group) => group.members),
+    [visibleGroups],
+  );
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -213,8 +247,9 @@ export default function ProductsClient({
           </button>
 
           <div className="text-sm text-gray-600 hidden sm:block">
+            {/* Counts cards, not rows — a three-finish fridge is one product. */}
             <span className="font-medium text-gray-900">
-              {filteredProducts.length}
+              {visibleGroups.length}
             </span>{" "}
             منتج
             {activeFilterCount > 0 && (
@@ -244,8 +279,8 @@ export default function ProductsClient({
 
         {/* Loading overlay */}
         <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
-          {filteredProducts.length > 0 ? (
-            <ProductGrid products={filteredProducts} />
+          {visibleGroups.length > 0 ? (
+            <ProductGrid products={orderedProducts} />
           ) : (
             <div className="text-center py-12 text-gray-500">
               <p className="text-lg mb-2">لا توجد منتجات مطابقة</p>

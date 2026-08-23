@@ -26,6 +26,17 @@ export interface ProductRevalidationTarget {
   previousParentSlug?: string | null;
   brandSlug?: string | null;
   previousBrandSlug?: string | null;
+  /**
+   * Slugs of the other variants in this product's group.
+   *
+   * Each variant page statically embeds its siblings' prices and stock in the
+   * colour switcher, so changing one variant makes every *other* variant's page
+   * wrong until it regenerates — up to an hour. Editing the silver fridge has
+   * to rebuild the black one's page too.
+   */
+  siblingSlugs?: readonly string[] | null;
+  /** Siblings of the group the product just left, when it was regrouped. */
+  previousSiblingSlugs?: readonly string[] | null;
 }
 
 export function revalidateProduct(target: ProductRevalidationTarget): void {
@@ -50,6 +61,13 @@ export function revalidateProduct(target: ProductRevalidationTarget): void {
 
   if (target.brandSlug) paths.add(`/brand/${target.brandSlug}`);
   if (target.previousBrandSlug) paths.add(`/brand/${target.previousBrandSlug}`);
+
+  for (const slug of target.siblingSlugs ?? []) {
+    paths.add(`/product/${slug}`);
+  }
+  for (const slug of target.previousSiblingSlugs ?? []) {
+    paths.add(`/product/${slug}`);
+  }
 
   for (const path of paths) {
     revalidatePath(path);

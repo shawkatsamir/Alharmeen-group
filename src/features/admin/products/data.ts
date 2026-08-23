@@ -80,7 +80,10 @@ export async function getProductForEdit(
 
   const { data, error } = await supabase
     .from("products")
-    .select("*, images:product_images(*)")
+    // The group is embedded because `toProductFormValues` orders the axis rows
+    // by `group.axes` — without it, the colour field would render in jsonb key
+    // order and a newly added axis would show no row to fill in.
+    .select("*, images:product_images(*), group:product_groups(*)")
     .eq("id", productId)
     .single();
 
@@ -97,4 +100,58 @@ export async function getProductForEdit(
   );
 
   return product;
+}
+
+export interface ProductGroupOption {
+  id: string;
+  name_ar: string;
+  axes: string[];
+  /** Axis values already in use, so the form can suggest canonical spellings. */
+  values: Record<string, string[]>;
+}
+
+/**
+ * Every variant group, with the axis values its members already use.
+ *
+ * The values feed a `<datalist>` on the axis input, which is the same nudge
+ * `SpecEditor` gives for spec keys and exists for the same reason: axis values
+ * are matched by exact string, so one "فضي" typed where the group already uses
+ * "سيلفر" silently splits one product into two swatches of the same finish.
+ */
+export async function getProductGroupOptions(): Promise<ProductGroupOption[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("product_groups")
+    .select("id, name_ar, axes, products(variant_values)")
+    .order("name_ar");
+
+  if (error || !data) {
+    if (error) console.error("Error fetching product groups:", error);
+    return [];
+  }
+
+  return data.map((group) => {
+    const values: Record<string, string[]> = {};
+
+    for (const member of (group.products ?? []) as {
+      variant_values: unknown;
+    }[]) {
+      const stored = member.variant_values;
+      if (!stored || typeof stored !== "object" || Array.isArray(stored)) continue;
+
+      for (const [axis, value] of Object.entries(stored as Record<string, unknown>)) {
+        if (typeof value !== "string" || !value.trim()) continue;
+        const seen = (values[axis] ??= []);
+        if (!seen.includes(value)) seen.push(value);
+      }
+    }
+
+    return {
+      id: group.id,
+      name_ar: group.name_ar,
+      axes: group.axes ?? [],
+      values,
+    };
+  });
 }

@@ -148,6 +148,23 @@ Full-page create and edit at `/admin/products/new` and `/admin/products/[id]/edi
 
 Migration `20260819090000_admin_product_image_write_access` added the admin INSERT/UPDATE/DELETE policies on `product_images` and on `storage.objects` for the `products` bucket — **both were SELECT-only, so image writes were impossible**; the 93 existing rows were created through the dashboard, which bypasses RLS. It also added a `unique (product_id) where is_primary` index (3 products had two primaries, 21 had none).
 
+### Product variant groups (added 2026-08-23)
+
+One physical product sold in several finishes — `SJ-58C(BK)` / `(SL)` / `(ST)` is one fridge in three colours. `product_groups` holds what the variants share (`name_ar`, ordered `axes`); each variant stays its own `products` row with its own slug, SKU, price, stock and images, carrying `group_id`, `variant_values` (jsonb, keyed by axis) and `is_group_primary`.
+
+- **Variant URLs stay indexable and self-canonical.** Separate URLs per colour are not a duplicate-content penalty — Google supports them and publishes `ProductGroup`/`hasVariant` for exactly this. What cost rankings was that the siblings were *unlinked and unmarked*. Nothing is deindexed and no canonical points sideways.
+- **`src/features/products/constants/variant-axes.ts` is the single source of truth** for axis keys and colour spelling, import-free and unit-tested, mirroring `normalize_color_name()` in Postgres — **change both in the same commit.** Verified parity across all 26 live colour values.
+- **`src/features/products/lib/variant-group.ts`** is the pure grouping logic (`collapseVariants`, `pickRepresentative`). Import-free, same discipline as `specifications.ts`.
+- **Collapse runs after filtering, and sorting runs after collapsing.** `ProductGrid` collapses, so every listing gets it without changing call sites. `ProductsClient` sorts *groups* by their representative, because a card advertises the representative's price — sorting raw variants would place a group at its cheapest member's position while showing a higher number.
+- **Swatches must be real `<a>`/`<Link>`, never client-side state.** Crawlable internal links are the entire mechanism; a `useState` switcher would emit none. Out-of-stock variants stay linked and are only dimmed. Verified: the brand page renders 12 cards from 16 active products with all 16 variant URLs still in the HTML.
+- **Axis keys reuse spec keys** (`اللون`, `السعة`) because `groupSpecifications()` matches by exact string; a parallel vocabulary would let the selector and the spec table disagree.
+- `getVariantSiblings` filters `is_active` and returns `[]` for a group of one — an archived variant has no page for a swatch to link to, and a group of one must not emit a `ProductGroup` claiming a relationship that does not exist.
+- **Revalidation fans out across siblings.** Each variant page statically embeds its siblings' prices, so editing one makes the others wrong for up to an hour; `revalidateProduct` takes `siblingSlugs` and every admin write supplies them.
+- `is_group_primary` is **not** owned by the product form (it is absent from `ProductRowPayload`, so a save never touches it). It is set by the backfill and by `startVariantFromProduct`; there is no UI to reassign it yet.
+- **"أضف لوناً جديداً"** (`actions/variant-groups.ts`) creates the group if needed, makes the source its primary, and opens `/admin/products/new?duplicateFrom=<id>` prefilled with everything except SKU, slug, meta and the axis value.
+
+Migration `20260823090000_variant_data_hygiene` fixed what blocked this: **seven SKUs carried surrounding whitespace** on a UNIQUE column (three leading spaces, four trailing newlines), `RF-31FTV-DST` had three spec fields pasted from a different product, and colour had already drifted (`سيلفر`/`فضي`, `أسود`/`اسود`, `استانلس`/`استانلس ستيل`). Note `btrim(x)` strips **spaces only, not newlines** — that trap made an earlier version of the migration a silent no-op on four rows. `20260823092000_backfill_variant_groups` then grouped seven hand-verified clusters from a hardcoded SKU list; the SKU-suffix regex used to *discover* them is deliberately not shipped, because it mis-grouped `RF-31FTV` (whose members are 296 لتر and 355 لتر — different products, not finishes).
+
 `supabase/` holds `config.toml` (project id `alharmeen-group`) and, since 2026-08-18, tracked migrations in `supabase/migrations/`. There is no local Supabase stack, and the CLI is **not linked** (no `supabase/.temp/project-ref`). The remote migration history started empty, so **don't generate a baseline schema dump**. Add forward-only migrations.
 
 **Don't run `npx supabase db push`.** The remote history records different version numbers than the local filenames (local `20260818090000_order_status_history_integrity.sql` vs remote `20260818055857`), because migrations have been applied through the Supabase MCP `apply_migration` tool, which stamps its own timestamp. `db push` would therefore consider every local file unapplied and try to re-run all of them. Apply new migrations the same way they have been so far — via `apply_migration` — and keep the `.sql` file in `supabase/migrations/` as the tracked record.
@@ -169,3 +186,42 @@ The unused `lib/supabase/middleware.ts` references `NEXT_PUBLIC_SUPABASE_PUBLISH
 Turnstile is only ever verified by Supabase as part of `signInWithPassword`/`signUp` (`options.captchaToken`); this app never calls `siteverify` itself. A missing token is rejected client-side in `actions/login.ts` / `actions/signup.ts`, but an *invalid* one only fails if captcha is enabled server-side in Supabase.
 
 Remote images are restricted to `**.supabase.co` and `images.unsplash.com` in `next.config.ts`; a new image host must be added there.
+
+## Known gaps and follow-ups
+
+Open work, recorded so it is not rediscovered from scratch. Ordered roughly by value.
+
+### Variant groups — admin UX (the biggest gap)
+
+The storefront half of variant groups is complete; the admin half is the minimum that makes it usable, and it shows.
+
+1. **There is no way to see a group's members, and no way to find the "origin" product.** The group `<select>` on the product form lists group *names* only. A group whose only member is the product that created it looks identical to a fully-populated one, and nothing tells you which product is the primary or what colours are already taken. Needed: a group summary on the edit page (members, their colours, which is primary, links between them), and ideally an `/admin/products/groups` page. Until it exists, the group name is derived from the origin product's name minus its SKU, and the origin is the row with `is_group_primary = true`.
+2. **The group picker is shown on every product, including standalone ones.** Most products are not variants and never will be, so the field is noise on the majority of the catalogue and invites mis-grouping. It should be collapsed behind a disclosure, or only surfaced for products that already belong to a group or arrived via `?duplicateFrom=`.
+3. **No UI to reassign `is_group_primary`, rename a group, move a product between groups, merge two groups, or delete an empty one.** `is_group_primary` is deliberately absent from `ProductRowPayload` so a normal save never touches it — reassignment needs its own action.
+4. **A group can be left with one member** (archive one of a pair) and nothing flags it. It renders correctly — `getVariantSiblings` returns `[]` — but the group is then dead weight.
+5. **`startVariantFromProduct` derives the group name by stripping the trailing SKU**, so the colour word stays in it ("… 450 لتر أسود"). Harmless but wrong-looking, and unfixable without a rename UI (item 3).
+
+### Variant groups — deferred by design
+
+6. **Phase 2: group-owned shared content.** Move `description_ar`, `content_blocks`, `features` and `warranty_info` onto `product_groups` with a per-product override, so a correction is made once instead of once per colour. Agreed as a later phase; this is the remaining half of the effort saving.
+7. **Multi-axis selector.** The schema is multi-axis but `VariantSelector` renders one row of whole variants. A group varying by colour *and* capacity needs one row per axis with unavailable combinations disabled. No such product exists yet, so it was left unbuilt rather than untested.
+8. **E2E coverage for variants.** `e2e/stub-supabase.mjs` has no `product_groups`, so the switcher and the collapsed grid are covered only by unit tests plus manual verification against the built HTML.
+
+### Catalogue data
+
+9. **`SJ-58C(ST)` has one image and it is a photo of a Tornado 396L** (`tornado-…-rf-48t-st-…jpg`) on a Sharp 450L product. Now more visible, not less: that row is its group's primary, so it represents the group in listings and structured data.
+10. **Spec values are inconsistent within groups.** `SJ-58C(BK)` records `السعة = "450"` while `(ST)` records `"450 لتر"`; `SJ-58C(SL)` and `SJ-PV63G-BK` have no colour or capacity spec at all. `groupSpecifications()` matches by exact string, so these fall out of their group and out of the buy-box chips.
+
+### Pre-existing bugs found while building this
+
+None of these were introduced by the variant work; they were found alongside it.
+
+11. **`/compare` is permanently empty.** `src/app/(customer)/compare/page.tsx:16-17` selects `name` and `description`, neither of which is a `products` column. PostgREST 400s, the error is swallowed, and the page renders zero products every time. Its `searchParams` prop is also typed as a plain object but `await`ed.
+12. **`/search` does not exist.** `SearchBar.tsx:74` pushes to `/search?q=…`, so both "عرض كل النتائج" and Enter-to-submit 404. There is no `src/app/search`.
+13. **`useRealtimePrice` / `LivePrice` / `getProductPrice` are unreferenced.** The 30s price polling described above this section is not wired to any page; the PDP shows an ISR price up to an hour stale.
+14. **`wishlist.ts:40` revalidates `/products/${productId}`** — wrong segment (`/product`) and wrong identifier (id, not slug). A no-op.
+15. **Category listings render client-side.** `useSearchParams()` inside the Suspense boundary opts `ProductsClient` out of SSR, so `/[category]/[subcategory]` ships no product markup in its initial HTML. Variant discovery is unaffected (PDP switchers, brand grids and the sitemap all carry the links), but the listings themselves are invisible to a non-rendering crawler.
+16. **Sitemap gaps.** No top-level `/[category]`, `/brand/[slug]`, `/offers`, `/featured`, `/best-sellers`, `/about-us` or `/contact`, and every entry uses `lastModified: new Date()` rather than `updated_at`.
+17. **Canonical host is inconsistent.** Every SEO string hardcodes the apex `https://alharmaingroup.com` while `src/lib/site-url.ts:27` falls back to `https://www.alharmaingroup.com`. Pick one.
+18. **`/[category]/[subcategory]` never 404s** for an unknown subcategory — it renders an empty, indexable, self-canonical page.
+19. **`/compare` and `/wishlist` are crawlable, canonical-less and parameterised** (`?products=`), which is thin-content risk.

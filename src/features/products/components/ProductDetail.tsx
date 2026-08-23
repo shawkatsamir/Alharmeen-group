@@ -23,12 +23,14 @@ import { groupSpecifications } from "../lib/specifications";
 import { hasProductVideos } from "../lib/videos";
 import { hasContentBlocks } from "../lib/content-blocks";
 import { hasRichContent } from "../lib/rich-content";
-import type { Product } from "../types";
+import type { Product, VariantSibling } from "../types";
 
 interface ProductDetailProps {
   product: Product;
   related?: Product[];
   relatedSlot?: React.ReactNode;
+  /** Active variants of this product's group, this one included. */
+  siblings?: VariantSibling[];
 }
 
 /**
@@ -40,7 +42,11 @@ interface ProductDetailProps {
  * data is absent the section is not rendered at all, so the page reflows with
  * no gap and no dangling heading. There are no "قريباً" placeholders.
  */
-export function ProductDetail({ product, relatedSlot }: ProductDetailProps) {
+export function ProductDetail({
+  product,
+  relatedSlot,
+  siblings = [],
+}: ProductDetailProps) {
   const features = normalizeFeatures(product.features);
   const specGroups = groupSpecifications(product.specifications);
 
@@ -119,7 +125,7 @@ export function ProductDetail({ product, relatedSlot }: ProductDetailProps) {
             images={product.images ?? []}
             productName={product.name_ar.trim()}
           />
-          <ProductBuyBox product={product} />
+          <ProductBuyBox product={product} siblings={siblings} />
         </div>
 
         <ProductAnchorNav anchors={anchors} />

@@ -36,12 +36,15 @@ import {
 import { BlockEditor } from "./form/BlockEditor";
 import { ImageManager, type ManagedImage } from "./form/ImageManager";
 import { SpecEditor } from "./form/SpecEditor";
+import { VariantGroupEditor } from "./form/VariantGroupEditor";
+import type { ProductGroupOption } from "../data";
 
 interface ProductFormProps {
   mode: "create" | "edit";
   defaultValues: ProductFormValues;
   categories: CategoryOption[];
   brands: BrandOption[];
+  groups?: ProductGroupOption[];
   /** Edit mode only. */
   productId?: string;
   initialImages?: ManagedImage[];
@@ -62,6 +65,7 @@ export function ProductForm({
   defaultValues,
   categories,
   brands,
+  groups = [],
   productId,
   initialImages = [],
   legacyHtml,
@@ -86,6 +90,8 @@ export function ProductForm({
 
   const offerEnabled = watch("offerEnabled");
   const categoryId = watch("category_id");
+  const groupId = watch("group_id");
+  const variantValues = watch("variant_values");
   const nameEn = watch("name_en");
   const sku = watch("sku");
 
@@ -403,7 +409,7 @@ export function ProductForm({
           </TabsContent>
 
           {/* ---------------------------------------------------------- specs */}
-          <TabsContent value="specs">
+          <TabsContent value="specs" className="space-y-8">
             <Controller
               control={control}
               name="specifications"
@@ -414,6 +420,24 @@ export function ProductForm({
                   categoryId={categoryId}
                 />
               )}
+            />
+
+            {/*
+             * Sits with the specs rather than in its own tab: the colour a
+             * variant differs by is the same fact the spec table states, and
+             * splitting them across tabs is how the two drift apart.
+             */}
+            <VariantGroupEditor
+              groupId={groupId}
+              variantValues={variantValues}
+              groups={groups}
+              onChange={(patch) => {
+                setValue("group_id", patch.group_id, { shouldDirty: true });
+                setValue("variant_values", patch.variant_values, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              }}
             />
           </TabsContent>
 

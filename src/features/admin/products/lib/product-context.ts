@@ -13,6 +13,7 @@ import type { ProductRevalidationTarget } from "./revalidate-product";
  */
 type ProductContextRow = {
   slug: string;
+  group_id: string | null;
   category: { slug: string; parent: { slug: string } | null } | null;
   brand: { slug: string } | null;
 };
@@ -20,10 +21,13 @@ type ProductContextRow = {
 export type ProductContext = Pick<
   ProductRevalidationTarget,
   "slug" | "categorySlug" | "parentSlug" | "brandSlug"
->;
+> & {
+  /** Needed to fan revalidation out across the product's colour siblings. */
+  groupId: string | null;
+};
 
 const CONTEXT_SELECT =
-  "slug, category:categories(slug, parent:parent_id(slug)), brand:brands(slug)";
+  "slug, group_id, category:categories(slug, parent:parent_id(slug)), brand:brands(slug)";
 
 /** Same shape plus the id, for the `insert(...).select(...)` on create. */
 const CONTEXT_SELECT_WITH_ID = `id, ${CONTEXT_SELECT}`;
@@ -46,10 +50,38 @@ export async function fetchProductContext(
 export function toContext(row: ProductContextRow): ProductContext {
   return {
     slug: row.slug,
+    groupId: row.group_id ?? null,
     categorySlug: row.category?.slug ?? null,
     parentSlug: row.category?.parent?.slug ?? null,
     brandSlug: row.brand?.slug ?? null,
   };
+}
+
+/**
+ * Slugs of every other active variant in a group.
+ *
+ * Returns `[]` for an ungrouped product. The product's own slug is included by
+ * the caller through `target.slug`, so it is excluded here to keep the set
+ * meaningful on its own.
+ */
+export async function fetchSiblingSlugs(
+  supabase: SupabaseClient<Database>,
+  groupId: string | null | undefined,
+  excludeProductId?: string,
+): Promise<string[]> {
+  if (!groupId) return [];
+
+  let query = supabase
+    .from("products")
+    .select("slug")
+    .eq("group_id", groupId);
+
+  if (excludeProductId) query = query.neq("id", excludeProductId);
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  return data.map((row) => row.slug);
 }
 
 export { CONTEXT_SELECT, CONTEXT_SELECT_WITH_ID };
