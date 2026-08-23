@@ -27,6 +27,12 @@ export default async function WishlistPage() {
           <ProductGrid
             products={products}
             wishlistIds={products.map((p) => p.id)}
+            /*
+             * Not collapsed. The shopper saved a specific finish; folding the
+             * silver fridge they saved into a black sibling would silently
+             * change what their wishlist says they wanted.
+             */
+            expandVariants
           />
         ) : (
           <EmptyState

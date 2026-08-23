@@ -23,6 +23,9 @@ export function emptyProductFormValues(): ProductFormValues {
     brand_id: "",
     warranty_info: "",
 
+    group_id: null,
+    variant_values: [],
+
     basePrice: 0,
     offerEnabled: false,
     salePrice: null,
@@ -64,6 +67,15 @@ export function toProductFormValues(product: Product): ProductFormValues {
     brand_id: product.brand_id ?? "",
     warranty_info: product.warranty_info ?? "",
 
+    group_id: product.group_id ?? null,
+    /*
+     * Ordered by the group's own `axes` rather than by jsonb key order, so the
+     * colour field is always where the author expects it. Axes the product has
+     * no value for still render as empty rows — that is how a variant added
+     * before a new axis existed gets filled in.
+     */
+    variant_values: toVariantRows(product.variant_values, product.group?.axes),
+
     basePrice: offer.basePrice,
     offerEnabled: offer.offerEnabled,
     salePrice: offer.salePrice,
@@ -89,6 +101,38 @@ export function toProductFormValues(product: Product): ProductFormValues {
     meta_title_ar: product.meta_title_ar ?? "",
     meta_description_ar: product.meta_description_ar ?? "",
   };
+}
+
+/**
+ * `variant_values` jsonb -> ordered axis rows.
+ *
+ * Driven by the group's `axes` so the rows appear in the group's declared
+ * order, and so an axis the product has no value for still renders as a blank
+ * row waiting to be filled. Any stored axis that is no longer part of the group
+ * is appended rather than dropped — silently discarding it on the next save
+ * would change what the variant is without telling anyone.
+ */
+function toVariantRows(
+  variantValues: unknown,
+  axes: readonly string[] | undefined,
+): { axis: string; value: string }[] {
+  const stored =
+    variantValues && typeof variantValues === "object" && !Array.isArray(variantValues)
+      ? (variantValues as Record<string, unknown>)
+      : {};
+
+  const declared = axes ?? [];
+  const rows = declared.map((axis) => ({
+    axis,
+    value: stringifySpecValue(stored[axis]),
+  }));
+
+  for (const [axis, value] of Object.entries(stored)) {
+    if (declared.includes(axis)) continue;
+    rows.push({ axis, value: stringifySpecValue(value) });
+  }
+
+  return rows;
 }
 
 function toSpecRows(specifications: unknown): { key: string; value: string }[] {

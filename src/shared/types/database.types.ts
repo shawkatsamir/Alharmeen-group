@@ -447,6 +447,33 @@ export type Database = {
           },
         ];
       };
+      product_groups: {
+        Row: {
+          axes: string[];
+          created_at: string;
+          id: string;
+          name_ar: string;
+          name_en: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          axes?: string[];
+          created_at?: string;
+          id?: string;
+          name_ar: string;
+          name_en?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          axes?: string[];
+          created_at?: string;
+          id?: string;
+          name_ar?: string;
+          name_en?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       product_images: {
         Row: {
           alt_text_ar: string | null;
@@ -502,11 +529,13 @@ export type Database = {
           description_en: string | null;
           features: string[] | null;
           fts: unknown;
+          group_id: string | null;
           id: string;
           is_active: boolean;
           is_available: boolean;
           is_best_seller: boolean;
           is_featured: boolean;
+          is_group_primary: boolean;
           is_new: boolean;
           is_special_offer: boolean;
           low_stock_threshold: number;
@@ -523,6 +552,7 @@ export type Database = {
           specifications: Json | null;
           stock_quantity: number;
           updated_at: string;
+          variant_values: Json | null;
           video_urls: Json | null;
           view_count: number;
           warranty_info: string | null;
@@ -537,11 +567,13 @@ export type Database = {
           description_en?: string | null;
           features?: string[] | null;
           fts?: unknown;
+          group_id?: string | null;
           id?: string;
           is_active?: boolean;
           is_available?: boolean;
           is_best_seller?: boolean;
           is_featured?: boolean;
+          is_group_primary?: boolean;
           is_new?: boolean;
           is_special_offer?: boolean;
           low_stock_threshold?: number;
@@ -558,6 +590,7 @@ export type Database = {
           specifications?: Json | null;
           stock_quantity?: number;
           updated_at?: string;
+          variant_values?: Json | null;
           video_urls?: Json | null;
           view_count?: number;
           warranty_info?: string | null;
@@ -572,11 +605,13 @@ export type Database = {
           description_en?: string | null;
           features?: string[] | null;
           fts?: unknown;
+          group_id?: string | null;
           id?: string;
           is_active?: boolean;
           is_available?: boolean;
           is_best_seller?: boolean;
           is_featured?: boolean;
+          is_group_primary?: boolean;
           is_new?: boolean;
           is_special_offer?: boolean;
           low_stock_threshold?: number;
@@ -593,6 +628,7 @@ export type Database = {
           specifications?: Json | null;
           stock_quantity?: number;
           updated_at?: string;
+          variant_values?: Json | null;
           video_urls?: Json | null;
           view_count?: number;
           warranty_info?: string | null;
@@ -610,6 +646,13 @@ export type Database = {
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "product_groups";
             referencedColumns: ["id"];
           },
         ];
@@ -701,6 +744,7 @@ export type Database = {
         }[];
       };
       is_admin: { Args: never; Returns: boolean };
+      normalize_color_name: { Args: { p_name: string }; Returns: string };
       normalize_governorate_name: { Args: { p_name: string }; Returns: string };
       search_products: {
         Args: { limit_count?: number; search_term: string };
@@ -714,11 +758,13 @@ export type Database = {
           description_en: string | null;
           features: string[] | null;
           fts: unknown;
+          group_id: string | null;
           id: string;
           is_active: boolean;
           is_available: boolean;
           is_best_seller: boolean;
           is_featured: boolean;
+          is_group_primary: boolean;
           is_new: boolean;
           is_special_offer: boolean;
           low_stock_threshold: number;
@@ -735,6 +781,7 @@ export type Database = {
           specifications: Json | null;
           stock_quantity: number;
           updated_at: string;
+          variant_values: Json | null;
           video_urls: Json | null;
           view_count: number;
           warranty_info: string | null;

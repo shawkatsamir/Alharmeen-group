@@ -1,17 +1,53 @@
+import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
-import type { Brand, Product } from "@/features/products/types";
+import type { Brand, Product, VariantSibling } from "@/features/products/types";
 
 export type { Product };
 
 /**
  * Every product read in this module returns the same relation shape, which is
  * what `features/products/types.ts#Product` declares. Keep them in step.
+ *
+ * This used to be declared here and then re-typed inline at seven call sites,
+ * so adding `group:product_groups(*)` meant eight edits and seven chances to
+ * miss one. Every fetcher now uses the constant.
  */
 const PRODUCT_SELECT = `
       *,
       brand:brands(*),
       category:categories(*),
-      images:product_images(*)
+      images:product_images(*),
+      group:product_groups(*)
+    ` as const;
+
+/**
+ * The detail page additionally needs the parent category for its breadcrumb.
+ *
+ * `parent:parent_id(*)` — hinting the FK *column* — is what resolves the
+ * self-reference as to-one. Hinting the table (`categories!parent_id`) resolves
+ * it as to-many and returns the (empty) children array instead, which silently
+ * prerendered every product page as a 404 the last time it was got wrong.
+ */
+const PRODUCT_DETAIL_SELECT = `
+      *,
+      brand:brands(*),
+      category:categories(*, parent:parent_id(*)),
+      images:product_images(*),
+      group:product_groups(*)
+    ` as const;
+
+/**
+ * Enough to render a swatch: identity, price, availability and one image.
+ *
+ * Deliberately not `*` — a variant page embeds every sibling, and `*` would
+ * ship each sibling's `content_blocks` and `description_ar` (3,000-6,000
+ * characters apiece) to the browser for copy that is never rendered.
+ */
+const VARIANT_SIBLING_SELECT = `
+      id, slug, name_ar, sku, price, old_price,
+      is_available, is_active, stock_quantity,
+      group_id, is_group_primary, variant_values,
+      images:product_images(image_url, is_primary, alt_text_ar)
     ` as const;
 
 export async function getProducts(options?: {
@@ -22,14 +58,7 @@ export async function getProducts(options?: {
   const supabase = await createStaticClient();
   let query = supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("is_active", true);
 
   if (options?.featured) {
@@ -61,26 +90,24 @@ export async function getProducts(options?: {
   return data as Product[];
 }
 
-export async function getProductBySlug(slug: string): Promise<Product | null> {
+/**
+ * Wrapped in React `cache()` because the detail route reads it twice per
+ * render — once in `generateMetadata` and once in the page body — and now a
+ * third time to resolve the variant group. Without this, one page view is three
+ * identical round trips.
+ *
+ * The cache is per-request, so it does not hold stale data across ISR
+ * regenerations.
+ */
+export const getProductBySlug = cache(async function getProductBySlug(
+  slug: string,
+): Promise<Product | null> {
   const supabase = await createStaticClient();
   const { data, error } = await supabase
     .from("products")
-    .select(
-      /*
-       * Embeds the parent category too, so the detail page can build the
-       * `/[category]/[subcategory]` breadcrumb without a second round trip.
-       *
-       * `parent:parent_id(*)` — hinting the FK *column* — is what resolves the
-       * self-reference as to-one. Hinting the table (`categories!parent_id`)
-       * resolves it as to-many and returns the (empty) children array instead.
-       */
-      `
-      *,
-      brand:brands(*),
-      category:categories(*, parent:parent_id(*)),
-      images:product_images(*)
-    `,
-    )
+    // Embeds the parent category too, so the detail page can build the
+    // `/[category]/[subcategory]` breadcrumb without a second round trip.
+    .select(PRODUCT_DETAIL_SELECT)
     .eq("slug", slug)
     .single();
 
@@ -90,7 +117,40 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   }
 
   return data as Product;
-}
+});
+
+/**
+ * The other variants of a product's group, the current one included.
+ *
+ * Returns `[]` — never a group of one — when the product has no group, so
+ * callers can treat "no group" and "group with nothing to choose between"
+ * identically.
+ *
+ * Archived variants are excluded: an `is_active = false` product has no page to
+ * link to, and `generateStaticParams` never built one, so a swatch pointing at
+ * it would be an internal link to a 404.
+ */
+export const getVariantSiblings = cache(async function getVariantSiblings(
+  groupId: string | null,
+): Promise<VariantSibling[]> {
+  if (!groupId) return [];
+
+  const supabase = await createStaticClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(VARIANT_SIBLING_SELECT)
+    .eq("group_id", groupId)
+    .eq("is_active", true);
+
+  if (error) {
+    console.error(`Error fetching variant siblings for group ${groupId}:`, error);
+    return [];
+  }
+
+  const members = (data ?? []) as VariantSibling[];
+  // A lone survivor is not a choice — see `hasVariantChoice`.
+  return members.length > 1 ? members : [];
+});
 
 export async function getProductsByCategory(
   categoryId: string,
@@ -98,14 +158,7 @@ export async function getProductsByCategory(
   const supabase = await createStaticClient();
   const { data, error } = await supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("category_id", categoryId)
     .eq("is_active", true);
 
@@ -121,14 +174,7 @@ export async function getProductsByBrand(brandId: string): Promise<Product[]> {
   const supabase = await createStaticClient();
   const { data, error } = await supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("brand_id", brandId)
     .eq("is_active", true);
 
@@ -158,14 +204,7 @@ export async function getBestSellerProducts(
   const supabase = await createStaticClient();
   let query = supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("is_best_seller", true)
     .eq("is_active", true)
     // Without an explicit order Postgres returns rows in an arbitrary order,
@@ -203,14 +242,7 @@ export async function getOffers(
   const supabase = await createStaticClient();
   let query = supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("is_special_offer", true)
     .eq("is_active", true)
     // Soonest-ending offers first; stable tiebreak so ISR output is repeatable.
@@ -279,10 +311,20 @@ export async function getBrandBySlug(slug: string): Promise<Brand | null> {
  * مشابهة" rail is worse than none.
  */
 export async function getRelatedProducts(
-  product: Pick<Product, "id" | "category_id" | "brand_id">,
+  product: Pick<Product, "id" | "category_id" | "brand_id" | "group_id">,
   limit = 10,
 ): Promise<Product[]> {
   const supabase = await createStaticClient();
+
+  /*
+   * Siblings of the current product are excluded. They are already on the page
+   * as the variant switcher, and listing "أسود" again under "منتجات مشابهة"
+   * both wastes the rail and re-creates exactly the near-duplicate repetition
+   * that grouping exists to remove.
+   *
+   * Over-fetch so the exclusion below cannot leave the rail short.
+   */
+  const fetchLimit = product.group_id ? limit * 2 : limit;
 
   const { data, error } = await supabase
     .from("products")
@@ -292,14 +334,17 @@ export async function getRelatedProducts(
     .neq("id", product.id)
     .order("is_best_seller", { ascending: false })
     .order("sales_count", { ascending: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (error) {
     console.error(`Error fetching related products for ${product.id}:`, error);
     return [];
   }
 
-  const related = (data ?? []) as Product[];
+  const notASibling = (candidate: Product) =>
+    !product.group_id || candidate.group_id !== product.group_id;
+
+  const related = ((data ?? []) as Product[]).filter(notASibling).slice(0, limit);
   if (related.length >= 4 || !product.brand_id) return related;
 
   // Top up from the same brand, skipping anything already included.
@@ -311,14 +356,18 @@ export async function getRelatedProducts(
     .eq("is_active", true)
     .not("id", "in", `(${excluded.join(",")})`)
     .order("sales_count", { ascending: false })
-    .limit(limit - related.length);
+    .limit((limit - related.length) * 2);
 
   if (brandError) {
     console.error(`Error topping up related products for ${product.id}:`, brandError);
     return related;
   }
 
-  return [...related, ...((brandData ?? []) as Product[])];
+  const topUp = ((brandData ?? []) as Product[])
+    .filter(notASibling)
+    .slice(0, limit - related.length);
+
+  return [...related, ...topUp];
 }
 
 export async function getProductsBySubcategory(
@@ -344,14 +393,7 @@ export async function getProductsBySubcategory(
   // Then fetch products for this category
   const { data, error } = await supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("category_id", category.id)
     .eq("is_active", true);
 
@@ -409,14 +451,7 @@ export async function getProductsWithFilters(
   // Fetch products for this category
   const { data, error } = await supabase
     .from("products")
-    .select(
-      `
-      *,
-      brand:brands(*),
-      category:categories(*),
-      images:product_images(*)
-    `,
-    )
+    .select(PRODUCT_SELECT)
     .eq("category_id", category.id)
     .eq("is_active", true)
     .order("created_at", { ascending: false });

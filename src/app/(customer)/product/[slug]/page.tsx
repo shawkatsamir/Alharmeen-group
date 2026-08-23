@@ -4,13 +4,43 @@ import {
   getAllProductSlugs,
   getProductBySlug,
   getRelatedProducts,
+  getVariantSiblings,
 } from "@/services/server/products";
 import { ProductDetail } from "@/features/products/components/ProductDetail";
 import ProductSlider from "@/features/products/components/ProductSlider";
 import { toPlainTextExcerpt } from "@/features/products/lib/rich-content";
 import { contentBlocksToPlainText } from "@/features/products/lib/content-blocks";
+import { buildProductJsonLd } from "@/features/products/lib/product-json-ld";
+import type { Product } from "@/features/products/types";
 
 export const revalidate = 3600;
+
+const SITE_URL = "https://alharmaingroup.com";
+
+/**
+ * Meta description precedence, shared by `generateMetadata` and the JSON-LD.
+ *
+ * `description_ar` is 3,000-6,000 characters of HTML, which made an unusable
+ * meta description when passed through raw. Prefer the curated
+ * `meta_description_ar`, else a plain-text excerpt.
+ *
+ * Blocks come before `description_ar` for the same reason the page renders them
+ * first: they supersede the legacy HTML. Products authored in the admin editor
+ * have no `description_ar` at all, so without this they fall through to the
+ * generic fallback.
+ *
+ * Extracted because the two callers had drifted — the JSON-LD copy omitted the
+ * `content_blocks` branch, so every block-authored product shipped structured
+ * data with an empty description.
+ */
+function resolveDescription(product: Product, limit: number): string {
+  return (
+    product.meta_description_ar?.trim() ||
+    toPlainTextExcerpt(contentBlocksToPlainText(product.content_blocks), limit) ||
+    toPlainTextExcerpt(product.description_ar, limit) ||
+    `تسوق ${product.name_ar.trim()} من الحرمين جروب بأفضل الأسعار في مصر`
+  );
+}
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -34,26 +64,12 @@ export async function generateMetadata({
   }
 
   const name = product.name_ar.trim();
-  const canonicalUrl = `https://alharmaingroup.com/product/${slug}`;
+  const canonicalUrl = `${SITE_URL}/product/${slug}`;
   const primaryImage =
     product.images?.find((img) => img.is_primary)?.image_url ??
     product.images?.[0]?.image_url;
 
-  /*
-   * `description_ar` is 3,000-6,000 characters of HTML, which made an unusable
-   * meta description when passed through raw. Prefer the curated
-   * `meta_description_ar`, else a plain-text excerpt.
-   *
-   * Blocks come before `description_ar` for the same reason the page renders
-   * them first: they supersede the legacy HTML. Products authored in the admin
-   * editor have no `description_ar` at all, so without this they would all fall
-   * through to the generic fallback below.
-   */
-  const description =
-    product.meta_description_ar?.trim() ||
-    toPlainTextExcerpt(contentBlocksToPlainText(product.content_blocks), 160) ||
-    toPlainTextExcerpt(product.description_ar, 160) ||
-    `تسوق ${name} من الحرمين جروب بأفضل الأسعار في مصر`;
+  const description = resolveDescription(product, 160);
 
   return {
     title: product.meta_title_ar?.trim() || name,
@@ -79,42 +95,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const related = await getRelatedProducts(product, 10);
+  // Siblings and related products are independent reads; `getProductBySlug` is
+  // React-cached, so this adds two round trips rather than three.
+  const [siblings, related] = await Promise.all([
+    getVariantSiblings(product.group_id),
+    getRelatedProducts(product, 10),
+  ]);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name_ar.trim(),
+  const jsonLd = buildProductJsonLd({
+    product,
+    siblings,
+    baseUrl: SITE_URL,
     // Structured data wants plain text, not the raw HTML blob.
-    description:
-      product.meta_description_ar?.trim() ||
-      toPlainTextExcerpt(product.description_ar, 300),
-    sku: product.sku,
-    url: `https://alharmaingroup.com/product/${slug}`,
-    image: product.images?.map((img) => img.image_url) ?? [],
-    brand: product.brand
-      ? { "@type": "Brand", name: product.brand.name_ar }
-      : undefined,
-    offers: {
-      "@type": "Offer",
-      price: product.price,
-      priceCurrency: "EGP",
-      availability:
-        product.is_available && product.stock_quantity > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-      url: `https://alharmaingroup.com/product/${slug}`,
-    },
-    additionalProperty: product.specifications
-      ? Object.entries(product.specifications as Record<string, string>).map(
-          ([key, value]) => ({
-            "@type": "PropertyValue",
-            name: key,
-            value: value,
-          }),
-        )
-      : undefined,
-  };
+    description: resolveDescription(product, 300),
+  });
 
   return (
     <>
@@ -124,6 +118,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       />
       <ProductDetail
         product={product}
+        siblings={siblings}
         relatedSlot={
           related.length > 0 ? (
             <div className="overflow-hidden rounded-xl border border-border">

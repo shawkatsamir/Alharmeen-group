@@ -5,6 +5,7 @@ type Tables = Database["public"]["Tables"];
 export type Brand = Tables["brands"]["Row"];
 export type Category = Tables["categories"]["Row"];
 export type ProductImage = Tables["product_images"]["Row"];
+export type ProductGroup = Tables["product_groups"]["Row"];
 
 /**
  * Products hang off leaf categories (ميكروويف), whose parent is a top-level
@@ -29,4 +30,32 @@ export type Product = Tables["products"]["Row"] & {
   category?: CategoryWithParent | null;
   brand?: Brand | null;
   images?: ProductImage[] | null;
+  group?: ProductGroup | null;
+};
+
+/**
+ * The lean shape `getVariantSiblings` returns — enough to render a swatch, its
+ * price and its availability, and nothing else.
+ *
+ * Siblings are fetched separately rather than embedded through the group,
+ * because every variant page would otherwise carry a full copy of every other
+ * variant's `content_blocks` and `description_ar`. A three-finish fridge would
+ * ship its long-form copy three times to the browser.
+ */
+export type VariantSibling = Pick<
+  Tables["products"]["Row"],
+  | "id"
+  | "slug"
+  | "name_ar"
+  | "sku"
+  | "price"
+  | "old_price"
+  | "is_available"
+  | "is_active"
+  | "stock_quantity"
+  | "group_id"
+  | "is_group_primary"
+  | "variant_values"
+> & {
+  images?: Pick<ProductImage, "image_url" | "is_primary" | "alt_text_ar">[] | null;
 };

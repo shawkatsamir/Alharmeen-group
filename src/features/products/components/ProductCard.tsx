@@ -7,23 +7,31 @@ import { Button } from "@/shared/components/ui/Button";
 import { Img } from "@/shared/components/ui/Image";
 import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { Badge } from "@/shared/components/ui/Badge";
-import { Product } from "../types";
+import { Product, VariantSibling } from "../types";
 import { toast } from "sonner";
 import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "./CompareToggle";
 import { formatCurrency } from "@/lib/utils";
+import { colorSwatchHex } from "../constants/variant-axes";
+import { describeVariant, sortVariantMembers } from "../lib/variant-group";
 
 interface ProductCardProps {
   product: Product;
   isWishlisted?: boolean;
   priority?: boolean;
+  /**
+   * The other variants this card stands for, when a listing has been collapsed
+   * so a three-finish fridge occupies one card instead of three.
+   */
+  variants?: VariantSibling[];
 }
 
 export function ProductCard({
   product,
   isWishlisted = false,
   priority = false,
+  variants = [],
 }: ProductCardProps) {
   const hasDiscount = product.old_price && product.old_price > product.price;
   const discountPercentage = hasDiscount
@@ -51,6 +59,23 @@ export function ProductCard({
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
+
+  const swatches = variants.length > 1 ? sortVariantMembers(variants) : [];
+  const axes = product.group?.axes ?? [];
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const preview = swatches.find((v) => v.id === previewId);
+
+  /*
+   * `is_primary`, with positional fallback. This card used to read `images[0]`
+   * while the gallery, the buy box and the OG image all read `is_primary`, so a
+   * product whose primary image was not first showed one photo in the grid and
+   * a different one on the page it linked to.
+   */
+  const primaryImage =
+    product.images?.find((img) => img.is_primary) ?? product.images?.[0];
+  const previewImage =
+    preview?.images?.find((img) => img.is_primary) ?? preview?.images?.[0];
+  const shownImage = previewImage ?? primaryImage;
 
   const outOfStock =
     product.stock_quantity !== undefined && product.stock_quantity <= 0;
@@ -100,8 +125,8 @@ export function ProductCard({
          * single, properly-labelled link.
          */}
         <Img
-          src={product.images?.[0]?.image_url || "/placeholder.svg"}
-          alt={product.images?.[0]?.alt_text_ar || product.name_ar}
+          src={shownImage?.image_url || "/placeholder.svg"}
+          alt={shownImage?.alt_text_ar || preview?.name_ar || product.name_ar}
           fill
           priority={priority}
           sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 260px"
@@ -140,10 +165,62 @@ export function ProductCard({
           </Link>
         </h3>
 
+        {/*
+         * Colour dots, not the image swatches the buy box uses. A card is dense
+         * and already carries a photo; the buy box has room for a thumbnail per
+         * finish. Both link, which is what matters — the whole point of
+         * collapsing the grid is that the sibling URLs stay crawlable from it.
+         *
+         * `relative z-10` lifts these above the stretched `after:inset-0`
+         * overlay on the title link, which would otherwise swallow the clicks.
+         */}
+        {swatches.length > 0 && (
+          <ul
+            className="relative z-10 mb-2 flex flex-wrap items-center gap-1.5"
+            onMouseLeave={() => setPreviewId(null)}
+          >
+            {swatches.map((variant) => {
+              const label =
+                describeVariant(variant.variant_values, axes) || variant.name_ar;
+              const hex = colorSwatchHex(label);
+              const isCurrent = variant.id === product.id;
+
+              return (
+                <li key={variant.id}>
+                  <Link
+                    href={`/product/${variant.slug}`}
+                    prefetch={false}
+                    aria-label={`${label} — ${formatCurrency(variant.price)}`}
+                    title={label}
+                    onMouseEnter={() => setPreviewId(variant.id)}
+                    onFocus={() => setPreviewId(variant.id)}
+                    onBlur={() => setPreviewId(null)}
+                    className={[
+                      "block h-5 w-5 rounded-full border transition",
+                      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
+                      isCurrent
+                        ? "border-primary ring-1 ring-primary"
+                        : "border-border hover:border-primary/60",
+                    ].join(" ")}
+                    style={hex ? { backgroundColor: hex } : undefined}
+                  >
+                    {/* Unknown colour: show its first letter rather than a blank dot. */}
+                    {!hex && (
+                      <span className="flex h-full w-full items-center justify-center text-[9px] leading-none text-muted-foreground">
+                        {label.trim().charAt(0)}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
         <div className="mt-auto flex flex-col gap-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-lg font-bold text-primary">
-              {formatCurrency(product.price)}
+              {formatCurrency(preview?.price ?? product.price)}
             </span>
             {hasDiscount && (
               <span className="text-sm text-muted-foreground line-through">

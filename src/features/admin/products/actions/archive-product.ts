@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/features/admin/lib/require-admin";
 import {
   CONTEXT_SELECT,
+  fetchSiblingSlugs,
   toContext,
   type ProductContextRow,
 } from "../lib/product-context";
@@ -42,7 +43,21 @@ async function setActive(productId: string, isActive: boolean) {
     };
   }
 
-  revalidateProduct(toContext(data as unknown as ProductContextRow));
+  const context = toContext(data as unknown as ProductContextRow);
+
+  /*
+   * Archiving removes this product from its siblings' switchers — and if it was
+   * the only other active member, the switcher disappears from them entirely.
+   * Restoring does the reverse. Either way every sibling page is now wrong.
+   */
+  revalidateProduct({
+    ...context,
+    siblingSlugs: await fetchSiblingSlugs(
+      guard.supabase,
+      context.groupId,
+      productId,
+    ),
+  });
 
   return {
     success: true,

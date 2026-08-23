@@ -6,6 +6,7 @@ import {
   CONTEXT_SELECT,
   CONTEXT_SELECT_WITH_ID,
   fetchProductContext,
+  fetchSiblingSlugs,
   toContext,
   type ProductContextRow,
 } from "../lib/product-context";
@@ -63,8 +64,17 @@ export async function createProduct(
   }
 
   const row = data as unknown as ProductContextRow & { id: string };
+  const context = toContext(row);
 
-  revalidateProduct(toContext(row));
+  revalidateProduct({
+    ...context,
+    // A new variant joining a group changes every sibling's colour switcher.
+    siblingSlugs: await fetchSiblingSlugs(
+      guard.supabase,
+      context.groupId,
+      row.id,
+    ),
+  });
 
   return {
     success: true,
@@ -120,12 +130,27 @@ export async function updateProductDetails(
 
   const next = toContext(data as unknown as ProductContextRow);
 
+  /*
+   * Both groups are revalidated. A price edit has to rebuild the siblings that
+   * quote it in their switcher, and a product moved between groups also has to
+   * rebuild the group it left — otherwise the old siblings keep offering a
+   * swatch for a variant that is no longer one of them.
+   */
+  const [siblingSlugs, previousSiblingSlugs] = await Promise.all([
+    fetchSiblingSlugs(guard.supabase, next.groupId, productId),
+    previous.groupId && previous.groupId !== next.groupId
+      ? fetchSiblingSlugs(guard.supabase, previous.groupId, productId)
+      : Promise.resolve([]),
+  ]);
+
   revalidateProduct({
     ...next,
     previousSlug: previous.slug,
     previousCategorySlug: previous.categorySlug,
     previousParentSlug: previous.parentSlug,
     previousBrandSlug: previous.brandSlug,
+    siblingSlugs,
+    previousSiblingSlugs,
   });
 
   return {
