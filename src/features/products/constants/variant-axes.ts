@@ -25,16 +25,96 @@
  * ---------------------------------------------------------------------------
  */
 
-/** Axis keys the group model understands, in the order selectors render. */
-export const VARIANT_AXES = ["اللون", "السعة", "موديل المنتج"] as const;
+/* -------------------------------------------------------------------------- */
+/* Axis registry                                                              */
+/* -------------------------------------------------------------------------- */
 
-export type VariantAxis = (typeof VARIANT_AXES)[number];
+/**
+ * How an axis renders and sorts.
+ *
+ *   color — image swatch, falling back to a hex chip then to a text pill
+ *   size  — text pill, ordered by the number inside the value
+ *   text  — text pill, ordered by the order its members appear in
+ *
+ * `text` is the DEFAULT for anything unregistered, and that is the whole
+ * robustness argument: a shop owner inventing "نوع الشواية" or "عدد الأبواب"
+ * gets a readable pill immediately, with no code change and no blank swatch.
+ * Only colour needs to be recognised to render well.
+ */
+export type AxisKind = "color" | "size" | "text";
 
-export function isVariantAxis(value: unknown): value is VariantAxis {
-  return (
-    typeof value === "string" && (VARIANT_AXES as readonly string[]).includes(value)
-  );
+export interface AxisDefinition {
+  kind: AxisKind;
+  /** Shown in the selector prompt, e.g. "اختر <label>". */
+  label: string;
+  /**
+   * The schema.org Product property that honestly expresses this axis, when one
+   * exists. Absent means the axis is real but has no standard vocabulary —
+   * a grill is not `color`, `size`, `material` or `pattern` — so structured data
+   * omits it rather than inventing a property name.
+   */
+  schemaProperty?: "color" | "size" | "model";
 }
+
+/**
+ * Axis keys are SPEC keys — see the header note. Both colour spellings appear
+ * because the catalogue uses `الألوان` on 68 products and `اللون` on 7.
+ */
+export const AXIS_REGISTRY: Readonly<Record<string, AxisDefinition>> = {
+  اللون: { kind: "color", label: "اللون", schemaProperty: "color" },
+  الألوان: { kind: "color", label: "اللون", schemaProperty: "color" },
+  المقاس: { kind: "size", label: "المقاس", schemaProperty: "size" },
+  الحجم: { kind: "size", label: "الحجم", schemaProperty: "size" },
+  السعة: { kind: "size", label: "السعة", schemaProperty: "size" },
+  البوصة: { kind: "size", label: "المقاس", schemaProperty: "size" },
+  "حجم الشاشة": { kind: "size", label: "حجم الشاشة", schemaProperty: "size" },
+  "موديل المنتج": { kind: "text", label: "الموديل", schemaProperty: "model" },
+  "نوع الشواية": { kind: "text", label: "نوع الشواية" },
+};
+
+/** Suggested axes for the admin picker. Not a validation gate — any key works. */
+export const VARIANT_AXES = [
+  "اللون",
+  "المقاس",
+  "السعة",
+  "حجم الشاشة",
+  "نوع الشواية",
+  "موديل المنتج",
+] as const;
+
+export function isVariantAxis(value: unknown): boolean {
+  return typeof value === "string" && value in AXIS_REGISTRY;
+}
+
+export function variantAxisKind(axis: string): AxisKind {
+  return AXIS_REGISTRY[axis]?.kind ?? "text";
+}
+
+export function variantAxisLabel(axis: string): string {
+  return AXIS_REGISTRY[axis]?.label ?? axis;
+}
+
+export function variantAxisSchemaProperty(
+  axis: string,
+): AxisDefinition["schemaProperty"] {
+  return AXIS_REGISTRY[axis]?.schemaProperty;
+}
+
+/**
+ * The colour axis of a group, if it has one.
+ *
+ * Callers that want a colour swatch must read the colour axis value directly.
+ * Reading the joined multi-axis label instead is a real bug that shipped: a
+ * two-axis group produces "أسود · 43 بوصة", which matches no colour, so every
+ * swatch silently degrades.
+ */
+export function findColorAxis(axes: readonly string[]): string | null {
+  return axes.find((axis) => variantAxisKind(axis) === "color") ?? null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Normalisation                                                              */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Tashkeel: the Arabic diacritic block U+064B–U+0652 plus superscript alef
@@ -43,10 +123,23 @@ export function isVariantAxis(value: unknown): value is VariantAxis {
  */
 const TASHKEEL = /[ً-ْٰ]/g;
 
+const ARABIC_INDIC_DIGITS = "٠١٢٣٤٥٦٧٨٩"; // U+0660–U+0669
+const EXTENDED_ARABIC_INDIC_DIGITS = "۰۱۲۳۴۵۶۷۸۹"; // U+06F0–U+06F9
+
+function digitFolds(): Record<string, string> {
+  const folds: Record<string, string> = {};
+  for (let i = 0; i < 10; i += 1) {
+    folds[ARABIC_INDIC_DIGITS[i]] = String(i);
+    folds[EXTENDED_ARABIC_INDIC_DIGITS[i]] = String(i);
+  }
+  return folds;
+}
+
 /**
- * Orthographic folds, matching the Postgres `translate('أإآةىـ', 'اااهي')`.
- * Tatweel (U+0640) maps to the empty string because its `to` position is past
- * the end of the Postgres target string, which deletes rather than replaces.
+ * Orthographic folds, matching the Postgres `translate()` in
+ * `normalize_axis_value()`. Tatweel (U+0640) maps to the empty string because
+ * its position in the SQL `from` string is past the end of `to`, which deletes
+ * rather than replaces — which is why tatweel must stay LAST in that string.
  */
 const ARABIC_FOLDS: Readonly<Record<string, string>> = {
   "أ": "ا", // أ -> ا
@@ -54,27 +147,84 @@ const ARABIC_FOLDS: Readonly<Record<string, string>> = {
   "آ": "ا", // آ -> ا
   "ة": "ه", // ة -> ه
   "ى": "ي", // ى -> ي
+  ...digitFolds(),
   "ـ": "", // ـ (tatweel) -> deleted
 } as const;
 
-/**
- * The TypeScript twin of `normalize_color_name()` in Postgres.
+/*
+ * The two digit blocks MUST be two separate ranges.
  *
- * Returns a *comparison key*, not a display value. Two colours are the same
- * colour when their keys match; what the customer sees is the stored text.
+ * A single `[٠-۹]` would span everything between them, swallowing the
+ * Arabic percent sign ٪ (U+066A), the Arabic decimal separator ٫ (U+066B), and
+ * a large slice of Arabic letters. This is the highest-risk character class in
+ * the codebase and it has its own test.
+ */
+const FOLDABLE = /[أإآةىـ٠-٩۰-۹]/g;
+
+/**
+ * The TypeScript twin of `normalize_axis_value()` in Postgres.
+ *
+ * Returns a *comparison key*, not a display value. Two axis values are the same
+ * value when their keys match; what the customer sees is the stored text.
  *
  * Step order matches the SQL exactly — strip tashkeel, collapse internal
  * whitespace runs, trim, fold, lowercase — because a divergence here means the
  * admin form and the database disagree about whether two variants collide.
+ *
+ * ---------------------------------------------------------------------------
+ * The `axis` parameter is deliberately unused today.
+ *
+ * It is NOT a hook for per-axis rules, and unit synonyms (كجم/كيلوجرام,
+ * فرد/أفراد) are deliberately NOT folded here: normalisation decides *identity*,
+ * so a wrong fold merges two genuinely different products and the unique index
+ * then rejects a legitimate save. All size intelligence lives in
+ * `axisValueRank`, where a wrong answer merely reorders a row.
+ *
+ * It exists for signature symmetry with the SQL function. A unique index depends
+ * on that function, and changing its signature later means dropping and
+ * rebuilding the index — so the unused argument is paid now to avoid that.
+ * ---------------------------------------------------------------------------
  */
-export function normalizeColorName(value: string | null | undefined): string {
+export function normalizeAxisValue(
+  axis: string,
+  value: string | null | undefined,
+): string {
+  void axis;
   if (!value) return "";
   return value
     .replace(TASHKEEL, "")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/[أإآةىـ]/g, (char) => ARABIC_FOLDS[char] ?? char)
+    .replace(FOLDABLE, (char) => ARABIC_FOLDS[char] ?? char)
     .toLowerCase();
+}
+
+/**
+ * Colour-specific alias of the generic normaliser, kept so every existing call
+ * site and the `CANONICAL_COLORS` keys below stay untouched. Mirrors the SQL
+ * `normalize_color_name()`, which is likewise a thin wrapper.
+ */
+export function normalizeColorName(value: string | null | undefined): string {
+  return normalizeAxisValue("اللون", value);
+}
+
+/**
+ * Numeric magnitude of a size value, or null when the axis has no natural
+ * numeric order.
+ *
+ * Gated on the axis kind so a model code like "SJ-58C" is never read as the
+ * number 58. Digits are already ASCII by the time this runs, so "٤٣ بوصة" and
+ * "43 بوصة" rank identically.
+ */
+export function axisValueRank(
+  axis: string,
+  value: string | null | undefined,
+): number | null {
+  if (variantAxisKind(axis) !== "size") return null;
+  const match = normalizeAxisValue(axis, value).match(/-?\d+(?:[.,٫]\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0].replace(/[,٫]/, "."));
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -135,6 +285,8 @@ export const COLOR_SWATCH_HEX: Readonly<Record<string, string>> = {
   [normalizeColorName("اينوكس")]: "#a9aeb2",
   [normalizeColorName("أسود زجاجي")]: "#141414",
   [normalizeColorName("رمادي")]: "#8a8d91",
+  [normalizeColorName("رمادي فاتح")]: "#b6b9bc",
+  [normalizeColorName("رمادي غامق")]: "#5b5f63",
   [normalizeColorName("أحمر")]: "#b3261e",
   [normalizeColorName("أزرق")]: "#1d4ed8",
   [normalizeColorName("كحلي")]: "#1e293b",
@@ -146,17 +298,10 @@ export function colorSwatchHex(value: string | null | undefined): string | null 
   return COLOR_SWATCH_HEX[normalizeColorName(canonicalizeColor(value))] ?? null;
 }
 
-export const VARIANT_AXIS_LABELS: Readonly<Record<VariantAxis, string>> = {
-  اللون: "اللون",
-  السعة: "السعة",
-  "موديل المنتج": "الموديل",
-} as const;
-
 /**
- * Arabic prompt shown above a selector, e.g. "اختر اللون".
- * Falls back to the raw key so a group with a hand-typed axis still renders.
+ * Arabic prompt shown above a selector row, e.g. "اختر اللون".
+ * Falls back to the raw key so an unregistered axis still reads correctly.
  */
 export function variantAxisPrompt(axis: string): string {
-  const label = isVariantAxis(axis) ? VARIANT_AXIS_LABELS[axis] : axis;
-  return `اختر ${label}`;
+  return `اختر ${variantAxisLabel(axis)}`;
 }

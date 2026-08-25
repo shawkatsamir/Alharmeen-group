@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Database } from "@/shared/types/database.types";
 import { requireAdmin } from "@/features/admin/lib/require-admin";
-import { canonicalizeColor } from "@/features/products/constants/variant-axes";
+import { canonicalizeColor, variantAxisKind } from "@/features/products/constants/variant-axes";
 import {
   CONTEXT_SELECT,
   fetchSiblingSlugs,
@@ -13,129 +15,242 @@ import {
 import { revalidateProduct } from "../lib/revalidate-product";
 
 /**
- * Strip the trailing model code from a product name to get a group name.
+ * Variant group management.
  *
- * Names in this catalogue end in their SKU — "ثلاجة شارب نوفروست 450 لتر أسود
- * SJ-58C(BK)" — and the group is that product without its finish. Removing the
- * SKU is reliable; removing the colour word is not, so the colour is left in
- * and the admin can rename the group later. A slightly long group name is a
- * cosmetic problem; guessing wrong about which word is the colour would put the
- * wrong products together.
+ * ---------------------------------------------------------------------------
+ * The lesson encoded here: NEVER FABRICATE AN AXIS VALUE.
+ *
+ * The first version of this module hardcoded `axes: ["اللون"]` and, when a
+ * product had no colour recorded, wrote the literal `"أساسي"` as its colour.
+ * That produced a live group of two silver microwaves that actually differ by
+ * whether they have a grill — one of them labelled "أساسي" in the storefront
+ * switcher. A fabricated value satisfies every constraint and every validator,
+ * so nothing ever surfaces it again.
+ *
+ * The axis and the source product's value for it are therefore both required
+ * input from the admin, and there is no fallback.
+ * ---------------------------------------------------------------------------
  */
-function deriveGroupName(nameAr: string, sku: string): string {
-  const trimmed = nameAr.trim();
-  const withoutSku = trimmed.endsWith(sku.trim())
-    ? trimmed.slice(0, -sku.trim().length)
-    : trimmed;
-  return withoutSku.trim() || trimmed;
+
+/** Failure codes; the edit page maps these to Arabic messages. */
+type FailureCode =
+  | "forbidden"
+  | "missing"
+  | "group"
+  | "assign"
+  | "axis"
+  | "value"
+  | "name";
+
+function editUrl(productId: string, code?: FailureCode): string {
+  return code
+    ? `/admin/products/${productId}/edit?variantError=${code}`
+    : `/admin/products/${productId}/edit`;
 }
 
 /**
- * Ensure a product belongs to a variant group, then open the create form
- * prefilled from it.
+ * Create a group from a product, then open the create form prefilled from it.
  *
- * This is the whole point of the feature for the store owner: adding the silver
- * version of a fridge should be picking a colour and a SKU, not re-authoring a
- * description, a spec table and a content block layout that already exist.
- *
- * A mutation runs before the redirect because the source product usually is not
- * grouped yet — the group has to exist for the new variant to join it, and
- * making the owner create one by hand first is the step they would forget.
+ * The axis, the group name and this product's value for that axis all come from
+ * the admin. The source becomes the group primary: it is the product that
+ * already ranks and already carries the content, so it should keep representing
+ * the group in listings and structured data.
  */
-export async function startVariantFromProduct(productId: string): Promise<void> {
-  /*
-   * Invoked as a `<form action>`, which must resolve to void — so failures come
-   * back as a query parameter on the edit page rather than a returned object.
-   * Throwing would replace the whole admin screen with an error boundary over
-   * what is a recoverable problem.
-   */
-  const fail = (code: string): never =>
-    redirect(`/admin/products/${productId}/edit?variantError=${code}`);
-
+export async function createGroupFromProduct(
+  productId: string,
+  formData: FormData,
+): Promise<void> {
   const guard = await requireAdmin();
-  if (!guard.ok) return fail("forbidden");
+  if (!guard.ok) redirect(editUrl(productId, "forbidden"));
+
+  const axis = String(formData.get("axis") ?? "").trim();
+  const value = String(formData.get("value") ?? "").trim();
+  const name = String(formData.get("name") ?? "").replace(/\s+/g, " ").trim();
+
+  if (!axis) redirect(editUrl(productId, "axis"));
+  if (!value) redirect(editUrl(productId, "value"));
+  if (!name) redirect(editUrl(productId, "name"));
 
   const { data: product, error } = await guard.supabase
     .from("products")
-    .select("id, name_ar, sku, group_id, specifications")
+    .select("id, group_id")
     .eq("id", productId)
     .single();
 
-  if (error || !product) return fail("missing");
+  if (error || !product) redirect(editUrl(productId, "missing"));
+  // Already grouped — nothing to create, just go and add the sibling.
+  if (product.group_id) redirect(`/admin/products/new?duplicateFrom=${productId}`);
 
-  let groupId = product.group_id;
+  const { data: group, error: groupError } = await guard.supabase
+    .from("product_groups")
+    .insert({ name_ar: name, axes: [axis] })
+    .select("id")
+    .single();
 
-  if (!groupId) {
-    const { data: group, error: groupError } = await guard.supabase
-      .from("product_groups")
-      .insert({
-        name_ar: deriveGroupName(product.name_ar, product.sku),
-        axes: ["اللون"],
-      })
-      .select("id")
-      .single();
-
-    if (groupError || !group) {
-      console.error("[startVariantFromProduct] group insert failed:", groupError);
-      return fail("group");
-    }
-
-    groupId = group.id;
-
-    /*
-     * The source becomes the group primary — it is the product that already
-     * ranks and already carries the content, so it should stay the one that
-     * represents the group in listings and structured data.
-     *
-     * Its colour comes from whichever spec key it happens to use. A product
-     * with no colour recorded still joins the group, labelled "أساسي", because
-     * refusing to group it would be a worse outcome than an imperfect label the
-     * owner can correct in the form they are about to open.
-     */
-    const specs =
-      product.specifications &&
-      typeof product.specifications === "object" &&
-      !Array.isArray(product.specifications)
-        ? (product.specifications as Record<string, unknown>)
-        : {};
-
-    const rawColor = specs["الألوان"] ?? specs["اللون"];
-    const color =
-      typeof rawColor === "string" && rawColor.trim()
-        ? canonicalizeColor(rawColor)
-        : "أساسي";
-
-    // `.select().single()` — an RLS-blocked UPDATE returns no error and no rows.
-    const { error: assignError } = await guard.supabase
-      .from("products")
-      .update({
-        group_id: groupId,
-        is_group_primary: true,
-        variant_values: { اللون: color },
-      })
-      .eq("id", productId)
-      .select("id")
-      .single();
-
-    if (assignError) {
-      console.error("[startVariantFromProduct] assign failed:", assignError);
-      return fail("assign");
-    }
-
-    const { data: contextRow } = await guard.supabase
-      .from("products")
-      .select(CONTEXT_SELECT)
-      .eq("id", productId)
-      .single();
-
-    if (contextRow) {
-      const context = toContext(contextRow as unknown as ProductContextRow);
-      revalidateProduct({
-        ...context,
-        siblingSlugs: await fetchSiblingSlugs(guard.supabase, groupId, productId),
-      });
-    }
+  if (groupError || !group) {
+    console.error("[createGroupFromProduct] group insert failed:", groupError);
+    redirect(editUrl(productId, "group"));
   }
 
+  // Colour is the one axis with a canonical-spelling table, so a "فضي" typed
+  // here lands as "سيلفر" and matches siblings saved earlier.
+  const stored = variantAxisKind(axis) === "color" ? canonicalizeColor(value) : value;
+
+  // `.select().single()` — an RLS-blocked UPDATE returns no error and no rows.
+  const { error: assignError } = await guard.supabase
+    .from("products")
+    .update({
+      group_id: group.id,
+      is_group_primary: true,
+      variant_values: { [axis]: stored },
+    })
+    .eq("id", productId)
+    .select("id")
+    .single();
+
+  if (assignError) {
+    console.error("[createGroupFromProduct] assign failed:", assignError);
+    redirect(editUrl(productId, "assign"));
+  }
+
+  await revalidateFor(guard.supabase, productId, group.id);
   redirect(`/admin/products/new?duplicateFrom=${productId}`);
+}
+
+/** Open the create form prefilled from a product already in a group. */
+export async function addVariantToGroup(productId: string): Promise<void> {
+  const guard = await requireAdmin();
+  if (!guard.ok) redirect(editUrl(productId, "forbidden"));
+  redirect(`/admin/products/new?duplicateFrom=${productId}`);
+}
+
+export async function renameVariantGroup(
+  productId: string,
+  groupId: string,
+  formData: FormData,
+): Promise<void> {
+  const guard = await requireAdmin();
+  if (!guard.ok) redirect(editUrl(productId, "forbidden"));
+
+  const name = String(formData.get("name") ?? "").replace(/\s+/g, " ").trim();
+  if (!name) redirect(editUrl(productId, "name"));
+
+  const { error } = await guard.supabase
+    .from("product_groups")
+    .update({ name_ar: name })
+    .eq("id", groupId)
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[renameVariantGroup] failed:", error);
+    redirect(editUrl(productId, "group"));
+  }
+
+  await revalidateFor(guard.supabase, productId, groupId);
+  redirect(editUrl(productId));
+}
+
+/**
+ * Move the group primary onto another member.
+ *
+ * Two statements rather than one, because `unique (group_id) where
+ * is_group_primary` rejects a transient second primary — the old one has to be
+ * cleared first.
+ */
+export async function setGroupPrimary(
+  productId: string,
+  targetId: string,
+  groupId: string,
+): Promise<void> {
+  const guard = await requireAdmin();
+  if (!guard.ok) redirect(editUrl(productId, "forbidden"));
+
+  await guard.supabase
+    .from("products")
+    .update({ is_group_primary: false })
+    .eq("group_id", groupId)
+    .eq("is_group_primary", true);
+
+  const { error } = await guard.supabase
+    .from("products")
+    .update({ is_group_primary: true })
+    .eq("id", targetId)
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[setGroupPrimary] failed:", error);
+    redirect(editUrl(productId, "assign"));
+  }
+
+  await revalidateFor(guard.supabase, productId, groupId);
+  redirect(editUrl(productId));
+}
+
+/**
+ * Detach a product from its group.
+ *
+ * `variant_values` is cleared with it: a value for an axis the product no longer
+ * belongs to is meaningless, and leaving it would trip the "axis values without
+ * a group" rule the next time the product is saved through the form.
+ */
+export async function removeFromGroup(
+  productId: string,
+  targetId: string,
+  groupId: string,
+): Promise<void> {
+  const guard = await requireAdmin();
+  if (!guard.ok) redirect(editUrl(productId, "forbidden"));
+
+  // Sibling slugs must be read BEFORE the detach, or the product being removed
+  // is already gone from the group and its page never gets rebuilt.
+  const siblingSlugs = await fetchSiblingSlugs(guard.supabase, groupId);
+
+  const { error } = await guard.supabase
+    .from("products")
+    .update({ group_id: null, variant_values: null, is_group_primary: false })
+    .eq("id", targetId)
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[removeFromGroup] failed:", error);
+    redirect(editUrl(productId, "assign"));
+  }
+
+  const { data: contextRow } = await guard.supabase
+    .from("products")
+    .select(CONTEXT_SELECT)
+    .eq("id", targetId)
+    .single();
+
+  if (contextRow) {
+    revalidateProduct({
+      ...toContext(contextRow as unknown as ProductContextRow),
+      previousSiblingSlugs: siblingSlugs,
+    });
+  }
+
+  redirect(editUrl(productId));
+}
+
+/** Revalidate a product and every sibling that embeds its price and images. */
+async function revalidateFor(
+  supabase: SupabaseClient<Database>,
+  productId: string,
+  groupId: string,
+): Promise<void> {
+  const { data } = await supabase
+    .from("products")
+    .select(CONTEXT_SELECT)
+    .eq("id", productId)
+    .single();
+
+  if (!data) return;
+
+  revalidateProduct({
+    ...toContext(data as unknown as ProductContextRow),
+    siblingSlugs: await fetchSiblingSlugs(supabase, groupId, productId),
+  });
 }

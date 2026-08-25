@@ -13,8 +13,12 @@ import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "./CompareToggle";
 import { formatCurrency } from "@/lib/utils";
-import { colorSwatchHex } from "../constants/variant-axes";
-import { describeVariant, sortVariantMembers } from "../lib/variant-group";
+import { colorSwatchHex, findColorAxis } from "../constants/variant-axes";
+import {
+  describeVariant,
+  readAxisValue,
+  sortVariantMembers,
+} from "../lib/variant-group";
 
 interface ProductCardProps {
   product: Product;
@@ -62,6 +66,12 @@ export function ProductCard({
 
   const swatches = variants.length > 1 ? sortVariantMembers(variants) : [];
   const axes = product.group?.axes ?? [];
+  /*
+   * Cards stay whole-variant — there is no room for one row per axis. A colour
+   * group gets dots; anything else gets short text pills, because a 20px circle
+   * cannot express "43 بوصة" or "بشواية" and would render two identical blanks.
+   */
+  const colorAxis = findColorAxis(axes);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const preview = swatches.find((v) => v.id === previewId);
 
@@ -182,35 +192,55 @@ export function ProductCard({
             {swatches.map((variant) => {
               const label =
                 describeVariant(variant.variant_values, axes) || variant.name_ar;
-              const hex = colorSwatchHex(label);
+              /*
+               * Read the COLOUR axis value, not the joined label. Passing
+               * `describeVariant(...)` here was a real bug: a two-axis group
+               * produces "أسود · 43 بوصة", which matches no colour, so every
+               * dot silently fell through to the blank fallback.
+               */
+              const hex = colorAxis
+                ? colorSwatchHex(readAxisValue(variant.variant_values, colorAxis))
+                : null;
               const isCurrent = variant.id === product.id;
+
+              const shared = {
+                href: `/product/${variant.slug}`,
+                prefetch: false as const,
+                "aria-label": `${label} — ${formatCurrency(variant.price)}`,
+                title: label,
+                onMouseEnter: () => setPreviewId(variant.id),
+                onFocus: () => setPreviewId(variant.id),
+                onBlur: () => setPreviewId(null),
+              };
 
               return (
                 <li key={variant.id}>
-                  <Link
-                    href={`/product/${variant.slug}`}
-                    prefetch={false}
-                    aria-label={`${label} — ${formatCurrency(variant.price)}`}
-                    title={label}
-                    onMouseEnter={() => setPreviewId(variant.id)}
-                    onFocus={() => setPreviewId(variant.id)}
-                    onBlur={() => setPreviewId(null)}
-                    className={[
-                      "block h-5 w-5 rounded-full border transition",
-                      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
-                      isCurrent
-                        ? "border-primary ring-1 ring-primary"
-                        : "border-border hover:border-primary/60",
-                    ].join(" ")}
-                    style={hex ? { backgroundColor: hex } : undefined}
-                  >
-                    {/* Unknown colour: show its first letter rather than a blank dot. */}
-                    {!hex && (
-                      <span className="flex h-full w-full items-center justify-center text-[9px] leading-none text-muted-foreground">
-                        {label.trim().charAt(0)}
-                      </span>
-                    )}
-                  </Link>
+                  {hex ? (
+                    <Link
+                      {...shared}
+                      className={[
+                        "block h-5 w-5 rounded-full border transition",
+                        "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
+                        isCurrent
+                          ? "border-primary ring-1 ring-primary"
+                          : "border-border hover:border-primary/60",
+                      ].join(" ")}
+                      style={{ backgroundColor: hex }}
+                    />
+                  ) : (
+                    <Link
+                      {...shared}
+                      className={[
+                        "block max-w-24 truncate rounded-full border px-2 py-0.5 text-[10px] leading-4 transition",
+                        "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
+                        isCurrent
+                          ? "border-primary text-primary ring-1 ring-primary"
+                          : "border-border text-muted-foreground hover:border-primary/60",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </Link>
+                  )}
                 </li>
               );
             })}

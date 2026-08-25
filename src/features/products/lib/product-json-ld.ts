@@ -24,22 +24,17 @@
  */
 
 import type { Product, VariantSibling } from "../types";
+import { variantAxisSchemaProperty } from "../constants/variant-axes";
 import { readAxisValue } from "./variant-group";
 
 /**
- * Axis key -> the schema.org Product property that expresses it.
+ * Properties Google understands in `variesBy`. `model` is not one of them.
  *
- * `variesBy` only means something to Google for properties it recognises, so an
- * axis with no sensible mapping is simply omitted from `variesBy` rather than
- * emitted as a made-up property name.
+ * This stays here rather than in the axis registry because it is a fact about
+ * Google, not about the catalogue. Which property an axis maps to IS a catalogue
+ * fact and lives in `variantAxisSchemaProperty`, so registering a new axis is
+ * one edit instead of two.
  */
-const AXIS_SCHEMA_PROPERTY: Readonly<Record<string, string>> = {
-  اللون: "color",
-  السعة: "size",
-  "موديل المنتج": "model",
-} as const;
-
-/** Properties Google understands in `variesBy`. `model` is not one of them. */
 const VARIES_BY_SUPPORTED = new Set(["color", "size", "material", "pattern"]);
 
 function productUrl(baseUrl: string, slug: string): string {
@@ -86,11 +81,49 @@ function axisProperties(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const axis of axes) {
-    const property = AXIS_SCHEMA_PROPERTY[axis];
+    const property = variantAxisSchemaProperty(axis);
     const value = readAxisValue(variantValues, axis);
     if (property && value) out[property] = value;
   }
   return out;
+}
+
+/**
+ * Axis values as `PropertyValue` entries, for axes with no schema.org property.
+ *
+ * Without this a group varying by something Google has no vocabulary for — a
+ * grill, a door count — emits `hasVariant` entries that differ only by name,
+ * SKU and URL. That is the "unlinked and unmarked" state this whole feature
+ * exists to eliminate, so the axis is stated as a generic property rather than
+ * dropped silently.
+ */
+function unmappedAxisProperties(variantValues: unknown, axes: readonly string[]) {
+  const entries = axes
+    .filter((axis) => !variantAxisSchemaProperty(axis))
+    .map((axis) => ({ axis, value: readAxisValue(variantValues, axis) }))
+    .filter((entry): entry is { axis: string; value: string } => entry.value !== null)
+    .map((entry) => ({
+      "@type": "PropertyValue",
+      name: entry.axis,
+      value: entry.value,
+    }));
+  return entries.length > 0 ? entries : undefined;
+}
+
+/**
+ * Concatenate property lists, first occurrence of a name winning.
+ *
+ * The axis key IS a spec key by design, so a product whose grill axis is also a
+ * spec row would otherwise state it twice.
+ */
+function mergeProperties(
+  ...lists: ({ "@type": string; name: string; value: string }[] | undefined)[]
+) {
+  const seen = new Set<string>();
+  const merged = lists
+    .flatMap((list) => list ?? [])
+    .filter((entry) => !seen.has(entry.name) && seen.add(entry.name));
+  return merged.length > 0 ? merged : undefined;
 }
 
 function specificationProperties(specifications: unknown) {
@@ -148,7 +181,10 @@ export function buildProductJsonLd({
     brand,
     ...axisProperties(product.variant_values, axes),
     offers: offersFor(product, baseUrl),
-    additionalProperty: specificationProperties(product.specifications),
+    additionalProperty: mergeProperties(
+      specificationProperties(product.specifications),
+      unmappedAxisProperties(product.variant_values, axes),
+    ),
   };
 
   const groupId = product.group?.id;
@@ -159,8 +195,11 @@ export function buildProductJsonLd({
   }
 
   const variesBy = axes
-    .map((axis) => AXIS_SCHEMA_PROPERTY[axis])
-    .filter((property) => property && VARIES_BY_SUPPORTED.has(property));
+    .map((axis) => variantAxisSchemaProperty(axis))
+    .filter(
+      (property): property is "color" | "size" =>
+        property !== undefined && VARIES_BY_SUPPORTED.has(property),
+    );
 
   if (!product.is_group_primary) {
     return {
@@ -189,6 +228,9 @@ export function buildProductJsonLd({
         sibling.images?.find((img) => img.is_primary)?.image_url ??
         sibling.images?.[0]?.image_url,
       ...axisProperties(sibling.variant_values, axes),
+      // Siblings carry no `specifications` in the lean query, so this is the
+      // only thing distinguishing variants on an axis Google has no word for.
+      additionalProperty: unmappedAxisProperties(sibling.variant_values, axes),
       offers: offersFor(sibling, baseUrl),
     })),
   };
