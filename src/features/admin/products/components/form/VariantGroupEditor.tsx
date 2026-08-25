@@ -4,11 +4,19 @@ import { useId } from "react";
 
 import { Input } from "@/shared/components/ui/Input";
 import {
-  VARIANT_AXES,
   canonicalizeColor,
-  normalizeColorName,
+  normalizeAxisValue,
+  variantAxisKind,
   variantAxisPrompt,
+  type AxisKind,
 } from "@/features/products/constants/variant-axes";
+
+/** Example values, so an empty axis field says what kind of thing goes in it. */
+const AXIS_PLACEHOLDERS: Record<AxisKind, string> = {
+  color: "مثال: أسود",
+  size: "مثال: 43 بوصة",
+  text: "مثال: بشواية",
+};
 import type { ProductGroupOption } from "../../data";
 import type { VariantValueRow } from "../../schema";
 
@@ -84,12 +92,12 @@ export function VariantGroupEditor({
     <div className="space-y-4">
       <div>
         <h3 className="font-semibold text-gray-900 dark:text-white">
-          المجموعة والألوان
+          المجموعة والنسخ
         </h3>
         <p className="text-sm text-gray-500">
-          إذا كان هذا المنتج نفس منتج آخر بلون أو مقاس مختلف، اربطهما بنفس
-          المجموعة. سيظهر للعميل زر تبديل بين الألوان، وسيظهر المنتج مرة واحدة في
-          قوائم المنتجات بدلاً من مرة لكل لون.
+          إذا كان هذا المنتج نفس منتج آخر بلون أو مقاس أو مواصفة مختلفة، اربطهما
+          بنفس المجموعة. سيظهر للعميل زر تبديل بين النسخ، وسيظهر المنتج مرة واحدة
+          في قوائم المنتجات بدلاً من مرة لكل نسخة.
         </p>
       </div>
 
@@ -114,7 +122,7 @@ export function VariantGroupEditor({
           ))}
         </select>
         <p className="mt-1 text-xs text-gray-500">
-          المجموعات تُنشأ من صفحة المنتج الأصلي عبر زر «أضف لوناً جديداً».
+          المجموعات تُنشأ من لوحة «مجموعة المنتج» أعلى هذه الصفحة.
         </p>
       </div>
 
@@ -123,18 +131,26 @@ export function VariantGroupEditor({
           {variantValues.map((row) => {
             const suggestions = selected.values[row.axis] ?? [];
             const axisListId = `${listId}-${row.axis}`;
-            const isColor = row.axis === "اللون";
+            const isColor = variantAxisKind(row.axis) === "color";
 
-            // Warn when the typed value differs only in spelling from one the
-            // group already uses — the case that silently splits a swatch row.
+            /*
+             * Warn when the typed value differs only in spelling from one the
+             * group already uses — the case that silently splits a swatch row.
+             *
+             * Runs on EVERY axis. This used to be gated on colour, so a size
+             * axis had no protection at all against "43 بوصة" / "٤٣ بوصة" /
+             * "43 بوصه", which is the same failure the colour axis was guarded
+             * against and the one a size axis is most prone to.
+             */
             const clash =
-              isColor &&
-              row.value.trim().length > 0 &&
-              suggestions.find(
-                (existing) =>
-                  existing !== row.value.trim() &&
-                  normalizeColorName(existing) === normalizeColorName(row.value),
-              );
+              row.value.trim().length > 0
+                ? suggestions.find(
+                    (existing) =>
+                      existing !== row.value.trim() &&
+                      normalizeAxisValue(row.axis, existing) ===
+                        normalizeAxisValue(row.axis, row.value),
+                  )
+                : undefined;
 
             return (
               <div key={row.axis}>
@@ -155,21 +171,21 @@ export function VariantGroupEditor({
                   id={axisListId}
                   list={`${axisListId}-list`}
                   value={row.value}
-                  placeholder={isColor ? "مثال: أسود" : ""}
+                  placeholder={AXIS_PLACEHOLDERS[variantAxisKind(row.axis)]}
                   onChange={(event) => updateValue(row.axis, event.target.value)}
                   onBlur={(event) => {
-                    if (!isColor) return;
-                    const canonical = canonicalizeColor(event.target.value);
-                    if (canonical !== event.target.value) {
-                      updateValue(row.axis, canonical);
-                    }
+                    // Whitespace is tidied on every axis; only colour has a
+                    // canonical-spelling table to fold synonyms through.
+                    const tidied = event.target.value.replace(/\s+/g, " ").trim();
+                    const next = isColor ? canonicalizeColor(tidied) : tidied;
+                    if (next !== event.target.value) updateValue(row.axis, next);
                   }}
                 />
 
                 {clash && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                    يوجد لون بنفس المعنى في هذه المجموعة باسم «{clash}». استخدم
-                    نفس الكتابة حتى لا يظهر اللون مرتين.
+                    توجد قيمة بنفس المعنى في هذه المجموعة باسم «{clash}». استخدم
+                    نفس الكتابة حتى لا تظهر النسخة مرتين.
                   </p>
                 )}
               </div>
@@ -184,9 +200,9 @@ export function VariantGroupEditor({
         </div>
       )}
 
-      {!selected && VARIANT_AXES.length > 0 && (
+      {!selected && (
         <p className="text-xs text-gray-500">
-          المنتجات المستقلة لا تحتاج إلى تحديد لون هنا — يكفي إضافته ضمن
+          المنتجات المستقلة لا تحتاج إلى تحديد قيمة هنا — يكفي إضافتها ضمن
           المواصفات الفنية.
         </p>
       )}

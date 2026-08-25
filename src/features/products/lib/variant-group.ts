@@ -196,3 +196,240 @@ export function hasVariantChoice<T extends VariantMember>(
 ): boolean {
   return members.length > 1;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Per-axis selectors                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Ordering and identity rules, injected rather than imported.
+ *
+ * This module stays import-free (it is the zero-mock unit-test target), so the
+ * axis registry cannot be reached from here. A `rank` hook rather than a
+ * comparator on purpose: the registry only has to answer "what is the magnitude
+ * of this value", and the whole total-order construction — which is the part
+ * that is easy to get subtly wrong — stays inside this tested module.
+ */
+export interface AxisSelectorHooks {
+  /** Comparison key. Two values with the same key are one option. */
+  normalize?: (axis: string, value: string) => string;
+  /** Numeric magnitude, or null when the axis has no natural numeric order. */
+  rank?: (axis: string, value: string) => number | null;
+}
+
+export interface AxisOption<T extends VariantMember> {
+  /** Display spelling — the first member in canonical order wins. */
+  value: string;
+  /** Normalised identity of this option within its row. */
+  key: string;
+  /** The member this option links to. NEVER null. */
+  target: T;
+  /** The active member itself carries this value. */
+  isActive: boolean;
+  /**
+   * `target` differs from the active member on this axis ONLY. False means the
+   * combination asked for does not exist and the link is a nearest neighbour.
+   */
+  isExact: boolean;
+}
+
+export interface AxisSelector<T extends VariantMember> {
+  axis: string;
+  /** The active member's value for this axis, or null when it carries none. */
+  activeValue: string | null;
+  options: AxisOption<T>[];
+}
+
+/**
+ * One selector row per axis, for a group that varies by more than one thing.
+ *
+ * ---------------------------------------------------------------------------
+ * Two invariants, both load-bearing.
+ *
+ * 1. `target` is NEVER null. The fallback chain below ends in
+ *    `sortVariantMembers` order, which is total, so an option can never be a
+ *    dead button. Crawlable links are the entire SEO mechanism of this feature;
+ *    a combination that does not exist still links to its nearest neighbour and
+ *    is merely *styled* as unavailable.
+ *
+ * 2. Options default to MEMBER order, not value order. A one-axis group must
+ *    come out byte-identical to `sortVariantMembers`, or the colour row that
+ *    already shipped silently reshuffles on the next ISR regeneration — these
+ *    are statically generated pages, so a reordering is a real content change.
+ *    Ranked values sort ascending *ahead of* unranked ones, so an admin typing
+ *    "كبير" into a size row appends one option instead of unsorting the row.
+ * ---------------------------------------------------------------------------
+ *
+ * Returns `[]` when there is nothing to choose between. Callers must fall back
+ * to a whole-variant row in that case rather than dropping the internal links.
+ */
+export function buildAxisSelectors<T extends VariantMember>(
+  members: readonly T[],
+  axes: readonly string[],
+  activeId: string,
+  hooks: AxisSelectorHooks = {},
+): AxisSelector<T>[] {
+  const normalize = hooks.normalize ?? ((_axis: string, value: string) => value.trim());
+  const rank = hooks.rank ?? (() => null);
+
+  if (members.length < 2 || axes.length === 0) return [];
+
+  const ordered = sortVariantMembers([...members]);
+  const orderIndex = new Map<T, number>();
+  ordered.forEach((member, index) => orderIndex.set(member, index));
+
+  /** Normalised value per axis, per member. `null` = the member has no value. */
+  const keyOf = (member: T, axis: string): string | null => {
+    const raw = readAxisValue(member.variant_values, axis);
+    if (raw === null) return null;
+    const key = normalize(axis, raw);
+    return key.length > 0 ? key : null;
+  };
+
+  const active = ordered.find((member) => member.id === activeId) ?? null;
+
+  const selectors: AxisSelector<T>[] = [];
+
+  for (const axis of axes) {
+    // Seed one option per distinct value, first member in canonical order
+    // deciding the display spelling.
+    const seen = new Map<string, { value: string; candidates: T[] }>();
+
+    for (const member of ordered) {
+      const key = keyOf(member, axis);
+      if (key === null) continue;
+      const existing = seen.get(key);
+      if (existing) existing.candidates.push(member);
+      else {
+        seen.set(key, {
+          value: readAxisValue(member.variant_values, axis) as string,
+          candidates: [member],
+        });
+      }
+    }
+
+    // A row offering one value is noise, and mirrors `hasVariantChoice`.
+    if (seen.size < 2) continue;
+
+    const options: AxisOption<T>[] = [];
+
+    for (const [key, { value, candidates }] of seen) {
+      const target = pickTarget(candidates, active, axis, axes, keyOf, orderIndex);
+      options.push({
+        value,
+        key,
+        target,
+        isActive: active !== null && keyOf(active, axis) === key,
+        isExact:
+          active !== null &&
+          agreesOnOtherAxes(target, active, axis, axes, keyOf),
+      });
+    }
+
+    options.sort((a, b) => compareOptions(a, b, axis, rank, orderIndex));
+
+    selectors.push({
+      axis,
+      activeValue: active ? readAxisValue(active.variant_values, axis) : null,
+      options,
+    });
+  }
+
+  return selectors;
+}
+
+/** True when two members carry the same value on every axis except `axis`. */
+function agreesOnOtherAxes<T extends VariantMember>(
+  a: T,
+  b: T,
+  axis: string,
+  axes: readonly string[],
+  keyOf: (member: T, axis: string) => string | null,
+): boolean {
+  return axes.every((other) => other === axis || keyOf(a, other) === keyOf(b, other));
+}
+
+/**
+ * Which member an option links to.
+ *
+ * Ranked: the active member itself (so the active option self-links), then an
+ * exact "swap only this axis" match, then the candidate agreeing on the most
+ * other axes, then agreement weighted by axis order — `axes` is the group's
+ * declared significance order, so keeping your colour beats keeping your size —
+ * and finally `sortVariantMembers` order, which is total.
+ */
+function pickTarget<T extends VariantMember>(
+  candidates: readonly T[],
+  active: T | null,
+  axis: string,
+  axes: readonly string[],
+  keyOf: (member: T, axis: string) => string | null,
+  orderIndex: Map<T, number>,
+): T {
+  if (active && candidates.includes(active)) return active;
+  if (!active) return [...candidates].sort(byOrder(orderIndex))[0];
+
+  const others = axes.filter((other) => other !== axis);
+
+  const scored = candidates.map((candidate) => {
+    let agreeing = 0;
+    let weight = 0;
+    others.forEach((other, i) => {
+      if (keyOf(candidate, other) === keyOf(active, other)) {
+        agreeing += 1;
+        // Earlier axes are more significant, so they carry more weight.
+        weight += others.length - i;
+      }
+    });
+    return { candidate, agreeing, weight };
+  });
+
+  scored.sort((a, b) => {
+    if (a.agreeing !== b.agreeing) return b.agreeing - a.agreeing;
+    if (a.weight !== b.weight) return b.weight - a.weight;
+    return byOrder(orderIndex)(a.candidate, b.candidate);
+  });
+
+  return scored[0].candidate;
+}
+
+function byOrder<T extends VariantMember>(orderIndex: Map<T, number>) {
+  return (a: T, b: T) =>
+    (orderIndex.get(a) ?? Number.MAX_SAFE_INTEGER) -
+    (orderIndex.get(b) ?? Number.MAX_SAFE_INTEGER);
+}
+
+/**
+ * Option order within one row.
+ *
+ * Deliberately NOT `localeCompare`: ICU collation for Arabic differs between the
+ * Node build server and the browser and can shift with an ICU version bump,
+ * which is exactly the ISR reshuffle these pages must not suffer. Code-unit
+ * comparison is byte-identical everywhere.
+ */
+function compareOptions<T extends VariantMember>(
+  a: AxisOption<T>,
+  b: AxisOption<T>,
+  axis: string,
+  rank: (axis: string, value: string) => number | null,
+  orderIndex: Map<T, number>,
+): number {
+  const rankA = finiteOrNull(rank(axis, a.value));
+  const rankB = finiteOrNull(rank(axis, b.value));
+
+  // Ranked values first, so one unrankable entry appends rather than unsorting.
+  if ((rankA === null) !== (rankB === null)) return rankA === null ? 1 : -1;
+  if (rankA !== null && rankB !== null && rankA !== rankB) return rankA - rankB;
+
+  const orderDelta = byOrder(orderIndex)(a.target, b.target);
+  if (orderDelta !== 0) return orderDelta;
+
+  // Total, and stable across engines.
+  if (a.value === b.value) return 0;
+  return a.value < b.value ? -1 : 1;
+}
+
+/** A rank hook returning NaN or ±Infinity must not poison the comparator. */
+function finiteOrNull(value: number | null): number | null {
+  return value !== null && Number.isFinite(value) ? value : null;
+}

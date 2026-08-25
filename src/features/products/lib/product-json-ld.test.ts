@@ -222,6 +222,82 @@ describe("buildProductJsonLd — edge cases", () => {
     expect(jsonLd["@type"]).toBe("ProductGroup");
   });
 
+  it("maps a size axis so screens and capacities are not left unmarked", () => {
+    const jsonLd = buildProductJsonLd({
+      product: product({
+        group: { ...GROUP, axes: ["المقاس"] },
+        variant_values: { المقاس: "43 بوصة" },
+      }),
+      siblings: [
+        sibling("TV-43", "tv-43", "x", 12000, {
+          variant_values: { المقاس: "43 بوصة" },
+        }),
+        sibling("TV-55", "tv-55", "x", 18000, {
+          variant_values: { المقاس: "55 بوصة" },
+        }),
+      ],
+      baseUrl: BASE,
+      description: "وصف",
+    });
+    expect(jsonLd.variesBy).toEqual(["size"]);
+    const variants = jsonLd.hasVariant as Record<string, unknown>[];
+    expect(variants.map((v) => v.size)).toEqual(["43 بوصة", "55 بوصة"]);
+  });
+
+  it("states an unmapped axis as a PropertyValue rather than emitting nothing", () => {
+    /*
+     * The real Midea microwave case: two variants differing only by a grill.
+     * schema.org has no property for that, so without this every hasVariant
+     * entry would differ by name/sku/url alone — the exact "unlinked and
+     * unmarked" state this file exists to prevent.
+     */
+    const grillGroup = { ...GROUP, axes: ["نوع الشواية"] };
+    const jsonLd = buildProductJsonLd({
+      product: product({
+        group: grillGroup,
+        variant_values: { "نوع الشواية": "بشواية" },
+        specifications: null,
+      }),
+      siblings: [
+        sibling("EG0P042MX-S", "midea-grill", "x", 7100, {
+          variant_values: { "نوع الشواية": "بشواية" },
+        }),
+        sibling("EM0P042MX-S", "midea-plain", "x", 6600, {
+          variant_values: { "نوع الشواية": "بدون شواية" },
+        }),
+      ],
+      baseUrl: BASE,
+      description: "وصف",
+    });
+
+    expect(jsonLd).not.toHaveProperty("variesBy");
+    const variants = jsonLd.hasVariant as Record<string, unknown>[];
+    expect(variants[0].additionalProperty).toEqual([
+      { "@type": "PropertyValue", name: "نوع الشواية", value: "بشواية" },
+    ]);
+    expect(variants[1].additionalProperty).toEqual([
+      { "@type": "PropertyValue", name: "نوع الشواية", value: "بدون شواية" },
+    ]);
+  });
+
+  it("does not state an axis twice when it is also a spec row", () => {
+    const jsonLd = buildProductJsonLd({
+      product: product({
+        group_id: null,
+        group: { ...GROUP, axes: ["نوع الشواية"] },
+        variant_values: { "نوع الشواية": "بشواية" },
+        specifications: { "نوع الشواية": "بشواية", السعة: "32 لتر" },
+      }),
+      siblings: [],
+      baseUrl: BASE,
+      description: "وصف",
+    });
+    const names = (jsonLd.additionalProperty as { name: string }[]).map(
+      (p) => p.name,
+    );
+    expect(names).toEqual(["نوع الشواية", "السعة"]);
+  });
+
   it("survives specifications that are not an object", () => {
     for (const specifications of [null, "text", ["a"], 42]) {
       const jsonLd = buildProductJsonLd({
