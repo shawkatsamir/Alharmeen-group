@@ -56,8 +56,9 @@ test("places a guest order and lands on the success page", async ({
   await page.getByLabel("البريد الإلكتروني").fill("customer@example.test");
   await page.getByLabel("رقم الهاتف").fill("01001234567");
   await page.getByLabel("المحافظة").click();
-  await page.getByRole("option", { name: /القاهرة/ }).click();
-  await page.getByLabel("المدينة / الحي").fill("مدينة نصر");
+  await page.getByRole("option", { name: "الشرقية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الزقازيق" }).click();
   await page
     .getByLabel("العنوان بالتفصيل")
     .fill("12 شارع عباس العقاد، الدور الثالث");
@@ -84,13 +85,22 @@ test("places a guest order and lands on the success page", async ({
 
   // Totals are recomputed on the server from the database, not trusted from
   // the client cart, and now include the governorate's shipping rate.
-  const CAIRO_SHIPPING = 60;
+  // الزقازيق: 26.3 straight * 1.3 road factor = 34.2 km.
+  // Large tier (inherited from the parent category): 120 + 34.2 * 8 = 393.6,
+  // rounded up to the nearest 5.
+  const EXPECTED_SHIPPING = 395;
   expect(order.subtotal).toBe(CART_ITEM.price * CART_ITEM.quantity);
-  expect(order.shipping_cost).toBe(CAIRO_SHIPPING);
-  expect(order.total).toBe(CART_ITEM.price * CART_ITEM.quantity + CAIRO_SHIPPING);
+  expect(order.shipping_cost).toBe(EXPECTED_SHIPPING);
+  expect(order.total).toBe(
+    CART_ITEM.price * CART_ITEM.quantity + EXPECTED_SHIPPING,
+  );
+  // Snapshotted so the trip can be reconstructed later.
+  expect(order.shipping_distance_km).toBe(34.2);
+  expect(order.delivery_tier).toBe("large");
 
   expect(order.customer_name).toBe("محمد عبد الرحمن");
-  expect(order.shipping_governorate).toBe("القاهرة");
+  expect(order.shipping_governorate).toBe("الشرقية");
+  expect(order.shipping_city).toBe("الزقازيق");
   // Cash on delivery is the default when the customer picks nothing else.
   expect(order.payment_method).toBe("cod");
   expect(order.payment_status).toBe("unpaid");
@@ -105,8 +115,9 @@ test("writes order items matching the cart", async ({ page, request }) => {
   await page.getByLabel("البريد الإلكتروني").fill("sara@example.test");
   await page.getByLabel("رقم الهاتف").fill("01112223334");
   await page.getByLabel("المحافظة").click();
-  await page.getByRole("option", { name: /الجيزة/ }).click();
-  await page.getByLabel("المدينة / الحي").fill("الدقي");
+  await page.getByRole("option", { name: "الشرقية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الزقازيق" }).click();
   await page.getByLabel("العنوان بالتفصيل").fill("5 شارع التحرير");
 
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
@@ -139,8 +150,9 @@ test("never writes order_status_history from the app", async ({
   await page.getByLabel("البريد الإلكتروني").fill("khaled@example.test");
   await page.getByLabel("رقم الهاتف").fill("01223334445");
   await page.getByLabel("المحافظة").click();
-  await page.getByRole("option", { name: /القاهرة/ }).click();
-  await page.getByLabel("المدينة / الحي").fill("سموحة");
+  await page.getByRole("option", { name: "الشرقية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الزقازيق" }).click();
   await page.getByLabel("العنوان بالتفصيل").fill("8 شارع فوزي معاذ");
 
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
@@ -176,8 +188,9 @@ test("ignores prices tampered with in the browser cart", async ({
   await page.getByLabel("البريد الإلكتروني").fill("mona@example.test");
   await page.getByLabel("رقم الهاتف").fill("01556667778");
   await page.getByLabel("المحافظة").click();
-  await page.getByRole("option", { name: /القاهرة/ }).click();
-  await page.getByLabel("المدينة / الحي").fill("المعادي");
+  await page.getByRole("option", { name: "الشرقية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الزقازيق" }).click();
   await page.getByLabel("العنوان بالتفصيل").fill("3 شارع 9");
 
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
@@ -204,8 +217,9 @@ test("records the chosen wallet payment method", async ({ page, request }) => {
   await page.getByLabel("البريد الإلكتروني").fill("yasmin@example.test");
   await page.getByLabel("رقم الهاتف").fill("01098765432");
   await page.getByLabel("المحافظة").click();
-  await page.getByRole("option", { name: /القاهرة/ }).click();
-  await page.getByLabel("المدينة / الحي").fill("مصر الجديدة");
+  await page.getByRole("option", { name: "الشرقية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الزقازيق" }).click();
   await page.getByLabel("العنوان بالتفصيل").fill("22 شارع الثورة");
 
   await page.getByRole("radio", { name: "فودافون كاش" }).check();
@@ -228,6 +242,34 @@ test("records the chosen wallet payment method", async ({ page, request }) => {
   // Still unpaid: payment_status is derived from the ledger by trigger and no
   // money has been recorded yet.
   expect(order.payment_status).toBe("unpaid");
+});
+
+test("refuses to quote a destination past the delivery radius", async ({
+  page,
+  request,
+}) => {
+  /*
+   * الرمل is 193 km by road, past the 150 km limit. The shop stops quoting
+   * rather than accepting a trip it loses money on — the customer gets a
+   * contact prompt, and the order cannot be submitted.
+   */
+  await page.goto("/checkout");
+
+  await page.getByLabel("المحافظة").click();
+  await page.getByRole("option", { name: "الإسكندرية" }).click();
+  await page.getByLabel("المدينة / المركز").click();
+  await page.getByRole("option", { name: "الرمل" }).click();
+
+  await expect(page.getByText(/خارج نطاق التوصيل/)).toBeVisible();
+
+  const submit = page.getByRole("button", { name: "تأكيد الطلب" });
+  await expect(submit).toBeDisabled();
+
+  // Nothing may reach the database for an order we cannot fulfil.
+  const writes = await captured(request);
+  expect(
+    writes.filter((r) => r.path === "/rest/v1/orders" && r.method === "POST"),
+  ).toHaveLength(0);
 });
 
 test("redirects to the cart when there is nothing to check out", async ({

@@ -16,6 +16,7 @@ import { Check, Minus, Plus, ShoppingCart, X } from "lucide-react";
 import type { Product, VariantSibling } from "../../types";
 import { pickSpecHighlights } from "../../lib/specifications";
 import { formatCurrency } from "@/lib/utils";
+import { DeliveryEstimate } from "@/features/checkout/components/DeliveryEstimate";
 
 interface ProductBuyBoxProps {
   product: Product;
@@ -180,6 +181,13 @@ export function ProductBuyBox({ product, siblings = [] }: ProductBuyBoxProps) {
             <CountdownTimer endDate={product.sale_end_date!} />
           </div>
         )}
+
+        {/* Delivery cost belongs next to the price, not four steps into
+            checkout — for a far village it can be a real fraction of a small
+            appliance's cost. Client component so this ISR page stays static. */}
+        <div className="mt-4">
+          <DeliveryEstimate productId={product.id} price={product.price} />
+        </div>
 
         <Separator className="my-5" />
 

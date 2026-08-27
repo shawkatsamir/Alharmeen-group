@@ -33,17 +33,21 @@ const PRODUCTS = [
     price: 25000,
     is_active: true,
     is_available: true,
+    // Unset on the product; inherited from the parent category, which is how
+    // all 41 real products resolve.
+    delivery_tier: null,
+    category: { delivery_tier: null, parent: { delivery_tier: "large" } },
     brand: { name_ar: "هيتاشي" },
     images: [{ image_url: "https://example.test/fridge.jpg", is_primary: true }],
   },
 ];
 
-/** Mirrors the seeded rates for the two governorates the specs use. */
+/** Fallback flat rates — only reached when a locality has no distance. */
 const GOVERNORATES = [
   {
     id: 1,
-    name_ar: "القاهرة",
-    shipping_cost: 60,
+    name_ar: "الشرقية",
+    shipping_cost: 50,
     is_deliverable: true,
     display_order: 1,
     updated_at: new Date().toISOString(),
@@ -51,9 +55,61 @@ const GOVERNORATES = [
   },
   {
     id: 2,
-    name_ar: "الجيزة",
-    shipping_cost: 60,
+    name_ar: "الإسكندرية",
+    shipping_cost: 75,
     is_deliverable: true,
+    display_order: 2,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  },
+];
+
+/**
+ * Three destinations covering the cases that matter: at the shop, a normal
+ * trip, and one past the 150 km radius where quoting stops.
+ */
+const LOCALITIES = [
+  locality(1, 1, "ديرب نجم", 0),
+  locality(2, 1, "الزقازيق", 26.3),
+  locality(3, 2, "الرمل", 148.8), // 148.8 * 1.3 = 193.4 km, out of range
+];
+
+function locality(id, governorate_id, name_ar, straight_km) {
+  return {
+    id,
+    governorate_id,
+    name_ar,
+    lat: null,
+    lng: null,
+    straight_km,
+    distance_km_override: null,
+    is_deliverable: true,
+    coordinates_verified: false,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  };
+}
+
+/** Mirrors the seeded delivery_tiers rows. */
+const DELIVERY_TIERS = [
+  {
+    key: "small",
+    label_ar: "أجهزة صغيرة",
+    base_fee: 40,
+    per_km_rate: 4,
+    min_fee: 40,
+    max_fee: 500,
+    display_order: 1,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  },
+  {
+    key: "large",
+    label_ar: "أجهزة كبيرة",
+    base_fee: 120,
+    per_km_rate: 8,
+    min_fee: 120,
+    max_fee: 1500,
     display_order: 2,
     updated_at: new Date().toISOString(),
     updated_by: null,
@@ -153,9 +209,6 @@ const server = createServer(async (req, res) => {
   }
 
   if (path === "/rest/v1/governorates" && req.method === "GET") {
-    // The action looks one up with `.eq("name_ar", ...).maybeSingle()`, so the
-    // filter has to be honoured — returning all rows makes PostgREST's
-    // single-object mode fail with PGRST116.
     const nameFilter = url.searchParams.get("name_ar");
     const rows = nameFilter?.startsWith("eq.")
       ? GOVERNORATES.filter(
@@ -165,11 +218,41 @@ const server = createServer(async (req, res) => {
     return respondRows(req, res, rows);
   }
 
+  if (path === "/rest/v1/localities" && req.method === "GET") {
+    // createOrder looks one up with `.eq("id", ...).maybeSingle()`, so the
+    // filter has to be honoured — returning all rows makes PostgREST's
+    // single-object mode fail with PGRST116.
+    const idFilter = url.searchParams.get("id");
+    let rows = LOCALITIES;
+    if (idFilter?.startsWith("eq.")) {
+      rows = LOCALITIES.filter((l) => String(l.id) === idFilter.slice(3));
+    }
+    // The action embeds the parent governorate for the fallback rate.
+    return respondRows(
+      req,
+      res,
+      rows.map((l) => ({
+        ...l,
+        governorate: GOVERNORATES.find((g) => g.id === l.governorate_id) ?? null,
+      })),
+    );
+  }
+
+  if (path === "/rest/v1/delivery_tiers" && req.method === "GET") {
+    return respondRows(req, res, DELIVERY_TIERS);
+  }
+
+  if (path === "/rest/v1/free_shipping_rules" && req.method === "GET") {
+    // Seeded empty, matching the migration: free shipping off by default.
+    return respondRows(req, res, []);
+  }
+
   if (path === "/rest/v1/app_settings" && req.method === "GET") {
     // Free shipping disabled, so every order is charged its governorate rate.
     // Wallet numbers left blank, matching a freshly seeded project.
     return respondRows(req, res, [
-      { key: "free_shipping_threshold", value: null },
+      { key: "delivery_road_factor", value: 1.3 },
+      { key: "max_delivery_km", value: 150 },
       { key: "payment_vodafone_cash_number", value: "" },
       { key: "payment_instapay_handle", value: "" },
       { key: "payment_bank_account", value: "" },

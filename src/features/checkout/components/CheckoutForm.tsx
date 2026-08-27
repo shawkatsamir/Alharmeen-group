@@ -19,10 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/Select";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/utils";
-import type { Governorate } from "@/services/client/shipping";
+import type { Governorate, Locality } from "@/services/client/shipping";
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
@@ -37,8 +36,10 @@ interface CheckoutFormProps {
   id?: string;
   /** Deliverable governorates; empty while the list is still loading. */
   governorates: Governorate[];
+  /** All deliverable localities; filtered to the chosen governorate below. */
+  localities: Locality[];
   /** Lifted so the order summary can price delivery as the user picks. */
-  onGovernorateChange: (name: string) => void;
+  onLocalityChange: (localityId: number | null) => void;
   /** Wallet numbers to display for prepaid methods; blank when unconfigured. */
   paymentDestinations?: Partial<Record<PaymentMethod, string>>;
 }
@@ -47,7 +48,8 @@ export function CheckoutForm({
   onSubmit,
   id,
   governorates,
-  onGovernorateChange,
+  localities,
+  onLocalityChange,
   paymentDestinations,
 }: CheckoutFormProps) {
   const form = useForm<CheckoutFormValues>({
@@ -57,12 +59,21 @@ export function CheckoutForm({
       email: "",
       phone: "",
       governorate: "",
+      localityId: 0,
       city: "",
       address: "",
       notes: "",
       paymentMethod: "cod",
     },
   });
+
+  /*
+   * Mirrored in local state rather than read with form.getValues(), which is
+   * not reactive — the locality field would never re-render when the
+   * governorate changed and stayed permanently disabled. form.watch() would be
+   * reactive but makes the React Compiler skip this whole component.
+   */
+  const [selectedGovernorate, setSelectedGovernorate] = useState("");
 
   // Prefill user data if logged in
   useEffect(() => {
@@ -152,7 +163,13 @@ export function CheckoutForm({
                   value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value);
-                    onGovernorateChange(value);
+                    setSelectedGovernorate(value);
+                    // Changing governorate invalidates the locality below it,
+                    // and with it the quote — clear both rather than leaving a
+                    // stale price from the previous governorate on screen.
+                    form.setValue("localityId", 0);
+                    form.setValue("city", "");
+                    onLocalityChange(null);
                   }}
                   disabled={governorates.length === 0}
                 >
@@ -173,14 +190,7 @@ export function CheckoutForm({
                         key={governorate.id}
                         value={governorate.name_ar}
                       >
-                        <span className="flex w-full items-center justify-between gap-4">
-                          <span>{governorate.name_ar}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {governorate.shipping_cost === 0
-                              ? "شحن مجاني"
-                              : `شحن ${formatCurrency(governorate.shipping_cost)}`}
-                          </span>
-                        </span>
+                        {governorate.name_ar}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -189,18 +199,67 @@ export function CheckoutForm({
               </FormItem>
             )}
           />
+
+          {/*
+            Was a free-text input. That is what produced ديرب نجم,
+            "Deyrab Negm" and "ديرب ن" as three different places across 38
+            orders, which made pricing by distance impossible.
+          */}
           <FormField
             control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>المدينة / الحي</FormLabel>
-                <FormControl>
-                  <Input placeholder="مدينة نصر" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            name="localityId"
+            render={({ field }) => {
+              const governorateId = governorates.find(
+                (g) => g.name_ar === selectedGovernorate,
+              )?.id;
+              const options = localities.filter(
+                (l) => l.governorate_id === governorateId,
+              );
+
+              return (
+                <FormItem>
+                  <FormLabel>المدينة / المركز</FormLabel>
+                  <Select
+                    dir="rtl"
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={(value) => {
+                      const id = Number(value);
+                      field.onChange(id);
+                      // shipping_city snapshots the name the order was placed
+                      // under, so keep it in step with the chosen locality.
+                      form.setValue(
+                        "city",
+                        options.find((l) => l.id === id)?.name_ar ?? "",
+                      );
+                      onLocalityChange(id);
+                    }}
+                    disabled={!governorateId || options.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !governorateId
+                              ? "اختر المحافظة أولاً"
+                              : options.length === 0
+                                ? "لا توجد مدن متاحة"
+                                : "اختر المدينة"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {options.map((locality) => (
+                        <SelectItem key={locality.id} value={String(locality.id)}>
+                          {locality.name_ar}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
         </div>
 

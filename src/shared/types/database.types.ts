@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           created_at: string;
           description_ar: string | null;
+          delivery_tier: string | null;
           display_order: number;
           id: string;
           image_url: string | null;
@@ -102,6 +103,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           description_ar?: string | null;
+          delivery_tier?: string | null;
           display_order?: number;
           id?: string;
           image_url?: string | null;
@@ -115,6 +117,7 @@ export type Database = {
         Update: {
           created_at?: string;
           description_ar?: string | null;
+          delivery_tier?: string | null;
           display_order?: number;
           id?: string;
           image_url?: string | null;
@@ -131,6 +134,82 @@ export type Database = {
             columns: ["parent_id"];
             isOneToOne: false;
             referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      delivery_tiers: {
+        Row: {
+          base_fee: number;
+          display_order: number;
+          key: string;
+          label_ar: string;
+          max_fee: number;
+          min_fee: number;
+          per_km_rate: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          base_fee?: number;
+          display_order?: number;
+          key: string;
+          label_ar: string;
+          max_fee: number;
+          min_fee?: number;
+          per_km_rate?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          base_fee?: number;
+          display_order?: number;
+          key?: string;
+          label_ar?: string;
+          max_fee?: number;
+          min_fee?: number;
+          per_km_rate?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "delivery_tiers_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      free_shipping_rules: {
+        Row: {
+          id: number;
+          max_distance_km: number;
+          min_order_total: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: number;
+          max_distance_km: number;
+          min_order_total: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: number;
+          max_distance_km?: number;
+          min_order_total?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "free_shipping_rules_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -169,6 +248,89 @@ export type Database = {
             columns: ["updated_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      localities: {
+        Row: {
+          coordinates_verified: boolean;
+          distance_km_override: number | null;
+          governorate_id: number;
+          id: number;
+          is_deliverable: boolean;
+          lat: number | null;
+          lng: number | null;
+          name_ar: string;
+          straight_km: number | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          coordinates_verified?: boolean;
+          distance_km_override?: number | null;
+          governorate_id: number;
+          id?: number;
+          is_deliverable?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          name_ar: string;
+          straight_km?: number | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          coordinates_verified?: boolean;
+          distance_km_override?: number | null;
+          governorate_id?: number;
+          id?: number;
+          is_deliverable?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          name_ar?: string;
+          straight_km?: number | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "localities_governorate_id_fkey";
+            columns: ["governorate_id"];
+            isOneToOne: false;
+            referencedRelation: "governorates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "localities_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      locality_aliases: {
+        Row: {
+          alias: string;
+          id: number;
+          locality_id: number;
+        };
+        Insert: {
+          alias: string;
+          id?: number;
+          locality_id: number;
+        };
+        Update: {
+          alias?: string;
+          id?: number;
+          locality_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "locality_aliases_locality_id_fkey";
+            columns: ["locality_id"];
+            isOneToOne: false;
+            referencedRelation: "localities";
             referencedColumns: ["id"];
           },
         ];
@@ -368,6 +530,7 @@ export type Database = {
           customer_notes: string | null;
           customer_phone: string;
           delivered_at: string | null;
+          delivery_tier: string | null;
           discount_amount: number;
           id: string;
           order_number: string;
@@ -376,7 +539,9 @@ export type Database = {
           shipping_address_line: string;
           shipping_city: string;
           shipping_cost: number;
+          shipping_distance_km: number | null;
           shipping_governorate: string;
+          shipping_locality_id: number | null;
           status: string;
           subtotal: number;
           total: number;
@@ -394,6 +559,7 @@ export type Database = {
           customer_notes?: string | null;
           customer_phone: string;
           delivered_at?: string | null;
+          delivery_tier?: string | null;
           discount_amount?: number;
           id?: string;
           order_number?: string;
@@ -420,6 +586,7 @@ export type Database = {
           customer_notes?: string | null;
           customer_phone?: string;
           delivered_at?: string | null;
+          delivery_tier?: string | null;
           discount_amount?: number;
           id?: string;
           order_number?: string;
@@ -428,7 +595,9 @@ export type Database = {
           shipping_address_line?: string;
           shipping_city?: string;
           shipping_cost?: number;
+          shipping_distance_km?: number | null;
           shipping_governorate?: string;
+          shipping_locality_id?: number | null;
           status?: string;
           subtotal?: number;
           total?: number;
@@ -525,6 +694,7 @@ export type Database = {
           category_id: string;
           content_blocks: Json | null;
           created_at: string;
+          delivery_tier: string | null;
           description_ar: string | null;
           description_en: string | null;
           features: string[] | null;
@@ -563,6 +733,7 @@ export type Database = {
           category_id: string;
           content_blocks?: Json | null;
           created_at?: string;
+          delivery_tier?: string | null;
           description_ar?: string | null;
           description_en?: string | null;
           features?: string[] | null;
@@ -601,6 +772,7 @@ export type Database = {
           category_id?: string;
           content_blocks?: Json | null;
           created_at?: string;
+          delivery_tier?: string | null;
           description_ar?: string | null;
           description_en?: string | null;
           features?: string[] | null;
@@ -735,6 +907,10 @@ export type Database = {
         Args: { p_has_refund: boolean; p_paid: number; p_total: number };
         Returns: string;
       };
+      find_locality: {
+        Args: { p_governorate: string; p_name: string };
+        Returns: number;
+      };
       governorate_order_stats: {
         Args: never;
         Returns: {
@@ -743,9 +919,20 @@ export type Database = {
           revenue: number;
         }[];
       };
+      haversine_km: {
+        Args: {
+          p_lat1: number;
+          p_lat2: number;
+          p_lng1: number;
+          p_lng2: number;
+        };
+        Returns: number;
+      };
       is_admin: { Args: never; Returns: boolean };
       normalize_color_name: { Args: { p_name: string }; Returns: string };
       normalize_governorate_name: { Args: { p_name: string }; Returns: string };
+      normalize_place_name: { Args: { p_name: string }; Returns: string };
+      recompute_locality_distances: { Args: never; Returns: number };
       search_products: {
         Args: { limit_count?: number; search_term: string };
         Returns: {

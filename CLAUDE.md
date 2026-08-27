@@ -112,9 +112,27 @@ Historical note: before this rebuild, the app wrote `previous_status`/`new_statu
 
 **Currency is EGP and there is exactly one formatter** — `formatCurrency` in `lib/utils.ts`. Do not hand-roll `` `${n.toLocaleString()} ج.م` ``; that drift is what left `ر.س` (Saudi riyal) rendering on the customer order page. It deliberately does **not** use `Intl` currency style, which emits Arabic-Indic digits that clash with the Latin numerals the rest of the site uses.
 
-**Shipping cost is per governorate, admin-editable.** `governorates` (27 rows, seeded) holds `shipping_cost` + `is_deliverable`; `/admin/shipping` edits them alongside real order traffic from `governorate_order_stats()`. `app_settings` is a public-readable key/value table for site-wide values (free-shipping threshold, wallet numbers, WhatsApp number) — **never put secrets there.** `resolveShippingCost` in `features/checkout/lib/shipping.ts` is import-free and runs on both server and client so the quoted and charged numbers cannot diverge.
+**`app_settings`** is a public-readable key/value table for site-wide values (wallet numbers, WhatsApp number, delivery origin and policy) — **never put secrets there.**
 
-**`orders.shipping_governorate` stays free text** (an order snapshots the name it was placed under), but checkout now picks from the table. `normalize_governorate_name()` collapses the Arabic spelling variants — 9 distinct strings for 5 governorates existed before this landed, which made traffic grouping useless.
+**`orders.shipping_governorate` and `shipping_city` stay free text** (an order snapshots the names it was placed under), but checkout picks from `governorates` and `localities`. `normalize_place_name()` collapses the Arabic spelling variants.
+
+### Delivery is priced by distance (added 2026-08-23)
+
+A flat per-governorate rate could not survive الشرقية: one row, ~34 localities, hundreds of kilometres between them. Rates are now `base_fee + (distance_km × per_km_rate)` per **size tier**.
+
+- **`src/features/checkout/lib/shipping.ts` is the single source of truth for the maths**, import-free and unit-tested, running on both server and client so the quoted and charged numbers cannot diverge. `haversineKm` mirrors `haversine_km()` in Postgres; the tests assert against the values the database actually computed.
+- **Not pure per-km.** A trip has a large fixed cost (loading an 85 kg fridge, two handlers, dispatching a vehicle). At 8 EGP/km a 2 km delivery would price at 16 EGP. The base fee is the point.
+- **One order is one trip.** `resolveDeliveryTier` returns the *largest* tier in the cart, never the sum — the items share a vehicle.
+- **Size tier comes from the category tree.** `أجهزة منزلية كبيرة` → `large`, `صغيرة`/`تحضير طعام` → `small`; resolution is product → category → parent → cheapest. All 41 products classify with zero data entry. **Do not price on weight** — only 29 of 41 carry `الوزن الصافي`, and bulk matters more than mass for appliances.
+- **Distance is stored, not computed per request.** `localities.straight_km` is Haversine from the origin; the quote uses `coalesce(distance_km_override, straight_km × road_factor)`. The override skips the road factor deliberately — it is the admin overruling the map. Changing `delivery_road_factor` needs no recompute; **moving the origin does**, and `updateDeliverySettings` calls `recompute_locality_distances()` in the same action.
+- **Seeded coordinates are approximate and a wrong one mis-prices silently.** `coordinates_verified` plus the distance-sorted audit list on `/admin/shipping` is the only practical check across ~97 rows.
+- **Beyond `max_delivery_km` the shop stops quoting** — out-of-range beats free shipping, the submit button disables, and the customer gets the WhatsApp prompt. Accepting an order the shop loses money on is worse than refusing it.
+- **`free_shipping_rules` are distance bands**, seeded empty so behaviour matches the old disabled threshold. A single global threshold would fund a 700 km trip out of a barely-qualifying order.
+- **`governorates.shipping_cost` is now only the fallback** for a locality with no coordinates and no override. Do not delete it.
+- **`locality_aliases` handles transliteration**, which no normaliser can: `Deyrab Negm` → `ديرب نجم` is not a spelling variant. 35 of 38 historical orders resolved through it; `Alex` and `قرية البرجاية` were deliberately left NULL rather than guessed.
+- **`normalize_governorate_name` is now a wrapper over `normalize_place_name`.** It is indexed, and replacing an indexed IMMUTABLE function requires `REINDEX` in the same migration — Postgres neither rebuilds nor warns.
+- **The product-page `DeliveryEstimate` must stay a client component.** `/product/[slug]` is ISR; reading the chosen locality from a cookie in the RSC would force dynamic rendering. It uses `useSyncExternalStore` over localStorage — a `useEffect` + `setState` version trips `react-hooks/set-state-in-effect`.
+- In `CheckoutForm`, the locality select reads a **local `useState` mirror** of the governorate, not `form.getValues()` (not reactive — the field stayed permanently disabled) and not `form.watch()` (makes the React Compiler skip the component).
 
 **Checkout recomputes every total server-side.** `createOrder` re-reads prices from `products` and the rate from `governorates`; the browser cart is treated as nothing more than a list of (product id, quantity). It previously summed the client's `item.price`, so a crafted request bought anything for 1 EGP. There is a Playwright regression test for this.
 

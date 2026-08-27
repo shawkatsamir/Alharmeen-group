@@ -4,9 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { CheckoutFormValues } from "@/features/checkout/schema";
 import { CartItem } from "@/stores/cartStore";
 import {
-  resolveShippingCost,
+  effectiveDistanceKm,
+  fallbackGovernorateCost,
+  quoteDelivery,
+  resolveDeliveryTier,
+  resolveProductTierKey,
   roundMoney,
 } from "@/features/checkout/lib/shipping";
+import { getDeliveryConfig } from "@/services/server/shipping";
 import { isPaymentMethod } from "@/features/orders/constants/payment";
 
 export type CreateOrderResult =
@@ -37,6 +42,8 @@ export async function createOrder(
    * meant a crafted request could buy anything for 1 EGP. The client cart is
    * now treated as nothing more than a list of (product id, quantity).
    */
+  const deliveryConfig = await getDeliveryConfig();
+
   const quantities = new Map<string, number>();
   for (const item of items) {
     const quantity = Math.floor(item.quantity);
@@ -49,7 +56,9 @@ export async function createOrder(
   const { data: products, error: productsError } = await supabase
     .from("products")
     .select(
-      "id, name_ar, price, is_active, is_available, brand:brands(name_ar), images:product_images(image_url, is_primary)",
+      // `parent:parent_id(...)` is the correct self-referencing embed form;
+      // the other spelling silently returns nothing.
+      "id, name_ar, price, is_active, is_available, delivery_tier, brand:brands(name_ar), images:product_images(image_url, is_primary), category:categories(delivery_tier, parent:parent_id(delivery_tier))",
     )
     .in("id", [...quantities.keys()]);
 
@@ -70,13 +79,26 @@ export async function createOrder(
     };
   }
 
+  // PostgREST returns a many-to-one embed as an object, but the generated
+  // types describe it as an array. Handle both rather than casting.
+  const one = <T,>(value: T | T[] | null): T | null =>
+    Array.isArray(value) ? (value[0] ?? null) : value;
+
+  const cartTierKeys = products.map((product) => {
+    const category = one(product.category);
+    return resolveProductTierKey({
+      productTier: product.delivery_tier,
+      categoryTier: category?.delivery_tier ?? null,
+      parentCategoryTier: one(category?.parent)?.delivery_tier ?? null,
+      fallback: deliveryConfig.fallbackTierKey,
+    });
+  });
+
   const orderItems = products.map((product) => {
     const quantity = quantities.get(product.id)!;
     const primaryImage =
       product.images?.find((img) => img.is_primary) ?? product.images?.[0];
-    // PostgREST returns a many-to-one embed as an object, but the generated
-    // types describe it as an array. Handle both rather than casting.
-    const brand = Array.isArray(product.brand) ? product.brand[0] : product.brand;
+    const brand = one(product.brand);
 
     return {
       product_id: product.id,
@@ -93,45 +115,73 @@ export async function createOrder(
     orderItems.reduce((sum, item) => sum + item.total_price, 0),
   );
 
-  // Shipping likewise comes from the governorates table, never from the client.
-  const { data: governorate, error: governorateError } = await supabase
-    .from("governorates")
-    .select("name_ar, shipping_cost, is_deliverable")
-    .eq("name_ar", data.governorate)
+  /*
+   * Delivery is priced from the locality's stored distance, never from the
+   * client. The browser shows a preview using the same pure functions, but
+   * this is the number that gets charged.
+   */
+  const { data: locality, error: localityError } = await supabase
+    .from("localities")
+    .select(
+      "id, name_ar, straight_km, distance_km_override, is_deliverable, governorate:governorates(name_ar, shipping_cost, is_deliverable)",
+    )
+    .eq("id", data.localityId)
     .maybeSingle();
 
-  if (governorateError) {
-    console.error("Error loading governorate:", governorateError);
-    return { success: false, error: "تعذر حساب تكلفة الشحن" };
+  if (localityError) {
+    console.error("Error loading locality:", localityError);
+    return { success: false, error: "تعذر حساب تكلفة التوصيل" };
   }
 
-  if (!governorate) {
-    return { success: false, error: "المحافظة المختارة غير صحيحة" };
+  if (!locality) {
+    return { success: false, error: "المدينة المختارة غير صحيحة" };
   }
 
-  if (!governorate.is_deliverable) {
+  const governorate = one(locality.governorate);
+
+  if (!locality.is_deliverable || !governorate?.is_deliverable) {
     return {
       success: false,
-      error: `عذراً، لا نقوم بالتوصيل إلى ${governorate.name_ar} حالياً`,
+      error: `عذراً، لا نقوم بالتوصيل إلى ${locality.name_ar} حالياً`,
     };
   }
 
-  const { data: thresholdSetting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "free_shipping_threshold")
-    .maybeSingle();
-
-  const freeShippingThreshold =
-    typeof thresholdSetting?.value === "number" && thresholdSetting.value > 0
-      ? thresholdSetting.value
-      : null;
-
-  const { cost: shippingCost } = resolveShippingCost({
-    rate: governorate.shipping_cost,
-    subtotal,
-    freeShippingThreshold,
+  const tier = resolveDeliveryTier(cartTierKeys, deliveryConfig.tiers);
+  const distanceKm = effectiveDistanceKm({
+    straightKm: locality.straight_km,
+    overrideKm: locality.distance_km_override,
+    roadFactor: deliveryConfig.roadFactor,
   });
+
+  let shippingCost: number;
+  let shippingDistanceKm: number | null = null;
+  let deliveryTierKey: string | null = tier?.key ?? null;
+
+  if (distanceKm === null || !tier) {
+    // Degraded path: a locality with no coordinates and no override, or a
+    // shop with no tiers configured. Fall back to the governorate flat rate
+    // rather than refusing an otherwise valid order.
+    shippingCost = fallbackGovernorateCost(governorate?.shipping_cost ?? 0);
+    deliveryTierKey = null;
+  } else {
+    const quote = quoteDelivery({
+      distanceKm,
+      tier,
+      subtotal,
+      rules: deliveryConfig.rules,
+      maxDeliveryKm: deliveryConfig.maxDeliveryKm,
+    });
+
+    if (quote.isOutOfRange) {
+      return {
+        success: false,
+        error: `${locality.name_ar} خارج نطاق التوصيل الحالي. برجاء التواصل معنا للاتفاق على التوصيل.`,
+      };
+    }
+
+    shippingCost = quote.cost;
+    shippingDistanceKm = quote.distanceKm;
+  }
 
   const discountAmount = 0;
   const total = roundMoney(subtotal + shippingCost - discountAmount);
@@ -162,9 +212,14 @@ export async function createOrder(
       customer_name: data.fullName,
       customer_email: data.email,
       customer_phone: data.phone,
-      // Store the canonical governorate name, not what the form posted.
-      shipping_governorate: governorate.name_ar,
-      shipping_city: data.city.trim(),
+      // Store the canonical names, not what the form posted.
+      shipping_governorate: governorate?.name_ar ?? data.governorate,
+      shipping_city: locality.name_ar,
+      shipping_locality_id: locality.id,
+      // Snapshotted so a dispute months later can be reconstructed, and so the
+      // shop can compare what it charged against what the trip cost.
+      shipping_distance_km: shippingDistanceKm,
+      delivery_tier: deliveryTierKey,
       shipping_address_line: data.address,
       customer_notes: data.notes,
       subtotal,
