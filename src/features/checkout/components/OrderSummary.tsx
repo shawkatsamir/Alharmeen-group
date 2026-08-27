@@ -2,40 +2,38 @@
 
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { resolveShippingCost } from "../lib/shipping";
+import type { DeliveryQuote } from "../lib/shipping";
 
 interface OrderSummaryProps {
   isLoading: boolean;
   onPlaceOrder?: () => void;
-  /** The chosen governorate's rate, or null before one is picked. */
-  shippingRate: number | null;
-  freeShippingThreshold: number | null;
+  /** Null until a locality is chosen, or when the fallback path applies. */
+  quote: DeliveryQuote | null;
+  /** Governorate flat rate, used when a locality has no coordinates. */
+  fallbackCost: number | null;
+  localityName: string | null;
+  /** wa.me link shown when the destination is out of range. */
+  whatsappLink?: string | null;
 }
 
 export function OrderSummary({
   isLoading,
   onPlaceOrder,
-  shippingRate,
-  freeShippingThreshold,
+  quote,
+  fallbackCost,
+  localityName,
+  whatsappLink,
 }: OrderSummaryProps) {
   const { total, items } = useCartStore();
   const subtotal = total();
 
-  // Until a governorate is chosen there is no rate to quote. Showing "مجاني"
-  // in that gap — which is what this component used to do unconditionally —
-  // promises free delivery the order then charges for.
-  const quote =
-    shippingRate === null
-      ? null
-      : resolveShippingCost({
-          rate: shippingRate,
-          subtotal,
-          freeShippingThreshold,
-        });
-
   if (items.length === 0) return null;
+
+  const isOutOfRange = quote?.isOutOfRange ?? false;
+  const shippingCost = isOutOfRange ? 0 : (quote?.cost ?? fallbackCost ?? 0);
+  const hasQuote = quote !== null || fallbackCost !== null;
 
   return (
     <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 h-fit sticky top-24">
@@ -59,29 +57,61 @@ export function OrderSummary({
           <span>المجموع الفرعي</span>
           <span>{formatCurrency(subtotal)}</span>
         </div>
+
         <div className="flex justify-between text-gray-600">
-          <span>الشحن</span>
           <span>
-            {quote === null ? (
-              <span className="text-sm text-gray-500">اختر المحافظة</span>
-            ) : quote.isFree ? (
+            التوصيل
+            {/* The distance is the justification for the number. Showing it
+                turns an arbitrary fee into something the customer can judge. */}
+            {quote && !isOutOfRange && quote.distanceKm > 0 && (
+              <span className="block text-xs text-gray-400">
+                {localityName} · {quote.distanceKm} كم
+              </span>
+            )}
+          </span>
+          <span className="text-left">
+            {!hasQuote ? (
+              <span className="text-sm text-gray-500">اختر المدينة</span>
+            ) : isOutOfRange ? (
+              <span className="text-sm font-medium text-amber-600">
+                يُحدد بالتواصل
+              </span>
+            ) : quote?.isFree ? (
               "مجاني"
             ) : (
-              formatCurrency(quote.cost)
+              formatCurrency(shippingCost)
             )}
           </span>
         </div>
-        {quote === null &&
-          freeShippingThreshold !== null &&
-          subtotal < freeShippingThreshold && (
-            <p className="text-xs text-[#4EA674]">
-              أضف {formatCurrency(freeShippingThreshold - subtotal)} للحصول على
-              شحن مجاني
+
+        {/*
+          Past the maximum radius the shop stops quoting rather than accepting
+          a trip it loses money on. The customer gets a way to reach us instead
+          of a dead end.
+        */}
+        {isOutOfRange && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p>
+              {localityName} خارج نطاق التوصيل الحالي. تواصل معنا للاتفاق على
+              التوصيل وتكلفته.
             </p>
-          )}
+            {whatsappLink && (
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-2 font-medium text-[#25D366]"
+              >
+                <MessageCircle className="h-4 w-4" />
+                تواصل على واتساب
+              </a>
+            )}
+          </div>
+        )}
+
         <div className="border-t border-gray-200 pt-4 mt-4 font-bold flex justify-between text-lg">
           <span>الإجمالي</span>
-          <span>{formatCurrency(subtotal + (quote?.cost ?? 0))}</span>
+          <span>{formatCurrency(subtotal + shippingCost)}</span>
         </div>
       </div>
 
@@ -89,7 +119,9 @@ export function OrderSummary({
         onClick={onPlaceOrder}
         className="w-full"
         size="lg"
-        disabled={isLoading}
+        // Blocking here rather than letting the server reject it keeps the
+        // customer from filling in the whole form for an order we cannot take.
+        disabled={isLoading || isOutOfRange}
       >
         {isLoading ? (
           <>
