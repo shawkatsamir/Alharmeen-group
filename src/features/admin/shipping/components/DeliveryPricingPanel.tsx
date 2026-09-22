@@ -13,7 +13,11 @@ import type {
   DeliverySettings,
   FreeShippingRuleRow,
 } from "../actions/get-shipping-settings";
-import type { DeliveryTier } from "@/features/checkout/lib/shipping";
+import {
+  googleMapsUrl,
+  parseLatLng,
+  type DeliveryTier,
+} from "@/features/checkout/lib/shipping";
 import {
   deleteFreeShippingRule,
   saveFreeShippingRule,
@@ -61,18 +65,24 @@ function OriginCard({
 }) {
   const [form, setForm] = useState({
     originName: settings.originName,
-    originLat: String(settings.originLat ?? ""),
-    originLng: String(settings.originLng ?? ""),
+    // One field, in the "lat, lng" form Google Maps copies from a dropped pin.
+    // Two separate number inputs invited pasting the pair into one of them.
+    originCoords:
+      settings.originLat !== null && settings.originLng !== null
+        ? `${settings.originLat}, ${settings.originLng}`
+        : "",
     roadFactor: String(settings.roadFactor),
     maxDeliveryKm: String(settings.maxDeliveryKm),
   });
 
+  const coords = parseLatLng(form.originCoords);
+
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (origin: { lat: number; lng: number }) =>
       updateDeliverySettings({
         originName: form.originName.trim(),
-        originLat: Number(form.originLat),
-        originLng: Number(form.originLng),
+        originLat: origin.lat,
+        originLng: origin.lng,
         roadFactor: Number(form.roadFactor),
         maxDeliveryKm: Number(form.maxDeliveryKm),
       }),
@@ -99,13 +109,34 @@ function OriginCard({
           <Label htmlFor="origin-name">اسم الموقع</Label>
           <Input id="origin-name" {...field("originName")} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="origin-lat">خط العرض</Label>
-          <Input id="origin-lat" type="number" step="0.0001" {...field("originLat")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="origin-lng">خط الطول</Label>
-          <Input id="origin-lng" type="number" step="0.0001" {...field("originLng")} />
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="origin-coords">الإحداثيات (خط العرض، خط الطول)</Label>
+          <Input
+            id="origin-coords"
+            dir="ltr"
+            placeholder="30.7490, 31.4420"
+            aria-invalid={form.originCoords.trim() !== "" && !coords}
+            {...field("originCoords")}
+          />
+          <p className="text-xs text-muted-foreground">
+            ضع دبوساً على موقع المتجر في خرائط جوجل وانسخ الرقمين كما هما.{" "}
+            {coords ? (
+              <a
+                href={googleMapsUrl(coords.lat, coords.lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                تأكد على الخريطة
+              </a>
+            ) : (
+              form.originCoords.trim() !== "" && (
+                <span className="text-destructive">
+                  صيغة غير صحيحة أو موقع خارج مصر
+                </span>
+              )
+            )}
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="road-factor">معامل الطريق</Label>
@@ -125,8 +156,8 @@ function OriginCard({
 
       <Button
         className="mt-4"
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending || !coords}
+        onClick={() => coords && mutation.mutate(coords)}
       >
         {mutation.isPending ? "جاري الحفظ..." : "حفظ وإعادة حساب المسافات"}
       </Button>

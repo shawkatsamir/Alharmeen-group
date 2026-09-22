@@ -3,6 +3,8 @@ import {
   effectiveDistanceKm,
   fallbackGovernorateCost,
   haversineKm,
+  isInEgypt,
+  parseLatLng,
   qualifiesForFreeShipping,
   quoteDelivery,
   resolveDeliveryTier,
@@ -37,8 +39,10 @@ const LARGE: DeliveryTier = {
 
 const TIERS = [SMALL, LARGE];
 
-// The shop, from `app_settings.delivery_origin_*`.
-const ORIGIN = { lat: 30.8167, lng: 31.4333 }; // ديرب نجم
+// The origin as seeded in `app_settings.delivery_origin_*`. It is ~7.6 km off
+// the real shop, but it is what the database computed the expected values
+// below from, which is the point: these tests pin TS/SQL parity, not geography.
+const ORIGIN = { lat: 30.8167, lng: 31.4333 };
 
 describe("haversineKm", () => {
   /*
@@ -217,6 +221,63 @@ describe("qualifiesForFreeShipping", () => {
 
   it("is off entirely when no rules are configured", () => {
     expect(qualifiesForFreeShipping(5, 1000000, [])).toBe(false);
+  });
+
+  /*
+   * "Narrowest band decides" gave a nearer trip a higher bar than a farther
+   * one under this config. Any covering band now suffices, so free delivery
+   * can only get easier as the trip gets shorter.
+   */
+  it("stays monotonic when a narrow band has a higher bar than a wider one", () => {
+    const MISORDERED: FreeShippingRule[] = [
+      { max_distance_km: 20, min_order_total: 5000 },
+      { max_distance_km: 50, min_order_total: 3000 },
+    ];
+    expect(qualifiesForFreeShipping(40, 4000, MISORDERED)).toBe(true);
+    expect(qualifiesForFreeShipping(10, 4000, MISORDERED)).toBe(true);
+    expect(qualifiesForFreeShipping(60, 4000, MISORDERED)).toBe(false);
+  });
+});
+
+describe("parseLatLng", () => {
+  it.each([
+    ["30.749, 31.442"],
+    ["30.749,31.442"],
+    ["30.749 31.442"],
+    ["30.749، 31.442"],
+    ["  30.749 ,  31.442  "],
+  ])("parses %j", (input) => {
+    expect(parseLatLng(input)).toEqual({ lat: 30.749, lng: 31.442 });
+  });
+
+  /*
+   * The mistake worth catching: both numbers are valid, the haversine would
+   * return a plausible-looking distance, and nothing else complains. The box
+   * catches a swap whenever it lands outside Egypt; in the Delta lat and lng
+   * are both ~30-31, so a swap there still passes — the map link in the admin
+   * is the check for that.
+   */
+  it("rejects a swapped pair that lands outside Egypt", () => {
+    expect(parseLatLng("31.442, 30.749")).not.toBeNull();
+    expect(parseLatLng("31.442, 20.5")).toBeNull();
+    expect(parseLatLng("24.1, 32.9")).toEqual({ lat: 24.1, lng: 32.9 });
+    expect(parseLatLng("32.9, 24.1")).toBeNull();
+  });
+
+  it.each([[""], ["30.749"], ["30.749, 31.442, 5"], ["abc, def"], ["30.7x, 31.4"]])(
+    "rejects %j",
+    (input) => {
+      expect(parseLatLng(input)).toBeNull();
+    },
+  );
+});
+
+describe("isInEgypt", () => {
+  it("accepts the shop and rejects points outside the box", () => {
+    expect(isInEgypt(30.749, 31.442)).toBe(true);
+    expect(isInEgypt(40, 31)).toBe(false);
+    expect(isInEgypt(30, 40)).toBe(false);
+    expect(isInEgypt(Number.NaN, 31)).toBe(false);
   });
 });
 

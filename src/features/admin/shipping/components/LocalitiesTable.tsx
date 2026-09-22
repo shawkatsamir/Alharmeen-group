@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, MapPin } from "lucide-react";
+import { AlertTriangle, ExternalLink, MapPin } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
@@ -12,6 +12,7 @@ import { DebouncedSearchInput } from "@/features/search/components/DebouncedSear
 import { cn } from "@/lib/utils";
 import type { LocalityWithTraffic } from "../actions/get-shipping-settings";
 import { updateLocality } from "../actions/shipping-settings";
+import { googleMapsUrl, parseLatLng } from "@/features/checkout/lib/shipping";
 
 interface LocalitiesTableProps {
   localities: LocalityWithTraffic[];
@@ -33,6 +34,7 @@ export function LocalitiesTable({
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [coordDrafts, setCoordDrafts] = useState<Record<number, string>>({});
 
   const mutation = useMutation({
     mutationFn: (vars: {
@@ -40,6 +42,7 @@ export function LocalitiesTable({
       distance_km_override: number | null;
       is_deliverable: boolean;
       coordinates_verified: boolean;
+      coordinates?: { lat: number; lng: number };
     }) => updateLocality(vars.id, vars),
     onSuccess: (result, vars) => {
       if (!result.success) {
@@ -47,11 +50,13 @@ export function LocalitiesTable({
         return;
       }
       toast.success(result.message);
-      setDrafts((prev) => {
+      const clear = (prev: Record<number, string>) => {
         const next = { ...prev };
         delete next[vars.id];
         return next;
-      });
+      };
+      setDrafts(clear);
+      setCoordDrafts(clear);
       queryClient.invalidateQueries({ queryKey: ["admin-shipping"] });
     },
     onError: () => toast.error("تعذر حفظ التغيير"),
@@ -77,7 +82,8 @@ export function LocalitiesTable({
         </h2>
         <p className="text-sm text-muted-foreground">
           مرتبة بالأبعد أولاً. راجع المسافات — الإحداثيات التقريبية قد تعطي رقماً
-          غير منطقي، وعندها استخدم خانة &quot;مسافة يدوية&quot; لتجاوزها.
+          غير منطقي. صحّح الإحداثيات من خرائط جوجل (تُعاد حساب المسافة تلقائياً
+          وتُعلَّم كمراجَعة)، أو استخدم خانة &quot;مسافة يدوية&quot; لتجاوزها.
         </p>
 
         {unverified > 0 && (
@@ -103,6 +109,7 @@ export function LocalitiesTable({
               <th className="p-4 font-medium">المدينة</th>
               <th className="p-4 font-medium">المحافظة</th>
               <th className="p-4 font-medium">الطلبات</th>
+              <th className="p-4 font-medium">الإحداثيات</th>
               <th className="p-4 font-medium">خط مستقيم</th>
               <th className="p-4 font-medium">المسافة المستخدمة</th>
               <th className="p-4 font-medium">مسافة يدوية</th>
@@ -118,7 +125,20 @@ export function LocalitiesTable({
                 locality.distance_km_override === null
                   ? ""
                   : String(locality.distance_km_override);
-              const isDirty = draft !== undefined && draft !== currentOverride;
+              const overrideDirty =
+                draft !== undefined && draft !== currentOverride;
+
+              const currentCoords =
+                locality.lat !== null && locality.lng !== null
+                  ? `${locality.lat}, ${locality.lng}`
+                  : "";
+              const coordDraft = coordDrafts[locality.id];
+              const coordsDirty =
+                coordDraft !== undefined && coordDraft !== currentCoords;
+              const parsedCoords = coordsDirty ? parseLatLng(coordDraft) : null;
+              const coordsInvalid = coordsDirty && parsedCoords === null;
+
+              const isDirty = (overrideDirty || coordsDirty) && !coordsInvalid;
               const outOfRange =
                 locality.effective_km !== null &&
                 locality.effective_km > maxDeliveryKm;
@@ -138,7 +158,11 @@ export function LocalitiesTable({
                         ? null
                         : Number(draft),
                   is_deliverable: locality.is_deliverable,
-                  coordinates_verified: locality.coordinates_verified,
+                  // Typing in a pin is the verification — that is the whole
+                  // point of the column.
+                  coordinates_verified:
+                    parsedCoords !== null || locality.coordinates_verified,
+                  ...(parsedCoords && { coordinates: parsedCoords }),
                   ...patch,
                 });
 
@@ -150,6 +174,35 @@ export function LocalitiesTable({
                   </td>
                   <td className="p-4 tabular-nums">
                     {locality.order_count > 0 ? locality.order_count : "—"}
+                  </td>
+                  <td className="p-4">
+                    <Input
+                      dir="ltr"
+                      placeholder="30.7490, 31.4420"
+                      className={cn(
+                        "min-w-[170px] max-w-[190px] text-xs",
+                        coordsInvalid && "border-destructive",
+                      )}
+                      aria-invalid={coordsInvalid}
+                      value={coordDraft ?? currentCoords}
+                      onChange={(e) =>
+                        setCoordDrafts((prev) => ({
+                          ...prev,
+                          [locality.id]: e.target.value,
+                        }))
+                      }
+                    />
+                    {locality.lat !== null && locality.lng !== null && (
+                      <a
+                        href={googleMapsUrl(locality.lat, locality.lng)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-xs text-primary underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        الخريطة
+                      </a>
+                    )}
                   </td>
                   <td className="p-4 tabular-nums text-muted-foreground">
                     {locality.straight_km ?? "—"}

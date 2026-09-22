@@ -980,6 +980,16 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      update_delivery_settings: {
+        Args: {
+          p_max_delivery_km: number;
+          p_origin_lat: number;
+          p_origin_lng: number;
+          p_origin_name: string;
+          p_road_factor: number;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       [_ in never]: never;
