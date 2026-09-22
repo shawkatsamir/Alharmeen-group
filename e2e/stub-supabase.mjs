@@ -20,6 +20,18 @@ let captured = [];
 const ORDER_ID = "00000000-0000-4000-8000-000000000001";
 const ORDER_NUMBER = "ORD-9001";
 
+/** Must match E2E_ACCESS_TOKEN / E2E_USER_ID in e2e/session.ts. */
+const E2E_ACCESS_TOKEN = "e2e-access-token";
+const E2E_USER = {
+  id: "22222222-2222-4222-8222-222222222222",
+  aud: "authenticated",
+  role: "authenticated",
+  email: "customer@example.test",
+  app_metadata: { provider: "email" },
+  user_metadata: {},
+  created_at: "2026-01-01T00:00:00Z",
+};
+
 /**
  * Catalogue rows. `createOrder` re-reads every price from the database rather
  * than trusting the browser cart, so the stub has to serve the product the
@@ -183,9 +195,39 @@ const server = createServer(async (req, res) => {
     captured.push({ method: req.method, path, body });
   }
 
-  // Guest checkout: no session.
+  /*
+   * Auth. A request carrying the E2E access token (set as a session cookie by
+   * the spec's `signIn` helper) is the signed-in customer; anything else has
+   * no session. getUser() is the only auth call the checkout path makes.
+   */
+  if (path === "/auth/v1/user") {
+    const bearer = req.headers.authorization ?? "";
+    if (bearer === `Bearer ${E2E_ACCESS_TOKEN}`) return json(res, 200, E2E_USER);
+    return json(res, 401, { message: "no session" });
+  }
   if (path.startsWith("/auth/v1")) {
     return json(res, 401, { message: "no session" });
+  }
+
+  /*
+   * createOrder writes the order and its items in one call to `place_order`
+   * (service-role only in the real database). Recorded like any other write,
+   * so specs assert on the exact p_order / p_items the server computed.
+   */
+  if (path === "/rest/v1/rpc/place_order" && req.method === "POST") {
+    const { p_order: order, p_items: items } = body ?? {};
+    createdOrder = {
+      id: ORDER_ID,
+      order_number: ORDER_NUMBER,
+      created_at: new Date().toISOString(),
+      // Derived by trigger in the real database; a new order has no
+      // payments, so the success page must see 0 and "unpaid".
+      amount_paid: 0,
+      payment_status: "unpaid",
+      ...order,
+    };
+    createdItems = (items ?? []).map((r, i) => ({ id: `item-${i}`, ...r }));
+    return json(res, 200, ORDER_ID);
   }
 
   // Catalogue reads that checkout depends on.
@@ -265,36 +307,12 @@ const server = createServer(async (req, res) => {
     return respondRows(req, res, []);
   }
 
-  if (path === "/rest/v1/orders") {
-    if (req.method === "POST") {
-      const row = Array.isArray(body) ? body[0] : body;
-      createdOrder = {
-        id: ORDER_ID,
-        order_number: ORDER_NUMBER,
-        created_at: new Date().toISOString(),
-        // Derived by trigger in the real database; a new order has no
-        // payments, so the success page must see 0 rather than undefined.
-        amount_paid: 0,
-        ...row,
-      };
-      return respondRows(req, res, [createdOrder]);
-    }
-    if (req.method === "GET") {
-      // Success page reads the order back with its items nested.
-      if (!createdOrder) return respondRows(req, res, []);
-      return respondRows(req, res, [
-        { ...createdOrder, order_items: createdItems },
-      ]);
-    }
-  }
-
-  if (path === "/rest/v1/order_items" && req.method === "POST") {
-    const rows = Array.isArray(body) ? body : [body];
-    createdItems = rows.map((r, i) => ({
-      id: `item-${i}`,
-      ...r,
-    }));
-    return respondRows(req, res, createdItems);
+  if (path === "/rest/v1/orders" && req.method === "GET") {
+    // Success page reads the order back with its items nested.
+    if (!createdOrder) return respondRows(req, res, []);
+    return respondRows(req, res, [
+      { ...createdOrder, order_items: createdItems },
+    ]);
   }
 
   // Everything else the storefront layout touches (categories, products,

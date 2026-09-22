@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { Loader2, MessageCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { DeliveryQuote } from "../lib/shipping";
+import type { CartPricing } from "@/services/client/shipping";
 
 interface OrderSummaryProps {
   isLoading: boolean;
@@ -16,6 +17,14 @@ interface OrderSummaryProps {
   localityName: string | null;
   /** wa.me link shown when the destination is out of range. */
   whatsappLink?: string | null;
+  /**
+   * Current database prices for the cart. Null while loading. The persisted
+   * cart's `item.price` is only a fallback for display until this arrives —
+   * `createOrder` charges these, not the cart's.
+   */
+  pricing: CartPricing | null;
+  pricingFailed: boolean;
+  localitySelected: boolean;
 }
 
 export function OrderSummary({
@@ -25,11 +34,24 @@ export function OrderSummary({
   fallbackCost,
   localityName,
   whatsappLink,
+  pricing,
+  pricingFailed,
+  localitySelected,
 }: OrderSummaryProps) {
   const { total, items } = useCartStore();
-  const subtotal = total();
 
   if (items.length === 0) return null;
+
+  const unitPrice = (item: { id: string; price: number }) =>
+    pricing?.prices[item.id] ?? item.price;
+  const subtotal = pricing?.subtotal ?? total();
+  const pricesChanged =
+    pricing !== null &&
+    items.some(
+      (item) =>
+        pricing.prices[item.id] !== undefined &&
+        pricing.prices[item.id] !== item.price,
+    );
 
   const isOutOfRange = quote?.isOutOfRange ?? false;
   const shippingCost = isOutOfRange ? 0 : (quote?.cost ?? fallbackCost ?? 0);
@@ -45,9 +67,14 @@ export function OrderSummary({
             <span className="text-gray-600">
               {item.quantity}x {item.name}
             </span>
-            <span>{formatCurrency(item.price * item.quantity)}</span>
+            <span>{formatCurrency(unitPrice(item) * item.quantity)}</span>
           </div>
         ))}
+        {pricesChanged && (
+          <p className="text-xs text-amber-700">
+            تم تحديث الأسعار حسب الأسعار الحالية
+          </p>
+        )}
       </div>
 
       <div className="border-t border-gray-200 my-4" />
@@ -70,8 +97,16 @@ export function OrderSummary({
             )}
           </span>
           <span className="text-left">
-            {!hasQuote ? (
+            {!localitySelected ? (
               <span className="text-sm text-gray-500">اختر المدينة</span>
+            ) : pricingFailed ? (
+              <span className="text-sm text-amber-600">
+                تعذر حساب التوصيل
+              </span>
+            ) : !hasQuote ? (
+              <span className="text-sm text-gray-500">
+                جاري حساب التوصيل...
+              </span>
             ) : isOutOfRange ? (
               <span className="text-sm font-medium text-amber-600">
                 يُحدد بالتواصل

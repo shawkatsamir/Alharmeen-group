@@ -932,6 +932,7 @@ export type Database = {
       normalize_color_name: { Args: { p_name: string }; Returns: string };
       normalize_governorate_name: { Args: { p_name: string }; Returns: string };
       normalize_place_name: { Args: { p_name: string }; Returns: string };
+      place_order: { Args: { p_items: Json; p_order: Json }; Returns: string };
       recompute_locality_distances: { Args: never; Returns: number };
       search_products: {
         Args: { limit_count?: number; search_term: string };
@@ -979,6 +980,16 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      update_delivery_settings: {
+        Args: {
+          p_max_delivery_km: number;
+          p_origin_lat: number;
+          p_origin_lng: number;
+          p_origin_name: string;
+          p_road_factor: number;
+        };
+        Returns: number;
       };
     };
     Enums: {

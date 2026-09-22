@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/features/admin/lib/require-admin";
+import { isInEgypt } from "@/features/checkout/lib/shipping";
 
 export interface ActionResult {
   success: boolean;
@@ -48,11 +49,15 @@ export async function updateGovernorate(
 }
 
 /**
- * Per-locality distance override and availability.
+ * Per-locality coordinates, distance override and availability.
  *
  * The override skips the road factor entirely — it is the admin overruling the
  * map for a ferry crossing or a road that does not exist, and re-applying the
  * multiplier would re-introduce the guess they just corrected.
+ *
+ * Coordinates are optional in the payload: when present, the
+ * `localities_set_straight_km` trigger recomputes `straight_km` in the same
+ * UPDATE, so this action never writes a distance itself.
  */
 export async function updateLocality(
   id: number,
@@ -60,6 +65,7 @@ export async function updateLocality(
     distance_km_override: number | null;
     is_deliverable: boolean;
     coordinates_verified: boolean;
+    coordinates?: { lat: number; lng: number };
   },
 ): Promise<ActionResult> {
   const guard = await requireAdmin();
@@ -70,12 +76,24 @@ export async function updateLocality(
     return { success: false, message: "المسافة يجب أن تكون رقماً موجباً" };
   }
 
+  // Checked here for an Arabic message; the DB CHECK is the backstop.
+  if (
+    values.coordinates &&
+    !isInEgypt(values.coordinates.lat, values.coordinates.lng)
+  ) {
+    return { success: false, message: "الإحداثيات غير صحيحة أو خارج مصر" };
+  }
+
   const { data, error } = await guard.supabase
     .from("localities")
     .update({
       distance_km_override: override,
       is_deliverable: values.is_deliverable,
       coordinates_verified: values.coordinates_verified,
+      ...(values.coordinates && {
+        lat: values.coordinates.lat,
+        lng: values.coordinates.lng,
+      }),
       updated_by: guard.userId,
     })
     .eq("id", id)
@@ -207,13 +225,8 @@ export async function updateDeliverySettings(values: {
   const guard = await requireAdmin();
   if (!guard.ok) return { success: false, message: guard.message };
 
-  if (
-    !Number.isFinite(values.originLat) ||
-    Math.abs(values.originLat) > 90 ||
-    !Number.isFinite(values.originLng) ||
-    Math.abs(values.originLng) > 180
-  ) {
-    return { success: false, message: "إحداثيات الموقع غير صحيحة" };
+  if (!isInEgypt(values.originLat, values.originLng)) {
+    return { success: false, message: "إحداثيات الموقع غير صحيحة أو خارج مصر" };
   }
   if (!Number.isFinite(values.roadFactor) || values.roadFactor < 1) {
     return { success: false, message: "معامل الطريق يجب أن يكون 1 أو أكثر" };
@@ -222,40 +235,30 @@ export async function updateDeliverySettings(values: {
     return { success: false, message: "أقصى مسافة يجب أن تكون أكبر من صفر" };
   }
 
-  const rows: { key: string; value: string | number }[] = [
-    { key: "delivery_origin_name", value: values.originName },
-    { key: "delivery_origin_lat", value: values.originLat },
-    { key: "delivery_origin_lng", value: values.originLng },
-    { key: "delivery_road_factor", value: values.roadFactor },
-    { key: "max_delivery_km", value: values.maxDeliveryKm },
-  ];
-
-  for (const row of rows) {
-    const { error } = await guard.supabase
-      .from("app_settings")
-      .update({ value: row.value, updated_by: guard.userId })
-      .eq("key", row.key);
-
-    if (error) {
-      console.error(`Error updating ${row.key}:`, error);
-      return { success: false, message: "فشل حفظ إعدادات التوصيل" };
-    }
-  }
-
-  const { error: recomputeError } = await guard.supabase.rpc(
-    "recompute_locality_distances",
+  // One transaction in Postgres: upsert all five settings, then recompute.
+  // The previous five separate UPDATEs could leave the origin half-moved, and
+  // an UPDATE on a missing key matched zero rows while reporting success.
+  const { data: recomputed, error } = await guard.supabase.rpc(
+    "update_delivery_settings",
+    {
+      p_origin_name: values.originName,
+      p_origin_lat: values.originLat,
+      p_origin_lng: values.originLng,
+      p_road_factor: values.roadFactor,
+      p_max_delivery_km: values.maxDeliveryKm,
+    },
   );
 
-  if (recomputeError) {
-    console.error("Error recomputing distances:", recomputeError);
-    return {
-      success: false,
-      message: "تم حفظ الإعدادات لكن فشل إعادة حساب المسافات",
-    };
+  if (error) {
+    console.error("Error saving delivery settings:", error);
+    return { success: false, message: "فشل حفظ إعدادات التوصيل" };
   }
 
   revalidateShipping();
-  return { success: true, message: "تم حفظ الإعدادات وإعادة حساب المسافات" };
+  return {
+    success: true,
+    message: `تم حفظ الإعدادات وإعادة حساب المسافات لـ ${recomputed ?? 0} مدينة`,
+  };
 }
 
 /**

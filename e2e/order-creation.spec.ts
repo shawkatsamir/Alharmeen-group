@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { STUB_SUPABASE_URL } from "../playwright.config";
+import { E2E_USER_ID, signIn } from "./session";
 
 /**
  * End-to-end cover for the order creation flow.
@@ -29,8 +30,32 @@ async function captured(request: {
   return res.json();
 }
 
-test.beforeEach(async ({ page, request }) => {
+const isPlaceOrder = (r: CapturedRequest) =>
+  r.path === "/rest/v1/rpc/place_order" && r.method === "POST";
+
+/**
+ * The single write createOrder makes: order and items together, so they
+ * commit or fail as one. Two separate inserts left 8 production orders with
+ * no items when the second failed.
+ */
+async function placedOrder(request: Parameters<typeof captured>[0]) {
+  const writes = await captured(request);
+  const call = writes.find(isPlaceOrder);
+  expect(call, "the app must call place_order").toBeTruthy();
+  const body = call!.body as {
+    p_order: Record<string, unknown>;
+    p_items: Record<string, unknown>[];
+  };
+  return { order: body.p_order, items: body.p_items, writes };
+}
+
+test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
   await request.get(`${STUB_SUPABASE_URL}/__reset`);
+
+  // Checkout is signed-in only. The guest spec opts out by its title.
+  if (!testInfo.title.startsWith("guest:")) {
+    await signIn(context, baseURL!);
+  }
 
   // Seed the cart directly in the zustand persist store, so the test covers
   // checkout rather than re-testing the product pages.
@@ -42,7 +67,7 @@ test.beforeEach(async ({ page, request }) => {
   }, CART_ITEM);
 });
 
-test("places a guest order and lands on the success page", async ({
+test("places an order and lands on the success page", async ({
   page,
   request,
 }) => {
@@ -70,13 +95,7 @@ test("places a guest order and lands on the success page", async ({
     page.getByRole("heading", { name: "تم استلام طلبك بنجاح!" }),
   ).toBeVisible();
 
-  const writes = await captured(request);
-  const orderInsert = writes.find(
-    (r) => r.path === "/rest/v1/orders" && r.method === "POST",
-  );
-  expect(orderInsert, "the app must POST an order").toBeTruthy();
-
-  const order = orderInsert!.body as Record<string, unknown>;
+  const { order } = await placedOrder(request);
 
   // The whole point: the initial status is the Arabic value the DB check
   // constraint allows, never the English "pending".
@@ -103,9 +122,9 @@ test("places a guest order and lands on the success page", async ({
   expect(order.shipping_city).toBe("الزقازيق");
   // Cash on delivery is the default when the customer picks nothing else.
   expect(order.payment_method).toBe("cod");
-  expect(order.payment_status).toBe("unpaid");
-  // Guest checkout.
-  expect(order.user_id).toBeNull();
+  // Derived from the payments ledger by trigger; the app must not send it.
+  expect(order).not.toHaveProperty("payment_status");
+  expect(order.user_id).toBe(E2E_USER_ID);
 });
 
 test("writes order items matching the cart", async ({ page, request }) => {
@@ -123,13 +142,7 @@ test("writes order items matching the cart", async ({ page, request }) => {
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
   await page.waitForURL(/\/order-success\//);
 
-  const writes = await captured(request);
-  const itemsInsert = writes.find(
-    (r) => r.path === "/rest/v1/order_items" && r.method === "POST",
-  );
-  expect(itemsInsert, "the app must POST order items").toBeTruthy();
-
-  const items = itemsInsert!.body as Record<string, unknown>[];
+  const { items } = await placedOrder(request);
   expect(items).toHaveLength(1);
   expect(items[0].product_id).toBe(CART_ITEM.id);
   expect(items[0].quantity).toBe(CART_ITEM.quantity);
@@ -158,7 +171,7 @@ test("never writes order_status_history from the app", async ({
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
   await page.waitForURL(/\/order-success\//);
 
-  const writes = await captured(request);
+  const { writes } = await placedOrder(request);
   const historyWrites = writes.filter((r) =>
     r.path.startsWith("/rest/v1/order_status_history"),
   );
@@ -196,17 +209,11 @@ test("ignores prices tampered with in the browser cart", async ({
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
   await page.waitForURL(/\/order-success\//);
 
-  const writes = await captured(request);
-  const order = writes.find(
-    (r) => r.path === "/rest/v1/orders" && r.method === "POST",
-  )!.body as Record<string, unknown>;
+  const { order, items } = await placedOrder(request);
 
   // The real catalogue price, not the 1 the browser sent.
   expect(order.subtotal).toBe(25000 * CART_ITEM.quantity);
 
-  const items = writes.find(
-    (r) => r.path === "/rest/v1/order_items" && r.method === "POST",
-  )!.body as Record<string, unknown>[];
   expect(items[0].unit_price).toBe(25000);
 });
 
@@ -233,15 +240,12 @@ test("records the chosen wallet payment method", async ({ page, request }) => {
   await page.getByRole("button", { name: "تأكيد الطلب" }).click();
   await page.waitForURL(/\/order-success\//);
 
-  const writes = await captured(request);
-  const order = writes.find(
-    (r) => r.path === "/rest/v1/orders" && r.method === "POST",
-  )!.body as Record<string, unknown>;
+  const { order } = await placedOrder(request);
 
   expect(order.payment_method).toBe("vodafone_cash");
-  // Still unpaid: payment_status is derived from the ledger by trigger and no
-  // money has been recorded yet.
-  expect(order.payment_status).toBe("unpaid");
+  // Still unpaid, but that is the ledger trigger's call — the app never sends
+  // payment_status.
+  expect(order).not.toHaveProperty("payment_status");
 });
 
 test("refuses to quote a destination past the delivery radius", async ({
@@ -267,9 +271,7 @@ test("refuses to quote a destination past the delivery radius", async ({
 
   // Nothing may reach the database for an order we cannot fulfil.
   const writes = await captured(request);
-  expect(
-    writes.filter((r) => r.path === "/rest/v1/orders" && r.method === "POST"),
-  ).toHaveLength(0);
+  expect(writes.filter(isPlaceOrder)).toHaveLength(0);
 });
 
 test("redirects to the cart when there is nothing to check out", async ({
@@ -284,4 +286,22 @@ test("redirects to the cart when there is nothing to check out", async ({
 
   await page.goto("/checkout");
   await page.waitForURL(/\/cart$/);
+});
+
+test("guest: is sent to sign in and nothing is written", async ({
+  page,
+  request,
+}) => {
+  /*
+   * Guest checkout has been impossible since 2026-02-14 (no anon INSERT
+   * policy on `orders`, no anon read path for /order-success). Until it is
+   * restored properly, /checkout sends a guest to sign in — the same thing
+   * the cart's checkout button already does — instead of letting them fill in
+   * the form and fail at submit. createOrder refuses guests server-side too.
+   */
+  await page.goto("/checkout");
+  await page.waitForURL(/\/auth\/login\?next=(%2F|\/)checkout/);
+
+  const writes = await captured(request);
+  expect(writes.filter(isPlaceOrder)).toHaveLength(0);
 });

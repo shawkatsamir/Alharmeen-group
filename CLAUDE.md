@@ -75,7 +75,7 @@ Storefront pages are ISR: `export const revalidate = 3600` (home, product, featu
 
 ### Auth
 
-`src/proxy.ts` (Next 16's renamed middleware) → `lib/supabase/updateSession` refreshes the session cookie on every non-static request. **Its redirect-unauthenticated block is commented out on purpose** — the site is browsable by guests and checkout supports guest orders, so route protection is per-page. `src/lib/supabase/middleware.ts` is a leftover scaffold copy that nothing imports (it uses a different env var name and still redirects); edit `proxy.ts`, not that file.
+`src/proxy.ts` (Next 16's renamed middleware) → `lib/supabase/updateSession` refreshes the session cookie on every non-static request. **Its redirect-unauthenticated block is commented out on purpose** — the site is browsable by guests, so route protection is per-page. (Checkout is currently signed-in only; see Known gaps.) `src/lib/supabase/middleware.ts` is a leftover scaffold copy that nothing imports (it uses a different env var name and still redirects); edit `proxy.ts`, not that file.
 
 Admin identity = `profiles.role === "admin"`; there is also an `is_admin()` Postgres function used by RLS.
 
@@ -124,10 +124,14 @@ A flat per-governorate rate could not survive الشرقية: one row, ~34 local
 - **Not pure per-km.** A trip has a large fixed cost (loading an 85 kg fridge, two handlers, dispatching a vehicle). At 8 EGP/km a 2 km delivery would price at 16 EGP. The base fee is the point.
 - **One order is one trip.** `resolveDeliveryTier` returns the *largest* tier in the cart, never the sum — the items share a vehicle.
 - **Size tier comes from the category tree.** `أجهزة منزلية كبيرة` → `large`, `صغيرة`/`تحضير طعام` → `small`; resolution is product → category → parent → cheapest. All 41 products classify with zero data entry. **Do not price on weight** — only 29 of 41 carry `الوزن الصافي`, and bulk matters more than mass for appliances.
-- **Distance is stored, not computed per request.** `localities.straight_km` is Haversine from the origin; the quote uses `coalesce(distance_km_override, straight_km × road_factor)`. The override skips the road factor deliberately — it is the admin overruling the map. Changing `delivery_road_factor` needs no recompute; **moving the origin does**, and `updateDeliverySettings` calls `recompute_locality_distances()` in the same action.
-- **Seeded coordinates are approximate and a wrong one mis-prices silently.** `coordinates_verified` plus the distance-sorted audit list on `/admin/shipping` is the only practical check across ~97 rows.
+- **Distance is stored, not computed per request.** `localities.straight_km` is Haversine from the origin; the quote uses `coalesce(distance_km_override, straight_km × road_factor)`. The override skips the road factor deliberately — it is the admin overruling the map. Changing `delivery_road_factor` needs no recompute; **moving the origin does**.
+- **`straight_km` is owned by the database** (added 2026-09-23). The `localities_set_straight_km` trigger recomputes it whenever `lat`/`lng` change, so application code never writes a distance — same discipline as `log_status_change_trigger`. Origin changes go through `update_delivery_settings()` (admin-checked SECURITY DEFINER): it upserts all five settings and calls `recompute_locality_distances()` in **one transaction**. That replaced five separate UPDATEs, which could half-move the origin and silently no-op on a missing key. `recompute_locality_distances()` is no longer executable by `authenticated`.
+- **CHECKs on `localities`:** every row needs coordinates or an override (`localities_has_distance`, so the flat-rate fallback can never skip `max_delivery_km`), and coordinates must lie inside Egypt (`localities_coordinates_in_egypt`, mirrored by `isInEgypt()`). The box only catches a swapped lat/lng that lands outside Egypt — in the Delta both are ~30–31, so the admin's map link is the real check there.
+- **The seeded origin was wrong.** `30.8167, 31.4333` is a rounded degree-minute value ~7.6 km north of ديرب نجم, so every distance was measured from the wrong point and then ×1.3: الزقازيق quoted 34.2 km instead of ~24.5, السنبلاوين 9.6 km instead of ~19. The fix is data, not code: paste the real pin on `/admin/shipping`.
+- **Seeded coordinates are approximate and a wrong one mis-prices silently.** The admin can now edit a locality's coordinates (pasted as Google Maps' `lat, lng`, parsed by `parseLatLng`); saving a pin marks it `coordinates_verified`. The distance-sorted audit list is still the only practical check across ~97 rows.
 - **Beyond `max_delivery_km` the shop stops quoting** — out-of-range beats free shipping, the submit button disables, and the customer gets the WhatsApp prompt. Accepting an order the shop loses money on is worse than refusing it.
-- **`free_shipping_rules` are distance bands**, seeded empty so behaviour matches the old disabled threshold. A single global threshold would fund a 700 km trip out of a barely-qualifying order.
+- **`free_shipping_rules` are distance bands**, seeded empty so behaviour matches the old disabled threshold. A single global threshold would fund a 700 km trip out of a barely-qualifying order. An order qualifies when **any** band covering the trip has a bar the subtotal reaches — not "narrowest band decides", which was non-monotonic under a mis-ordered config (a nearer trip could lose free delivery a farther one got).
+- **The preview never quotes from a failed or pending lookup.** `getCartPricing` (client) returns current DB prices, the subtotal the server will charge and each product's tier, and **throws** on error. The old version returned `[]` on error, which resolves to the smallest tier and showed a fridge at the small-appliance rate while the server charged the large one. Checkout and `DeliveryEstimate` show "جاري حساب التوصيل" / "تعذر حساب التوصيل" instead of a number until it resolves.
 - **`governorates.shipping_cost` is now only the fallback** for a locality with no coordinates and no override. Do not delete it.
 - **`locality_aliases` handles transliteration**, which no normaliser can: `Deyrab Negm` → `ديرب نجم` is not a spelling variant. 35 of 38 historical orders resolved through it; `Alex` and `قرية البرجاية` were deliberately left NULL rather than guessed.
 - **`normalize_governorate_name` is now a wrapper over `normalize_place_name`.** It is indexed, and replacing an indexed IMMUTABLE function requires `REINDEX` in the same migration — Postgres neither rebuilds nor warns.
@@ -135,6 +139,10 @@ A flat per-governorate rate could not survive الشرقية: one row, ~34 local
 - In `CheckoutForm`, the locality select reads a **local `useState` mirror** of the governorate, not `form.getValues()` (not reactive — the field stayed permanently disabled) and not `form.watch()` (makes the React Compiler skip the component).
 
 **Checkout recomputes every total server-side.** `createOrder` re-reads prices from `products` and the rate from `governorates`; the browser cart is treated as nothing more than a list of (product id, quantity). It previously summed the client's `item.price`, so a crafted request bought anything for 1 EGP. There is a Playwright regression test for this.
+
+**Order and items are written atomically by `place_order(p_order, p_items)`** (added 2026-09-23). Two PostgREST inserts left 8 orders with no items when the second failed. The function **stores, it does not price** — pricing stays in `shipping.ts` — which is safe only because **EXECUTE is granted to `service_role` alone**; `createOrder` calls it through `createAdminClient()` after checking `SUPABASE_SERVICE_ROLE_KEY`. Never grant it to `anon`/`authenticated`: a browser could then submit its own totals. Side effect: the first `order_status_history` row of a new order has `changed_by = NULL` (no `auth.uid()` under the service role); `orders.user_id` still records who placed it. The E2E stub implements `/rest/v1/rpc/place_order` and signs in with a stubbed session cookie (`e2e/session.ts`).
+
+**Checkout is signed-in only.** `createOrder` and `place_order` refuse guests, and `/checkout` redirects a guest to `/auth/login?next=/checkout` (the cart button already did). See Known gaps for restoring guest checkout.
 
 #### Payment status is derived, never set
 
@@ -221,6 +229,12 @@ Remote images are restricted to `**.supabase.co` and `images.unsplash.com` in `n
 ## Known gaps and follow-ups
 
 Open work, recorded so it is not rediscovered from scratch. Ordered roughly by value.
+
+### Delivery and checkout (found 2026-09-23)
+
+- **Guest checkout is broken and deliberately disabled.** No guest order has been written since 2026-02-14: `orders` has only an `authenticated` INSERT policy (`user_id = auth.uid()`) and no anon SELECT, so /order-success cannot show a guest their order either. Restoring it needs a guest access path for the success page (`orders.tracking_token` already exists and is unused by the app) and dropping the `user_id` requirement in `place_order`.
+- **Real road distance.** Straight line × `delivery_road_factor` is still a guess. Calibrate the factor against a few known trips first; if it is still off, store an OSRM/Distance-Matrix road distance per locality (once per origin change, never per request) and drop the factor.
+- **8 legacy orders have no items** (ORD-1017…1026, all 2026-02-03, the owner's own test orders from before `place_order`). Left in place; delete only with the owner's say-so.
 
 ### Variant groups — remaining admin gaps
 

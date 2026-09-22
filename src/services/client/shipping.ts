@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/shared/types/database.types";
-import type {
-  DeliveryTier,
-  FreeShippingRule,
+import {
+  resolveProductTierKey,
+  roundMoney,
+  type DeliveryTier,
+  type FreeShippingRule,
 } from "@/features/checkout/lib/shipping";
 
 export type Governorate = Database["public"]["Tables"]["governorates"]["Row"];
@@ -26,44 +28,77 @@ export interface ShippingOptions {
   };
 }
 
+export interface CartPricing {
+  /** Resolved delivery tier per product, same chain the server walks. */
+  tierKeys: string[];
+  /** Current unit price per product id, from the database. */
+  prices: Record<string, number>;
+  /** Sum of current price × quantity — what `createOrder` will charge. */
+  subtotal: number;
+}
+
 /**
- * Resolved delivery tier for each product in the cart.
+ * What the server will charge for these (product id, quantity) pairs, minus
+ * delivery: current prices and each product's delivery tier.
  *
- * Fetched rather than stored on CartItem: carts are persisted in localStorage,
- * so an existing cart predates any new field and would resolve to undefined.
- * Mirrors the same product -> category -> parent chain the server walks.
+ * Fetched rather than read off CartItem: carts are persisted in localStorage,
+ * so `item.price` can be days old and an existing cart predates any new field.
+ * `createOrder` re-reads the same rows, so previewing from them is the only
+ * way the quoted and charged numbers agree.
+ *
+ * THROWS on error rather than returning an empty result. An empty tier list
+ * resolves to the smallest tier, which quoted a fridge at the small-appliance
+ * price while the server charged the large one. A visible "could not
+ * calculate" is better than a confident wrong number.
  */
-export async function getCartDeliveryTiers(
-  productIds: string[],
+export async function getCartPricing(
+  items: readonly { id: string; quantity: number }[],
   fallbackTierKey: string,
-): Promise<string[]> {
-  if (productIds.length === 0) return [];
+): Promise<CartPricing> {
+  if (items.length === 0) return { tierKeys: [], prices: {}, subtotal: 0 };
 
   const supabase = createClient();
 
   const { data, error } = await supabase
     .from("products")
     // `parent:parent_id(...)` is the correct self-referencing embed form.
-    .select("id, delivery_tier, category:categories(delivery_tier, parent:parent_id(delivery_tier))")
-    .in("id", productIds);
+    .select(
+      "id, price, delivery_tier, category:categories(delivery_tier, parent:parent_id(delivery_tier))",
+    )
+    .in(
+      "id",
+      items.map((item) => item.id),
+    );
 
   if (error) {
-    console.error("Error fetching cart delivery tiers:", error);
-    return [];
+    console.error("Error fetching cart pricing:", error);
+    throw error;
   }
 
   const one = <T,>(value: T | T[] | null): T | null =>
     Array.isArray(value) ? (value[0] ?? null) : value;
 
-  return (data ?? []).map((product) => {
+  const prices: Record<string, number> = {};
+  const tierKeys = (data ?? []).map((product) => {
+    prices[product.id] = product.price;
     const category = one(product.category);
-    return (
-      product.delivery_tier ??
-      category?.delivery_tier ??
-      one(category?.parent)?.delivery_tier ??
-      fallbackTierKey
-    );
+    return resolveProductTierKey({
+      productTier: product.delivery_tier,
+      categoryTier: category?.delivery_tier ?? null,
+      parentCategoryTier: one(category?.parent)?.delivery_tier ?? null,
+      fallback: fallbackTierKey,
+    });
   });
+
+  const subtotal = roundMoney(
+    items.reduce(
+      (sum, item) =>
+        sum + roundMoney((prices[item.id] ?? 0) * Math.floor(item.quantity)),
+      0,
+    ),
+  );
+
+  return { tierKeys, prices, subtotal };
 }
 
 const SETTING_KEYS = [

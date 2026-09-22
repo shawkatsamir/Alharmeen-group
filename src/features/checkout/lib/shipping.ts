@@ -78,6 +78,60 @@ export function haversineKm(
 }
 
 /**
+ * Egypt's bounding box. Mirrors the `localities_coordinates_in_egypt` CHECK
+ * and the validation in `update_delivery_settings()`.
+ *
+ * Its real job is catching swapped lat/lng: both are valid numbers, the
+ * haversine happily returns a distance, and nothing else would complain.
+ */
+export const EGYPT_BOUNDS = {
+  minLat: 22,
+  maxLat: 32,
+  minLng: 24.5,
+  maxLng: 37,
+} as const;
+
+export function isInEgypt(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= EGYPT_BOUNDS.minLat &&
+    lat <= EGYPT_BOUNDS.maxLat &&
+    lng >= EGYPT_BOUNDS.minLng &&
+    lng <= EGYPT_BOUNDS.maxLng
+  );
+}
+
+/**
+ * Parses the "lat, lng" string Google Maps copies from a dropped pin
+ * ("30.749, 31.442"). Accepts a Latin or Arabic comma and optional spaces.
+ *
+ * Returns null for anything that is not two numbers inside Egypt — including
+ * the pair pasted the wrong way round, which is the mistake worth catching.
+ */
+export function parseLatLng(
+  input: string,
+): { lat: number; lng: number } | null {
+  const parts = input
+    .trim()
+    .split(/\s*[,،]\s*|\s+/)
+    .filter(Boolean);
+
+  if (parts.length !== 2) return null;
+
+  const numeric = /^-?\d+(\.\d+)?$/;
+  if (!parts.every((p) => numeric.test(p))) return null;
+
+  const [lat, lng] = parts.map(Number);
+  return isInEgypt(lat, lng) ? { lat, lng } : null;
+}
+
+/** Link for eyeballing a coordinate on a map. */
+export function googleMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
+/**
  * Straight-line km to driving km. Nile Delta roads run about 1.25–1.35x the
  * great-circle distance; the factor is a setting so the shop can calibrate it
  * against real trips.
@@ -158,21 +212,25 @@ export function resolveProductTierKey(params: {
 /**
  * Whether an order earns free delivery.
  *
- * Rules are distance bands: the narrowest band covering this trip decides.
- * A single global threshold cannot work once distance is priced — it would
- * fund a 700 km trip out of a barely-qualifying order.
+ * Rules are distance bands: the order qualifies when ANY band covering this
+ * trip has a bar the subtotal reaches. A single global threshold cannot work
+ * once distance is priced — it would fund a 700 km trip out of a
+ * barely-qualifying order.
+ *
+ * Not "the narrowest band decides": that is non-monotonic under a
+ * mis-ordered config. With {20 km: 5000} and {50 km: 3000}, a 4000 order
+ * would get free delivery at 40 km but pay at 10 km. For well-ordered rules
+ * (bars rising with distance) the two readings agree.
  */
 export function qualifiesForFreeShipping(
   distanceKm: number,
   subtotal: number,
   rules: readonly FreeShippingRule[],
 ): boolean {
-  const band = [...rules]
-    .sort((a, b) => a.max_distance_km - b.max_distance_km)
-    .find((rule) => distanceKm <= rule.max_distance_km);
-
-  if (!band) return false;
-  return subtotal >= band.min_order_total;
+  return rules.some(
+    (rule) =>
+      distanceKm <= rule.max_distance_km && subtotal >= rule.min_order_total,
+  );
 }
 
 export function quoteDelivery(params: {
