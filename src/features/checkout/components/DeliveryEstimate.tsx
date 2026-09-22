@@ -13,7 +13,7 @@ import {
 } from "@/shared/components/ui/Select";
 import { formatCurrency } from "@/lib/utils";
 import {
-  getCartDeliveryTiers,
+  getCartPricing,
   getShippingOptions,
 } from "@/services/client/shipping";
 import {
@@ -85,12 +85,13 @@ export function DeliveryEstimate({
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: tiers } = useQuery({
-    queryKey: ["cart-delivery-tiers", [productId]],
+  const lines = [{ id: productId, quantity: 1 }];
+  const { data: pricing, isError: pricingFailed } = useQuery({
+    queryKey: ["cart-pricing", lines],
     queryFn: () =>
-      getCartDeliveryTiers([productId], shipping?.fallbackTierKey ?? "small"),
+      getCartPricing(lines, shipping?.fallbackTierKey ?? "small"),
     enabled: !!shipping,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 
   // Nothing to show until the shared config has loaded.
@@ -106,8 +107,18 @@ export function DeliveryEstimate({
         اختر مدينتك لمعرفة تكلفة التوصيل
       </span>
     );
+  } else if (pricingFailed) {
+    body = (
+      <span className="text-amber-600">تعذر حساب تكلفة التوصيل حالياً</span>
+    );
+  } else if (!pricing) {
+    // Never quote from an empty tier list: it resolves to the smallest tier
+    // and shows a fridge at the small-appliance price.
+    body = (
+      <span className="text-muted-foreground">جاري حساب التوصيل...</span>
+    );
   } else {
-    const tier = resolveDeliveryTier(tiers ?? [], shipping.tiers);
+    const tier = resolveDeliveryTier(pricing.tierKeys, shipping.tiers);
     const distanceKm = effectiveDistanceKm({
       straightKm: locality.straight_km,
       overrideKm: locality.distance_km_override,
@@ -129,9 +140,10 @@ export function DeliveryEstimate({
       const quote = quoteDelivery({
         distanceKm,
         tier,
-        // A single unit — the real cart may qualify for a free-shipping band
+        // A single unit at its current price (the ISR-rendered `price` can be
+        // an hour stale). The real cart may qualify for a free-shipping band
         // this one does not, so the checkout figure can only go down.
-        subtotal: price,
+        subtotal: pricing.subtotal || price,
         rules: shipping.rules,
         maxDeliveryKm: shipping.maxDeliveryKm,
       });

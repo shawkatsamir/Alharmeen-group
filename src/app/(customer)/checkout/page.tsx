@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  getCartDeliveryTiers,
+  getCartPricing,
   getShippingOptions,
 } from "@/services/client/shipping";
 import {
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [localityId, setLocalityId] = useState<number | null>(null);
-  const { items, clearCart, total } = useCartStore();
+  const { items, clearCart } = useCartStore();
   const router = useRouter();
 
   // Rates change rarely and only from the admin dashboard, so this is cheap to
@@ -37,26 +37,36 @@ export default function CheckoutPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const productIds = items.map((item) => item.id);
-  const { data: cartTiers } = useQuery({
-    queryKey: ["cart-delivery-tiers", productIds],
+  const cartLines = items.map((item) => ({
+    id: item.id,
+    quantity: item.quantity,
+  }));
+  const {
+    data: pricing,
+    isError: pricingFailed,
+  } = useQuery({
+    queryKey: ["cart-pricing", cartLines],
     queryFn: () =>
-      getCartDeliveryTiers(productIds, shipping?.fallbackTierKey ?? "small"),
-    enabled: productIds.length > 0 && !!shipping,
-    staleTime: 5 * 60 * 1000,
+      getCartPricing(cartLines, shipping?.fallbackTierKey ?? "small"),
+    enabled: cartLines.length > 0 && !!shipping,
+    staleTime: 60 * 1000,
   });
 
   /*
    * Preview only. `createOrder` recomputes all of this server-side from the
    * same rows using the same pure functions, so a tampered client changes
    * what is displayed but never what is charged.
+   *
+   * No quote until `pricing` has loaded: quoting from an empty tier list
+   * resolves to the smallest tier, and quoting from the persisted cart's
+   * prices can promise free delivery the server then withholds.
    */
   const locality = shipping?.localities.find((l) => l.id === localityId);
   let quote: DeliveryQuote | null = null;
   let fallbackCost: number | null = null;
 
-  if (shipping && locality) {
-    const tier = resolveDeliveryTier(cartTiers ?? [], shipping.tiers);
+  if (shipping && locality && pricing) {
+    const tier = resolveDeliveryTier(pricing.tierKeys, shipping.tiers);
     const distanceKm = effectiveDistanceKm({
       straightKm: locality.straight_km,
       overrideKm: locality.distance_km_override,
@@ -67,7 +77,7 @@ export default function CheckoutPage() {
       quote = quoteDelivery({
         distanceKm,
         tier,
-        subtotal: total(),
+        subtotal: pricing.subtotal,
         rules: shipping.rules,
         maxDeliveryKm: shipping.maxDeliveryKm,
       });
@@ -140,6 +150,9 @@ export default function CheckoutPage() {
             isLoading={isLoading}
             quote={quote}
             fallbackCost={fallbackCost}
+            pricing={pricing ?? null}
+            pricingFailed={pricingFailed}
+            localitySelected={!!locality}
             localityName={locality?.name_ar ?? null}
             whatsappLink={
               shipping?.whatsappNumber
