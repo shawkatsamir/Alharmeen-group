@@ -9,6 +9,7 @@ import { OrderSummary } from "@/features/checkout/components/OrderSummary";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
 import {
   getCartPricing,
   getShippingOptions,
@@ -28,6 +29,22 @@ export default function CheckoutPage() {
   const [localityId, setLocalityId] = useState<number | null>(null);
   const { items, clearCart } = useCartStore();
   const router = useRouter();
+
+  /*
+   * Checkout is signed-in only: createOrder refuses guests, because guest
+   * orders have had no working write or read path since 2026-02-14. The
+   * cart's checkout button already sends guests to log in; this covers a
+   * direct visit, before they fill in a form that cannot succeed.
+   */
+  const { data: user, isSuccess: authChecked } = useQuery({
+    queryKey: ["checkout-user"],
+    queryFn: async () => {
+      const { data } = await createClient().auth.getUser();
+      return data.user ?? null;
+    },
+    staleTime: 0,
+  });
+  const isGuest = authChecked && user === null;
 
   // Rates change rarely and only from the admin dashboard, so this is cheap to
   // hold for the length of a checkout session.
@@ -100,8 +117,15 @@ export default function CheckoutPage() {
     }
   }, [mounted, items, router, isSuccess]);
 
+  useEffect(() => {
+    if (isGuest && !isSuccess) {
+      router.replace("/auth/login?next=/checkout");
+    }
+  }, [isGuest, isSuccess, router]);
+
   if (!mounted) return null;
   if ((!mounted || items.length === 0) && !isSuccess) return null;
+  if (isGuest) return null;
 
   const handleSubmit = async (data: CheckoutFormValues) => {
     setIsLoading(true);

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CheckoutFormValues } from "@/features/checkout/schema";
 import { CartItem } from "@/stores/cartStore";
 import {
@@ -28,6 +29,28 @@ export async function createOrder(
     return { success: false, error: "السلة فارغة" };
   }
 
+  /*
+   * Signed-in customers only, for now. Guest checkout has been impossible
+   * since 2026-02-14: `orders` has no anon INSERT policy and /order-success
+   * has no anon read path. Refusing up front, with a reason, beats letting a
+   * guest fill in the form and hit "فشل في إنشاء الطلب". Restoring guest
+   * checkout is tracked in CLAUDE.md's known gaps.
+   */
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "يرجى تسجيل الدخول لإتمام الطلب" };
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // createAdminClient() would silently fall back to the publishable key,
+    // which cannot execute place_order — fail with a clear log instead.
+    console.error("[createOrder] SUPABASE_SERVICE_ROLE_KEY is not set");
+    return { success: false, error: "فشل في إنشاء الطلب" };
+  }
+
   // Re-validated here rather than trusting the client: this is a Server Action
   // and the zod schema only ran in the browser.
   if (!isPaymentMethod(data.paymentMethod)) {
@@ -42,8 +65,6 @@ export async function createOrder(
    * meant a crafted request could buy anything for 1 EGP. The client cart is
    * now treated as nothing more than a list of (product id, quantity).
    */
-  const deliveryConfig = await getDeliveryConfig();
-
   const quantities = new Map<string, number>();
   for (const item of items) {
     const quantity = Math.floor(item.quantity);
@@ -53,14 +74,34 @@ export async function createOrder(
     quantities.set(item.id, (quantities.get(item.id) ?? 0) + quantity);
   }
 
-  const { data: products, error: productsError } = await supabase
-    .from("products")
-    .select(
-      // `parent:parent_id(...)` is the correct self-referencing embed form;
-      // the other spelling silently returns nothing.
-      "id, name_ar, price, is_active, is_available, delivery_tier, brand:brands(name_ar), images:product_images(image_url, is_primary), category:categories(delivery_tier, parent:parent_id(delivery_tier))",
-    )
-    .in("id", [...quantities.keys()]);
+  // Independent reads, so fetched together rather than one after another.
+  const [
+    deliveryConfig,
+    { data: products, error: productsError },
+    { data: locality, error: localityError },
+  ] = await Promise.all([
+    getDeliveryConfig(),
+    supabase
+      .from("products")
+      .select(
+        // `parent:parent_id(...)` is the correct self-referencing embed form;
+        // the other spelling silently returns nothing.
+        "id, name_ar, price, is_active, is_available, delivery_tier, brand:brands(name_ar), images:product_images(image_url, is_primary), category:categories(delivery_tier, parent:parent_id(delivery_tier))",
+      )
+      .in("id", [...quantities.keys()]),
+    /*
+     * Delivery is priced from the locality's stored distance, never from the
+     * client. The browser shows a preview using the same pure functions, but
+     * this is the number that gets charged.
+     */
+    supabase
+      .from("localities")
+      .select(
+        "id, name_ar, straight_km, distance_km_override, is_deliverable, governorate:governorates(name_ar, shipping_cost, is_deliverable)",
+      )
+      .eq("id", data.localityId)
+      .maybeSingle(),
+  ]);
 
   if (productsError || !products) {
     console.error("Error loading products for order:", productsError);
@@ -114,19 +155,6 @@ export async function createOrder(
   const subtotal = roundMoney(
     orderItems.reduce((sum, item) => sum + item.total_price, 0),
   );
-
-  /*
-   * Delivery is priced from the locality's stored distance, never from the
-   * client. The browser shows a preview using the same pure functions, but
-   * this is the number that gets charged.
-   */
-  const { data: locality, error: localityError } = await supabase
-    .from("localities")
-    .select(
-      "id, name_ar, straight_km, distance_km_override, is_deliverable, governorate:governorates(name_ar, shipping_cost, is_deliverable)",
-    )
-    .eq("id", data.localityId)
-    .maybeSingle();
 
   if (localityError) {
     console.error("Error loading locality:", localityError);
@@ -186,76 +214,63 @@ export async function createOrder(
   const discountAmount = 0;
   const total = roundMoney(subtotal + shippingCost - discountAmount);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /*
+   * Order and items are written by `place_order` in ONE transaction. Two
+   * PostgREST inserts left 8 orders in production with no items when the
+   * second failed. The function only stores — every number above was
+   * computed here — and only the service role may execute it, so the
+   * browser's publishable key can never reach it with its own totals.
+   */
+  const { data: orderId, error: orderError } = await createAdminClient().rpc(
+    "place_order",
+    {
+      p_order: {
+        user_id: user.id,
+        customer_name: data.fullName,
+        customer_email: data.email,
+        customer_phone: data.phone,
+        // Store the canonical names, not what the form posted.
+        shipping_governorate: governorate?.name_ar ?? data.governorate,
+        shipping_city: locality.name_ar,
+        shipping_locality_id: locality.id,
+        // Snapshotted so a dispute months later can be reconstructed, and so
+        // the shop can compare what it charged against what the trip cost.
+        shipping_distance_km: shippingDistanceKm,
+        delivery_tier: deliveryTierKey,
+        shipping_address_line: data.address,
+        customer_notes: data.notes ?? null,
+        subtotal,
+        shipping_cost: shippingCost,
+        discount_amount: discountAmount,
+        total,
+        status: "قيد الانتظار",
+        payment_method: data.paymentMethod,
+        // payment_status / amount_paid are not sent: they are derived by
+        // `sync_order_payment_totals_trigger` from the order_payments ledger.
+      },
+      p_items: orderItems,
+    },
+  );
 
-  if (user) {
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        phone: data.phone,
-        address: data.address, // Update default address with the new one
-      })
-      .eq("id", user.id);
-
-    if (profileError) {
-      console.error("Error updating profile:", profileError);
-      // We don't fail the order if profile update fails, just log it
-    }
-  }
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: user?.id || null, // Handle guest checkout
-      customer_name: data.fullName,
-      customer_email: data.email,
-      customer_phone: data.phone,
-      // Store the canonical names, not what the form posted.
-      shipping_governorate: governorate?.name_ar ?? data.governorate,
-      shipping_city: locality.name_ar,
-      shipping_locality_id: locality.id,
-      // Snapshotted so a dispute months later can be reconstructed, and so the
-      // shop can compare what it charged against what the trip cost.
-      shipping_distance_km: shippingDistanceKm,
-      delivery_tier: deliveryTierKey,
-      shipping_address_line: data.address,
-      customer_notes: data.notes,
-      subtotal,
-      shipping_cost: shippingCost,
-      discount_amount: discountAmount,
-      total,
-      status: "قيد الانتظار",
-      payment_method: data.paymentMethod,
-      // Derived by `sync_order_payment_totals_trigger` from the order_payments
-      // ledger; sent only to satisfy the column's NOT NULL, and overwritten.
-      payment_status: "unpaid",
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) {
+  if (orderError || !orderId) {
     console.error("Error creating order:", orderError);
     return { success: false, error: "فشل في إنشاء الطلب" };
   }
 
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    orderItems.map((item) => ({
-      order_id: order.id,
-      ...item,
-    })),
-  );
-
-  if (itemsError) {
-    console.error("Error creating order items:", itemsError);
-    // TODO: Rollback order? (Hard in Supabase without functions, but okay for now)
-    return { success: false, error: "فشل في إضافة المنتجات للطلب" };
-  }
-
   // Status history is written by the `log_status_change_trigger` on `orders`,
   // which fires on INSERT as well as UPDATE. Inserting here too would duplicate
-  // the first step (and RLS blocks this client anyway).
+  // the first step.
 
-  return { success: true, orderId: order.id };
+  // Only after the order exists: a failed order must not rewrite the
+  // customer's saved phone and address. Best-effort — never fails the order.
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ phone: data.phone, address: data.address })
+    .eq("id", user.id);
+
+  if (profileError) {
+    console.error("Error updating profile:", profileError);
+  }
+
+  return { success: true, orderId };
 }

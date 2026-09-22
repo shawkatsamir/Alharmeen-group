@@ -42,7 +42,9 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_SUPABASE_URL: STUB_SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_e2e_fake",
-        SUPABASE_SERVICE_ROLE_KEY: "",
+        // Non-empty so createOrder's guard passes and place_order goes to the
+        // stub; the stub never checks keys, so any value works.
+        SUPABASE_SERVICE_ROLE_KEY: "e2e-service-role-fake",
         NEXT_PUBLIC_BASE_URL: BASE_URL,
         // Cloudflare's documented always-passes test key.
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
