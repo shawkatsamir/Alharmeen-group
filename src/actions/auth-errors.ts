@@ -55,6 +55,12 @@ export interface DescribedAuthError {
    * already consumed it — but this lets the copy be specific.
    */
   captchaFailed: boolean;
+  /**
+   * True when there is no usable session — on /auth/update-password that means
+   * the reset link expired, was already used, or was opened somewhere its
+   * session could not be established. Retrying cannot help; a new link can.
+   */
+  sessionMissing?: boolean;
 }
 
 const GENERIC = "تعذر إتمام العملية، يرجى المحاولة مرة أخرى";
@@ -78,6 +84,20 @@ export function describeAuthError(
     return {
       message: "فشل التحقق الأمني، يرجى المحاولة مرة أخرى",
       captchaFailed: true,
+    };
+  }
+
+  // supabase-js raises AuthSessionMissingError ("Auth session missing!")
+  // client-side; the server answers session_not_found / session_expired.
+  if (
+    has(both, "session missing") ||
+    has(both, "session_not_found") ||
+    has(both, "session_expired")
+  ) {
+    return {
+      message: "انتهت صلاحية رابط إعادة التعيين أو تم استخدامه من قبل.",
+      captchaFailed: false,
+      sessionMissing: true,
     };
   }
 
