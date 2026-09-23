@@ -103,8 +103,45 @@ describe("describeAuthError", () => {
     );
   });
 
+  /*
+   * The exact error behind "captcha protection: request disallowed (no
+   * captcha_token found)" on the forgot-password form, which sent no token.
+   */
+  it("reads the missing-token refusal from /recover as a captcha failure", () => {
+    const described = describeAuthError({
+      code: "captcha_failed",
+      message: "captcha protection: request disallowed (no captcha_token found)",
+    });
+    expect(described.captchaFailed).toBe(true);
+    expect(described.message).toBe("فشل التحقق الأمني، يرجى المحاولة مرة أخرى");
+  });
+
+  /*
+   * On /auth/update-password a missing session means the reset link expired
+   * or was already used. Retrying the form cannot help, so it is flagged for
+   * the page to offer a new link.
+   */
+  it.each([
+    [{ message: "Auth session missing!" }],
+    [{ code: "session_not_found", message: "Session from session_id claim in JWT does not exist" }],
+    [{ code: "session_expired", message: "Session expired" }],
+  ])("flags a missing reset session: %j", (error) => {
+    const described = describeAuthError(error);
+    expect(described.sessionMissing).toBe(true);
+    expect(described.message).toBe(
+      "انتهت صلاحية رابط إعادة التعيين أو تم استخدامه من قبل.",
+    );
+  });
+
+  it("does not flag a missing session for ordinary failures", () => {
+    expect(
+      describeAuthError({ code: "invalid_credentials" }).sessionMissing,
+    ).toBeFalsy();
+  });
+
   it("never returns an English message for a customer to read", () => {
     const samples = [
+      { message: "Auth session missing!" },
       { message: "User already registered" },
       { message: "Something entirely unexpected" },
       { code: "email_not_confirmed" },

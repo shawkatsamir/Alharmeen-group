@@ -13,6 +13,7 @@ import {
 } from "@/shared/components/ui/Card";
 import { PasswordInput } from "@/shared/components/ui/PasswordInput";
 import { Label } from "@/shared/components/ui/Label";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,6 +23,9 @@ export function UpdatePasswordForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The reset link's session is missing or expired: retrying cannot help,
+  // only a new link can, so offer one.
+  const [expired, setExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -39,7 +43,11 @@ export function UpdatePasswordForm({
       router.push("/account");
       router.refresh();
     } catch (error: unknown) {
-      setError(describeAuthError(error as { code?: string; message?: string }).message);
+      const described = describeAuthError(
+        error as { code?: string; message?: string },
+      );
+      setError(described.message);
+      setExpired(described.sessionMissing === true);
     } finally {
       setIsLoading(false);
     }
@@ -49,10 +57,8 @@ export function UpdatePasswordForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Reset Your Password</CardTitle>
-          <CardDescription>
-            Please enter your new password below.
-          </CardDescription>
+          <CardTitle className="text-2xl">تعيين كلمة مرور جديدة</CardTitle>
+          <CardDescription>أدخل كلمة المرور الجديدة لحسابك</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleForgotPassword}>
@@ -68,9 +74,21 @@ export function UpdatePasswordForm({
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && (
+                <p className="text-sm text-red-500">
+                  {error}{" "}
+                  {expired && (
+                    <Link
+                      href="/auth/forgot-password"
+                      className="font-medium text-blue-600 underline underline-offset-4"
+                    >
+                      طلب رابط جديد
+                    </Link>
+                  )}
+                </p>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Saving..." : "Save new password"}
+                {isLoading ? "جاري الحفظ..." : "حفظ كلمة المرور"}
               </Button>
             </div>
           </form>
