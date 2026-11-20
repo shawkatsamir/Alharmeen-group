@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { User, Loader2 } from "lucide-react";
+import { User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/shared/components/ui/Button";
 
@@ -37,24 +37,30 @@ export function UserMenu() {
     checkUser();
   }, []);
 
+  /*
+   * A dimmed icon while the session resolves, not a spinner: this runs on every
+   * page load, and a constantly spinning header icon reads as "something is
+   * wrong" rather than "loading".
+   */
   if (loading) {
     return (
       <Button
         variant="ghost"
         size="icon"
-        className="hidden md:flex relative"
+        className="relative opacity-50"
         disabled
+        aria-label="حسابي"
       >
-        <Loader2 className="w-5 h-5 animate-spin" />
+        <User className="size-5" />
       </Button>
     );
   }
 
   return (
-    <Link href={accountHref}>
-      <Button variant="ghost" size="icon" className="relative">
-        <User className="w-5 h-5" />
-      </Button>
-    </Link>
+    <Button asChild variant="ghost" size="icon" className="relative">
+      <Link href={accountHref} aria-label="حسابي">
+        <User className="size-5" />
+      </Link>
+    </Button>
   );
 }

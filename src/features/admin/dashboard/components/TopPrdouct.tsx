@@ -1,5 +1,5 @@
 import { Img } from "@/shared/components/ui/Image";
-import { MoreVertical, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 export function TopProducts() {
   const products = [
@@ -57,7 +57,7 @@ export function TopProducts() {
 
       <div className="divide-y divide-border">
         {products.map((product, index) => (
-          <div key={index} className="p-4 hover:bg-accent transition-colors">
+          <div key={index} className="p-4 hover:bg-primary-soft transition-colors">
             <div className="flex items-center gap-4">
               {" "}
               {/* 1. Outer container: Just handles layout (removed w-12 h-12) */}

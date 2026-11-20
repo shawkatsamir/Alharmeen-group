@@ -165,7 +165,9 @@ export function DeliveryEstimate({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
+    // No box of its own: it sits between the buy box's separators, and a
+    // bordered panel inside that card nested one card in another.
+    <div className="text-sm">
       <div className="flex items-start gap-2">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1 space-y-2">

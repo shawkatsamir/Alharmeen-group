@@ -198,7 +198,7 @@ export function ProductBuyBox({ product, siblings = [] }: ProductBuyBoxProps) {
               متوفر في المخزون
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-sale-soft px-3 py-1 text-sm font-medium text-sale">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
               <X className="h-4 w-4" />
               غير متوفر حالياً
             </span>

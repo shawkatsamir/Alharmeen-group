@@ -156,7 +156,7 @@ function OptionLink({
     "flex flex-col items-center gap-1 rounded-lg border p-1.5 transition",
     "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
     isActive ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50",
-    inStock ? "" : "opacity-55",
+    inStock ? "" : "text-muted-foreground",
     !isExact ? "border-dashed" : "",
     isColor ? "w-20" : "min-w-20 px-3",
   ].join(" ");
@@ -177,7 +177,9 @@ function OptionLink({
        * the Midea no-grill microwave is actually in.
        */}
       {isColor && (image || hex) && (
-        <span className="relative block h-14 w-full overflow-hidden rounded bg-surface-sunken">
+        <span
+          className={`relative block h-14 w-full overflow-hidden rounded bg-surface-sunken ${inStock ? "" : "opacity-55"}`}
+        >
           {image ? (
             <Img src={image} alt="" fill sizes="80px" className="object-contain p-0.5" />
           ) : (
@@ -190,12 +192,12 @@ function OptionLink({
         </span>
       )}
 
-      <span className="w-full truncate text-center text-[11px] leading-tight">
+      <span className="w-full truncate text-center text-xs leading-tight">
         {value}
       </span>
 
       {note && (
-        <span className="w-full truncate text-center text-[10px] leading-none text-sale">
+        <span className="w-full truncate text-center text-[11px] leading-none text-muted-foreground">
           {note}
         </span>
       )}
@@ -246,11 +248,13 @@ function WholeVariantRow({
                   isActive
                     ? "border-primary ring-1 ring-primary"
                     : "border-border hover:border-primary/50",
-                  inStock ? "" : "opacity-55",
+                  inStock ? "" : "text-muted-foreground",
                 ].join(" ")}
               >
                 {image && (
-                  <span className="relative block h-14 w-full overflow-hidden rounded bg-surface-sunken">
+                  <span
+                    className={`relative block h-14 w-full overflow-hidden rounded bg-surface-sunken ${inStock ? "" : "opacity-55"}`}
+                  >
                     <Img
                       src={image}
                       alt=""
@@ -260,11 +264,11 @@ function WholeVariantRow({
                     />
                   </span>
                 )}
-                <span className="w-full truncate text-center text-[11px] leading-tight">
+                <span className="w-full truncate text-center text-xs leading-tight">
                   {label}
                 </span>
                 {!inStock && (
-                  <span className="text-[10px] leading-none text-sale">غير متوفر</span>
+                  <span className="text-[11px] leading-none text-muted-foreground">غير متوفر</span>
                 )}
               </Link>
             </li>

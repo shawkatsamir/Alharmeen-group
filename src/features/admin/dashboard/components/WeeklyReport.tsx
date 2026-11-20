@@ -19,7 +19,7 @@ export default function WeeklyReport() {
           <button className="px-3 py-1 text-xs font-medium text-primary-foreground bg-primary rounded">
             هذا الأسبوع
           </button>
-          <button className="px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded">
+          <button className="px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-primary-soft hover:text-primary rounded">
             الأسبوع الماضي
           </button>
           <button className="text-muted-foreground hover:text-foreground">

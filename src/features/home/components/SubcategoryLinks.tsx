@@ -37,7 +37,7 @@ export function SubcategoryLinks({
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-raised px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
                 >
                   {sub.name}
-                  <span className="text-[10px] opacity-70">
+                  <span className="text-[11px] font-medium tabular-nums">
                     {sub.productCount}
                   </span>
                 </Link>

@@ -1,4 +1,5 @@
 import { BadgeCheck, Banknote, ShieldCheck, Truck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProductAssuranceProps {
   warrantyInfo: string | null;
@@ -8,7 +9,10 @@ interface ProductAssuranceProps {
 /**
  * `warranty_info` is populated on 67 of 75 products and was previously rendered
  * nowhere. For an authorized dealer it is a top-tier conversion signal, so it
- * gets a real card alongside the standing service promises.
+ * leads the section, above the standing service promises.
+ *
+ * Rows, not boxes: this already sits inside a `ProductSection` panel, and the
+ * old tinted warranty card and three promise cards nested cards in a card.
  */
 export function ProductAssurance({
   warrantyInfo,
@@ -35,11 +39,13 @@ export function ProductAssurance({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {warrantyInfo && (
-        <div className="flex gap-4 rounded-xl border-r-4 border-success bg-success-soft p-4">
-          <ShieldCheck className="h-6 w-6 shrink-0 text-success" />
-          <div>
+        <div className="flex gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+            <ShieldCheck className="size-6" />
+          </span>
+          <div className="pt-0.5">
             <p className="font-bold text-foreground">تفاصيل الضمان</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               {warrantyInfo}
@@ -48,18 +54,22 @@ export function ProductAssurance({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <ul
+        className={cn(
+          "grid gap-5 sm:grid-cols-3 sm:gap-6",
+          warrantyInfo && "border-t border-border pt-6",
+        )}
+      >
         {promises.map(({ icon: Icon, title, body }) => (
-          <div
-            key={title}
-            className="rounded-xl border border-border bg-surface-sunken p-4"
-          >
-            <Icon className="mb-2 h-5 w-5 text-primary" />
-            <p className="font-semibold">{title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-          </div>
+          <li key={title} className="flex gap-3">
+            <Icon className="mt-0.5 size-5 shrink-0 text-primary" />
+            <div>
+              <p className="font-semibold">{title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

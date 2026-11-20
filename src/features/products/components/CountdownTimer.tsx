@@ -99,7 +99,7 @@ function CountdownTimerComponent({
           {i > 0 && <span className="font-bold text-sale">:</span>}
           <span className="flex items-center gap-0.5 rounded bg-sale px-1 py-0.5 text-sale-foreground">
             <span className="font-bold tabular-nums">{pad(unit.value)}</span>
-            <span className="text-[10px] opacity-80">{unit.label}</span>
+            <span className="text-[11px] opacity-80">{unit.label}</span>
           </span>
         </div>
       ))}

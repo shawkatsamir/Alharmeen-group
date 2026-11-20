@@ -92,14 +92,15 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ابحث عن المنتجات..."
-          className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-gray-50 text-right transition-all"
+          className="w-full pl-10 pr-4 py-2.5 border border-border rounded-full bg-surface-sunken text-right transition-all placeholder:text-muted-foreground hover:border-primary/30 focus:outline-none focus:ring-3 focus:ring-primary/15 focus:border-primary/50 focus:bg-surface-raised"
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
         />
         <button
           type="submit"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
+          aria-label="بحث"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
         >
           {showLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -111,7 +112,8 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="إغلاق البحث"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -120,17 +122,17 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
 
       {/* Dropdown Results */}
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border overflow-hidden z-50">
+        <div className="absolute top-full mt-2 w-full bg-popover text-popover-foreground rounded-xl shadow-xl border border-border overflow-hidden z-50 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200">
           {/* Loading State */}
           {isFetching && results.length === 0 && (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center text-muted-foreground text-sm">
               جاري البحث...
             </div>
           )}
 
           {/* No Results */}
           {!isFetching && results.length === 0 && debouncedQuery.length > 2 && (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center text-muted-foreground text-sm">
               لا توجد نتائج لـ &quot;{query}&quot;
             </div>
           )}
@@ -150,7 +152,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
                     key={product.id}
                     href={`/product/${product.slug}`}
                     onClick={handleResultClick}
-                    className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors border-b last:border-0"
+                    className="flex items-center justify-between p-3 hover:bg-primary-soft transition-colors border-b border-border last:border-0"
                   >
                     <div className="text-left">
                       <p className="text-sm font-bold text-primary">
@@ -158,7 +160,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                      <p className="text-sm font-medium text-foreground line-clamp-1">
                         {product.name_ar || product.name_en}
                       </p>
                     </div>
@@ -169,7 +171,7 @@ export function SearchBar({ onClose, isMobile = false }: SearchBarProps) {
               {/* See All Button */}
               <button
                 onClick={handleSearchSubmit}
-                className="w-full p-3 text-center text-sm text-primary font-bold hover:bg-blue-50 transition-colors bg-gray-50"
+                className="w-full p-3 text-center text-sm text-primary font-bold hover:bg-primary-soft transition-colors bg-surface-sunken"
               >
                 عرض كل النتائج ({results.length}+)
               </button>

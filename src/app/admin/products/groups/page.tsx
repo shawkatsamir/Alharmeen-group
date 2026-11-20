@@ -106,13 +106,13 @@ export default async function ProductGroupsPage() {
                   {warnings.map((warning) => (
                     <li
                       key={warning}
-                      className="rounded bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+                      className="rounded bg-accent-soft px-2 py-0.5 text-xs text-accent-foreground dark:text-accent"
                     >
                       {warning}
                     </li>
                   ))}
                   {warnings.length === 0 && (
-                    <li className="rounded bg-green-50 px-2 py-0.5 text-[11px] text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                    <li className="rounded bg-success-soft px-2 py-0.5 text-xs text-success">
                       سليمة
                     </li>
                   )}

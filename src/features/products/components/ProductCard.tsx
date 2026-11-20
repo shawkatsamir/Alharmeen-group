@@ -231,7 +231,7 @@ export function ProductCard({
                     <Link
                       {...shared}
                       className={[
-                        "block max-w-24 truncate rounded-full border px-2 py-0.5 text-[10px] leading-4 transition",
+                        "block max-w-24 truncate rounded-full border px-2 py-0.5 text-[11px] leading-4 transition",
                         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
                         isCurrent
                           ? "border-primary text-primary ring-1 ring-primary"

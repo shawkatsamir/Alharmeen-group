@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BrandWordmark } from "@/shared/components/brand/BrandWordmark";
 
 interface SidebarProps {
   open: boolean;
@@ -77,7 +78,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
         className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
           isActive
             ? "bg-primary text-primary-foreground font-medium"
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         } ${!open ? "justify-center px-2" : ""}`}
       >
         <Icon className="w-5 h-5 min-w-[20px]" />
@@ -94,14 +95,12 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
       <div
         className={`p-6 flex items-center justify-between border-b border-border ${!open ? "px-4 justify-center" : ""}`}
       >
-        <Link href="/admin" className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            {open && (
-              <div>
-                <span className="font-bold text-primary">الحرمين</span>
-              </div>
-            )}
-          </div>
+        <Link
+          href="/admin"
+          aria-label="الحرمين — لوحة التحكم"
+          className="flex items-center gap-2"
+        >
+          {open && <BrandWordmark className="h-9" />}
         </Link>
         {open ? (
           <button

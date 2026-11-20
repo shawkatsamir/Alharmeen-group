@@ -9,6 +9,7 @@ import { getCategoryTiles } from "@/services/server/categories";
 import { Section } from "@/shared/components/ui/Section";
 import { AnnouncementBar } from "@/features/home/components/AnnouncementBar";
 import { HeroCarousel } from "@/features/home/components/HeroCarousel";
+import { BrandHeroSlide } from "@/features/home/components/BrandHeroSlide";
 import { TrustBar } from "@/features/home/components/TrustBar";
 import { CategoryGrid } from "@/features/home/components/CategoryGrid";
 import { CampaignBand } from "@/features/home/components/CampaignBand";
@@ -37,16 +38,17 @@ export default async function Home() {
      * them is invalid.
      */
     <>
-      <h1 className="sr-only">
-        الحرمين جروب — وكيل معتمد للأجهزة المنزلية والكهربائية في مصر
-      </h1>
-
       <AnnouncementBar message={ANNOUNCEMENT} />
-      <HeroCarousel slides={HERO_SLIDES} />
+      {/* The brand slide owns the page's <h1>. */}
+      <HeroCarousel
+        slides={HERO_SLIDES}
+        lead={<BrandHeroSlide brandNames={brands.map((b) => b.name_ar)} />}
+      />
       <TrustBar />
 
       {populatedCategories.length > 0 && (
         <Section
+          id="categories"
           title="تسوق حسب القسم"
           subtitle="كل الأجهزة اللي بيتك محتاجها في مكان واحد"
         >
