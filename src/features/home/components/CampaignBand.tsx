@@ -24,7 +24,7 @@ export function CampaignBand({ campaigns }: { campaigns: Campaign[] }) {
         <Link
           key={campaign.id}
           href={campaign.href}
-          className={`group/campaign relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 transition-shadow hover:shadow-lg sm:p-8 ${
+          className={`group/campaign relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 transition-[box-shadow,translate] duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 ${
             campaign.tone === "primary"
               ? "bg-primary text-primary-foreground"
               : "bg-accent text-accent-foreground"
@@ -33,11 +33,15 @@ export function CampaignBand({ campaigns }: { campaigns: Campaign[] }) {
           {/* Decorative bleed, keeps the block from reading as a flat rectangle. */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10"
+            className="pointer-events-none absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 transition-transform duration-700 ease-out motion-safe:group-hover/campaign:scale-125"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-10 left-1/4 h-24 w-24 rounded-full bg-white/5 transition-transform duration-700 ease-out motion-safe:group-hover/campaign:-translate-y-3"
           />
           <div className="relative">
             <p className="text-xl font-bold sm:text-2xl">{campaign.title}</p>
-            <p className="mt-2 max-w-sm text-sm opacity-90">{campaign.body}</p>
+            <p className="mt-2 max-w-sm text-sm text-pretty opacity-90">{campaign.body}</p>
           </div>
           <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-bold">
             {campaign.cta}

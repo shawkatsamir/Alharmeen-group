@@ -44,7 +44,7 @@ export function ProductSpecs({ groups }: { groups: SpecGroup[] }) {
               <h3 className="mb-3 text-sm font-bold tracking-wide text-muted-foreground">
                 {group.label}
               </h3>
-              <dl className="overflow-hidden rounded-lg border border-border">
+              <dl className="border-y border-border">
                 {group.entries.map((entry, i) => (
                   <div
                     key={entry.key}

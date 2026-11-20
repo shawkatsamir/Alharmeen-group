@@ -17,7 +17,6 @@ export const HERO_SLIDES: HeroSlide[] = [
     id: "offers",
     image:
       "https://images.unsplash.com/photo-1740803292814-13d2e35924c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920",
-    eyebrow: "عروض محدودة",
     title: "أجهزتك المنزلية بأفضل سعر",
     description: "خصومات على تشكيلة واسعة من الثلاجات والغسالات والبوتاجازات",
     cta: "تسوق العروض",
@@ -27,7 +26,6 @@ export const HERO_SLIDES: HeroSlide[] = [
     id: "dealer",
     image:
       "https://images.unsplash.com/photo-1700847304964-9fe563059742?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920",
-    eyebrow: "وكيل معتمد",
     title: "منتجات أصلية بضمان الوكيل",
     description: "تورنيدو، شارب، توشيبا، هوفر، هيتاشي ولاجيرمانيا",
     cta: "تعرف على الماركات",
@@ -37,7 +35,6 @@ export const HERO_SLIDES: HeroSlide[] = [
     id: "kitchen",
     image:
       "https://images.unsplash.com/photo-1740803292349-c7e53f7125b2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920",
-    eyebrow: "أساسيات المطبخ",
     title: "كل اللي مطبخك محتاجه",
     description: "ميكروويف، غسالات أطباق، شفاطات وأجهزة تحضير الطعام",
     cta: "اكتشف الآن",

@@ -1,0 +1,702 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T17:10:29.005Z",
+  "title": "Design System: الحرمين جروب",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Dealer Blue",
+        "canonical": "oklch(0.42 0.128 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.058 255)",
+          "oklch(0.25 0.083 255)",
+          "oklch(0.35 0.109 255)",
+          "oklch(0.45 0.128 255)",
+          "oklch(0.58 0.128 255)",
+          "oklch(0.72 0.109 255)",
+          "oklch(0.85 0.07 255)",
+          "oklch(0.95 0.032 255)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Dealer Blue Deep",
+        "canonical": "oklch(0.36 0.124 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 255)",
+          "oklch(0.25 0.081 255)",
+          "oklch(0.35 0.105 255)",
+          "oklch(0.45 0.124 255)",
+          "oklch(0.58 0.124 255)",
+          "oklch(0.72 0.105 255)",
+          "oklch(0.85 0.068 255)",
+          "oklch(0.95 0.031 255)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Dealer Blue Soft",
+        "canonical": "oklch(0.955 0.021 254)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 254)",
+          "oklch(0.25 0.014 254)",
+          "oklch(0.35 0.018 254)",
+          "oklch(0.45 0.021 254)",
+          "oklch(0.58 0.021 254)",
+          "oklch(0.72 0.018 254)",
+          "oklch(0.85 0.012 254)",
+          "oklch(0.95 0.005 254)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "On Dealer Blue",
+        "canonical": "oklch(0.99 0.003 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.001 250)",
+          "oklch(0.25 0.002 250)",
+          "oklch(0.35 0.003 250)",
+          "oklch(0.45 0.003 250)",
+          "oklch(0.58 0.003 250)",
+          "oklch(0.72 0.003 250)",
+          "oklch(0.85 0.002 250)",
+          "oklch(0.95 0.001 250)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Signal Amber",
+        "canonical": "oklch(0.79 0.148 76)",
+        "tonalRamp": [
+          "oklch(0.15 0.067 76)",
+          "oklch(0.25 0.096 76)",
+          "oklch(0.35 0.126 76)",
+          "oklch(0.45 0.148 76)",
+          "oklch(0.58 0.148 76)",
+          "oklch(0.72 0.126 76)",
+          "oklch(0.85 0.081 76)",
+          "oklch(0.95 0.037 76)"
+        ]
+      },
+      "accent-hover": {
+        "role": "secondary",
+        "displayName": "Amber Deep",
+        "canonical": "oklch(0.73 0.152 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.068 70)",
+          "oklch(0.25 0.099 70)",
+          "oklch(0.35 0.129 70)",
+          "oklch(0.45 0.152 70)",
+          "oklch(0.58 0.152 70)",
+          "oklch(0.72 0.129 70)",
+          "oklch(0.85 0.084 70)",
+          "oklch(0.95 0.038 70)"
+        ]
+      },
+      "accent-soft": {
+        "role": "secondary",
+        "displayName": "Amber Wash",
+        "canonical": "oklch(0.965 0.036 84)",
+        "tonalRamp": [
+          "oklch(0.15 0.016 84)",
+          "oklch(0.25 0.023 84)",
+          "oklch(0.35 0.031 84)",
+          "oklch(0.45 0.036 84)",
+          "oklch(0.58 0.036 84)",
+          "oklch(0.72 0.031 84)",
+          "oklch(0.85 0.02 84)",
+          "oklch(0.95 0.009 84)"
+        ]
+      },
+      "accent-foreground": {
+        "role": "secondary",
+        "displayName": "Amber Ink",
+        "canonical": "oklch(0.245 0.045 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.02 70)",
+          "oklch(0.25 0.029 70)",
+          "oklch(0.35 0.038 70)",
+          "oklch(0.45 0.045 70)",
+          "oklch(0.58 0.045 70)",
+          "oklch(0.72 0.038 70)",
+          "oklch(0.85 0.025 70)",
+          "oklch(0.95 0.011 70)"
+        ]
+      },
+      "sale": {
+        "role": "tertiary",
+        "displayName": "Discount Red",
+        "canonical": "oklch(0.575 0.213 27.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.096 27.5)",
+          "oklch(0.25 0.138 27.5)",
+          "oklch(0.35 0.181 27.5)",
+          "oklch(0.45 0.213 27.5)",
+          "oklch(0.58 0.213 27.5)",
+          "oklch(0.72 0.181 27.5)",
+          "oklch(0.85 0.117 27.5)",
+          "oklch(0.95 0.053 27.5)"
+        ]
+      },
+      "sale-soft": {
+        "role": "tertiary",
+        "displayName": "Discount Wash",
+        "canonical": "oklch(0.96 0.026 25)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 25)",
+          "oklch(0.25 0.017 25)",
+          "oklch(0.35 0.022 25)",
+          "oklch(0.45 0.026 25)",
+          "oklch(0.58 0.026 25)",
+          "oklch(0.72 0.022 25)",
+          "oklch(0.85 0.014 25)",
+          "oklch(0.95 0.006 25)"
+        ]
+      },
+      "sale-foreground": {
+        "role": "tertiary",
+        "displayName": "On Discount Red",
+        "canonical": "oklch(0.99 0.003 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.001 250)",
+          "oklch(0.25 0.002 250)",
+          "oklch(0.35 0.003 250)",
+          "oklch(0.45 0.003 250)",
+          "oklch(0.58 0.003 250)",
+          "oklch(0.72 0.003 250)",
+          "oklch(0.85 0.002 250)",
+          "oklch(0.95 0.001 250)"
+        ]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Stock Green",
+        "canonical": "oklch(0.545 0.118 162)",
+        "tonalRamp": [
+          "oklch(0.15 0.053 162)",
+          "oklch(0.25 0.077 162)",
+          "oklch(0.35 0.1 162)",
+          "oklch(0.45 0.118 162)",
+          "oklch(0.58 0.118 162)",
+          "oklch(0.72 0.1 162)",
+          "oklch(0.85 0.065 162)",
+          "oklch(0.95 0.029 162)"
+        ]
+      },
+      "success-soft": {
+        "role": "tertiary",
+        "displayName": "Stock Green Wash",
+        "canonical": "oklch(0.955 0.032 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.014 165)",
+          "oklch(0.25 0.021 165)",
+          "oklch(0.35 0.027 165)",
+          "oklch(0.45 0.032 165)",
+          "oklch(0.58 0.032 165)",
+          "oklch(0.72 0.027 165)",
+          "oklch(0.85 0.018 165)",
+          "oklch(0.95 0.008 165)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Showroom White",
+        "canonical": "oklch(0.985 0.002 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.001 250)",
+          "oklch(0.25 0.001 250)",
+          "oklch(0.35 0.002 250)",
+          "oklch(0.45 0.002 250)",
+          "oklch(0.58 0.002 250)",
+          "oklch(0.72 0.002 250)",
+          "oklch(0.85 0.001 250)",
+          "oklch(0.95 0.001 250)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Floor Mist",
+        "canonical": "oklch(0.975 0.004 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.002 250)",
+          "oklch(0.25 0.003 250)",
+          "oklch(0.35 0.003 250)",
+          "oklch(0.45 0.004 250)",
+          "oklch(0.58 0.004 250)",
+          "oklch(0.72 0.003 250)",
+          "oklch(0.85 0.002 250)",
+          "oklch(0.95 0.001 250)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Display White",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.58 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "surface-sunken": {
+        "role": "neutral",
+        "displayName": "Shelf Grey",
+        "canonical": "oklch(0.955 0.006 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 250)",
+          "oklch(0.25 0.004 250)",
+          "oklch(0.35 0.005 250)",
+          "oklch(0.45 0.006 250)",
+          "oklch(0.58 0.006 250)",
+          "oklch(0.72 0.005 250)",
+          "oklch(0.85 0.003 250)",
+          "oklch(0.95 0.002 250)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "oklch(0.962 0.007 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 250)",
+          "oklch(0.25 0.005 250)",
+          "oklch(0.35 0.006 250)",
+          "oklch(0.45 0.007 250)",
+          "oklch(0.58 0.007 250)",
+          "oklch(0.72 0.006 250)",
+          "oklch(0.85 0.004 250)",
+          "oklch(0.95 0.002 250)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "canonical": "oklch(0.275 0.035 265)",
+        "tonalRamp": [
+          "oklch(0.15 0.016 265)",
+          "oklch(0.25 0.023 265)",
+          "oklch(0.35 0.03 265)",
+          "oklch(0.45 0.035 265)",
+          "oklch(0.58 0.035 265)",
+          "oklch(0.72 0.03 265)",
+          "oklch(0.85 0.019 265)",
+          "oklch(0.95 0.009 265)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink Navy",
+        "canonical": "oklch(0.205 0.028 265)",
+        "tonalRamp": [
+          "oklch(0.15 0.013 265)",
+          "oklch(0.25 0.018 265)",
+          "oklch(0.35 0.024 265)",
+          "oklch(0.45 0.028 265)",
+          "oklch(0.58 0.028 265)",
+          "oklch(0.72 0.024 265)",
+          "oklch(0.85 0.015 265)",
+          "oklch(0.95 0.007 265)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "oklch(0.525 0.026 258)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 258)",
+          "oklch(0.25 0.017 258)",
+          "oklch(0.35 0.022 258)",
+          "oklch(0.45 0.026 258)",
+          "oklch(0.58 0.026 258)",
+          "oklch(0.72 0.022 258)",
+          "oklch(0.85 0.014 258)",
+          "oklch(0.95 0.006 258)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.918 0.008 253)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 253)",
+          "oklch(0.25 0.005 253)",
+          "oklch(0.35 0.007 253)",
+          "oklch(0.45 0.008 253)",
+          "oklch(0.58 0.008 253)",
+          "oklch(0.72 0.007 253)",
+          "oklch(0.85 0.004 253)",
+          "oklch(0.95 0.002 253)"
+        ]
+      },
+      "brand-navy": {
+        "role": "identity",
+        "displayName": "ALHARMAN Navy",
+        "canonical": "oklch(0.224 0.054 259)",
+        "tonalRamp": [
+          "oklch(0.15 0.024 259)",
+          "oklch(0.25 0.035 259)",
+          "oklch(0.35 0.046 259)",
+          "oklch(0.45 0.054 259)",
+          "oklch(0.58 0.054 259)",
+          "oklch(0.72 0.046 259)",
+          "oklch(0.85 0.03 259)",
+          "oklch(0.95 0.013 259)"
+        ]
+      },
+      "brand-gold": {
+        "role": "identity",
+        "displayName": "ALHARMAN Gold",
+        "canonical": "oklch(0.706 0.108 74.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.049 74.5)",
+          "oklch(0.25 0.07 74.5)",
+          "oklch(0.35 0.092 74.5)",
+          "oklch(0.45 0.108 74.5)",
+          "oklch(0.58 0.108 74.5)",
+          "oklch(0.72 0.092 74.5)",
+          "oklch(0.85 0.059 74.5)",
+          "oklch(0.95 0.027 74.5)"
+        ]
+      },
+      "brand-gold-light": {
+        "role": "identity",
+        "displayName": "ALHARMAN Gold Light",
+        "canonical": "oklch(0.861 0.11 85.3)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 85.3)",
+          "oklch(0.25 0.072 85.3)",
+          "oklch(0.35 0.093 85.3)",
+          "oklch(0.45 0.11 85.3)",
+          "oklch(0.58 0.11 85.3)",
+          "oklch(0.72 0.093 85.3)",
+          "oklch(0.85 0.061 85.3)",
+          "oklch(0.95 0.028 85.3)"
+        ]
+      },
+      "brand-gold-deep": {
+        "role": "identity",
+        "displayName": "ALHARMAN Gold Deep",
+        "canonical": "oklch(0.609 0.107 73.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.048 73.8)",
+          "oklch(0.25 0.07 73.8)",
+          "oklch(0.35 0.091 73.8)",
+          "oklch(0.45 0.107 73.8)",
+          "oklch(0.58 0.107 73.8)",
+          "oklch(0.72 0.091 73.8)",
+          "oklch(0.85 0.059 73.8)",
+          "oklch(0.95 0.027 73.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero slide headlines only; 1.5rem on a phone, 3rem at lg."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles; 1.5rem rising to 1.875rem at sm."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings, always with the section bar; 1.25rem rising to 1.5rem."
+      },
+      "product-title": {
+        "displayName": "Product Title",
+        "purpose": "Product card names, clamped to two lines."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "Card prices in Dealer Blue, Latin tabular digits via formatCurrency."
+      },
+      "prose-heading": {
+        "displayName": "Prose Heading",
+        "purpose": "h2 in product descriptions, both renderers, with the Dealer Blue inline-start rule."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default UI text, buttons (at 500), fields and descriptions."
+      },
+      "prose": {
+        "displayName": "Prose",
+        "purpose": "Rich product descriptions (.rich-content)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, brand lines on cards, meta."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "11px: bottom-tab labels, variant pills and notes, countdown units, count-badge digits. The floor for functional text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-lift",
+        "value": "0 8px 28px -8px oklch(0.42 0.128 255 / 0.25)",
+        "purpose": "Product card hover, with translateY(-2px) and the border warming to 25% Dealer Blue."
+      },
+      {
+        "name": "header-settle",
+        "value": "0 10px 30px -18px oklch(0.205 0.028 265 / 0.35)",
+        "purpose": "Sticky header, scroll-driven over the first 96px; none at the top of the page."
+      },
+      {
+        "name": "menu-float",
+        "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "purpose": "Desktop category mega-menu and floating panels."
+      },
+      {
+        "name": "resting-hint",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "purpose": "Generic cards and round quick-action buttons on product photos."
+      },
+      {
+        "name": "bottom-sheet-edge",
+        "value": "0 -4px 16px -8px rgb(0 0 0 / 0.2)",
+        "purpose": "Mobile sticky buy bar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-settle",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Entrances: rise-in, word-in, scroll reveal, wordmark rules."
+      },
+      {
+        "name": "ease-wipe",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "Wordmark letter wipe, right to left."
+      },
+      {
+        "name": "ease-sweep",
+        "value": "cubic-bezier(0.45, 0, 0.25, 1)",
+        "purpose": "Wordmark highlight sweep."
+      },
+      {
+        "name": "duration-hover",
+        "value": "200ms",
+        "purpose": "Card lift, border and colour state changes."
+      },
+      {
+        "name": "duration-media",
+        "value": "300ms",
+        "purpose": "Photo scale on card hover, nav underline, tab indicator."
+      },
+      {
+        "name": "badge-bump",
+        "value": "320ms",
+        "purpose": "CountBadge scale 1 → 1.35 → 1 on ease-settle, replayed on every count change. The keyframe overshoots; the curve never bounces."
+      },
+      {
+        "name": "word-in",
+        "value": "450ms",
+        "purpose": "RotatingWords: whole Arabic words rising in."
+      },
+      {
+        "name": "rise-in",
+        "value": "650ms",
+        "purpose": "Hero slide copy, staggered with animation-delay, replayed via data-active."
+      },
+      {
+        "name": "reveal",
+        "value": "view() entry 0px → entry 220px",
+        "purpose": "Section fade-up, scroll-driven, behind @supports; applied once per Section."
+      },
+      {
+        "name": "drift",
+        "value": "18s / 24s alternate",
+        "purpose": "Brand hero ambient lights."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Everything static; the hero stops autoplaying."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      },
+      {
+        "name": "2xl",
+        "value": "1536px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary-lg",
+      "description": "Dealer Blue action, e.g. add to cart. 40px for primary commerce actions, 36px default.",
+      "html": "<button class=\"ds-btn-primary\" dir=\"rtl\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/></svg>أضف للسلة</button>",
+      "css": ".ds-btn-primary { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; white-space: nowrap; border: 1px solid transparent; cursor: pointer; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; outline: none; height: 40px; padding: 0 24px; background: var(--primary, oklch(0.42 0.128 255)); color: var(--primary-foreground, oklch(0.99 0.003 250)); } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary, oklch(0.42 0.128 255)) 90%, transparent); } .ds-btn-primary:focus-visible { box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); } .ds-btn-primary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Accent Button",
+      "kind": "button",
+      "refersTo": "button-accent",
+      "description": "Signal Amber, for the one action that should pull hardest (the hero's shop button).",
+      "html": "<button class=\"ds-btn-accent\" dir=\"rtl\">تسوق العروض</button>",
+      "css": ".ds-btn-accent { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; white-space: nowrap; border: 1px solid transparent; cursor: pointer; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; outline: none; height: 40px; padding: 0 24px; background: var(--accent, oklch(0.79 0.148 76)); color: var(--accent-foreground, oklch(0.245 0.045 70)); } .ds-btn-accent:hover { background: var(--accent-hover, oklch(0.73 0.152 70)); } .ds-btn-accent:focus-visible { box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); } .ds-btn-accent:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Hairline-bordered secondary action; hovers to Dealer Blue Soft, never amber.",
+      "html": "<button class=\"ds-btn-outline\" dir=\"rtl\">تصفح الأقسام</button>",
+      "css": ".ds-btn-outline { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; white-space: nowrap; border: 1px solid transparent; cursor: pointer; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; outline: none; height: 36px; padding: 8px 16px; background: var(--background, oklch(0.985 0.002 250)); color: var(--foreground, oklch(0.205 0.028 265)); border-color: var(--border, oklch(0.918 0.008 253)); } .ds-btn-outline:hover { background: var(--primary-soft, oklch(0.955 0.021 254)); color: var(--primary, oklch(0.42 0.128 255)); border-color: color-mix(in oklch, var(--primary, oklch(0.42 0.128 255)) 30%, transparent); } .ds-btn-outline:focus-visible { box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); } .ds-btn-outline:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Hairline stroke, Display White fill, Dealer Blue border and 3px ring on focus.",
+      "html": "<input class=\"ds-input\" dir=\"rtl\" type=\"text\" placeholder=\"ابحث عن منتج…\" />",
+      "css": ".ds-input { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); height: 36px; width: 260px; padding: 4px 12px; border: 1px solid var(--input, oklch(0.918 0.008 253)); border-radius: 8px; background: var(--input-background, oklch(1 0 0)); color: var(--foreground, oklch(0.205 0.028 265)); font-size: 0.875rem; outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.525 0.026 258)); } .ds-input:focus-visible { border-color: var(--ring, oklch(0.42 0.128 255)); box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); } .ds-input[aria-invalid=\"true\"] { border-color: var(--destructive, oklch(0.575 0.213 27.5)); box-shadow: 0 0 0 3px oklch(0.575 0.213 27.5 / 0.2); }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "card-product",
+      "description": "Flat at rest; Card Lift on hover. Square white photo well, brand, two-line title, blue price, full-width add to cart.",
+      "html": "<article class=\"ds-card\" dir=\"rtl\"><div class=\"ds-card-well\"><span class=\"ds-card-badge\">خصم 15%</span><div class=\"ds-card-photo\" aria-hidden=\"true\"></div></div><div class=\"ds-card-body\"><span class=\"ds-card-brand\">شارب</span><h3 class=\"ds-card-title\">ثلاجة شارب نوفروست 450 لتر، أسود</h3><div class=\"ds-card-prices\"><span class=\"ds-card-price\">24,999 ج.م</span><span class=\"ds-card-old\">29,410 ج.م</span></div><button class=\"ds-card-cta\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/></svg>أضف للسلة</button></div></article>",
+      "css": ".ds-card { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); width: 240px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border, oklch(0.918 0.008 253)); border-radius: 14px; background: var(--surface-raised, oklch(1 0 0)); color: var(--foreground, oklch(0.205 0.028 265)); transition: box-shadow 200ms, border-color 200ms, transform 200ms; } .ds-card:hover { transform: translateY(-2px); border-color: oklch(0.42 0.128 255 / 0.25); box-shadow: 0 8px 28px -8px oklch(0.42 0.128 255 / 0.25); } .ds-card-well { position: relative; aspect-ratio: 1; background: #fff; display: grid; place-items: center; padding: 16px; } .ds-card-photo { width: 46%; height: 82%; border-radius: 6px; background: linear-gradient(180deg, oklch(0.3 0.01 260), oklch(0.22 0.01 260)); transition: transform 300ms; } .ds-card:hover .ds-card-photo { transform: scale(1.04); } .ds-card-badge { position: absolute; top: 12px; right: 12px; padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 500; background: var(--sale, oklch(0.575 0.213 27.5)); color: var(--sale-foreground, oklch(0.99 0.003 250)); } .ds-card-body { display: flex; flex-direction: column; padding: 16px; } .ds-card-brand { margin-bottom: 4px; font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground, oklch(0.525 0.026 258)); } .ds-card-title { margin: 0 0 8px; min-height: 2.6em; font-size: 0.95rem; font-weight: 600; line-height: 1.375; } .ds-card-prices { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: lining-nums tabular-nums; } .ds-card-price { font-size: 1.125rem; font-weight: 700; color: var(--primary, oklch(0.42 0.128 255)); } .ds-card-old { font-size: 0.875rem; color: var(--muted-foreground, oklch(0.525 0.026 258)); text-decoration: line-through; } .ds-card-cta { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; white-space: nowrap; border: 1px solid transparent; cursor: pointer; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; outline: none; margin-top: 12px; width: 100%; height: 40px; background: var(--primary, oklch(0.42 0.128 255)); color: var(--primary-foreground, oklch(0.99 0.003 250)); } .ds-card-cta:hover { background: color-mix(in oklch, var(--primary, oklch(0.42 0.128 255)) 90%, transparent); } .ds-card-cta:focus-visible { box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); }"
+    },
+    {
+      "name": "Status Badges",
+      "kind": "chip",
+      "refersTo": "badge-sale",
+      "description": "Discount Red for discounts, Signal Amber for new, Quiet Grey for unavailable. 8px corners.",
+      "html": "<div class=\"ds-badges\" dir=\"rtl\"><span class=\"ds-badge ds-badge-sale\">خصم 15%</span><span class=\"ds-badge ds-badge-new\">جديد</span><span class=\"ds-badge ds-badge-off\">غير متوفر</span><span class=\"ds-badge ds-badge-sale-soft\">ينتهي العرض قريباً</span></div>",
+      "css": ".ds-badges { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: flex; gap: 8px; flex-wrap: wrap; } .ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; } .ds-badge-sale { background: var(--sale, oklch(0.575 0.213 27.5)); color: var(--sale-foreground, oklch(0.99 0.003 250)); } .ds-badge-new { background: var(--accent, oklch(0.79 0.148 76)); color: var(--accent-foreground, oklch(0.245 0.045 70)); } .ds-badge-off { background: var(--secondary, oklch(0.962 0.007 250)); color: var(--secondary-foreground, oklch(0.275 0.035 265)); } .ds-badge-sale-soft { background: var(--sale-soft, oklch(0.96 0.026 25)); color: var(--sale, oklch(0.575 0.213 27.5)); }"
+    },
+    {
+      "name": "Count Badge",
+      "kind": "custom",
+      "refersTo": "count-badge",
+      "description": "Amber count on cart, wishlist and bottom-nav icons; replays a 320ms bump on every change.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"السلة\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/></svg><span class=\"ds-count\">3</span></button>",
+      "css": ".ds-icon-btn { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--foreground, oklch(0.205 0.028 265)); cursor: pointer; transition: background-color 150ms, color 150ms; } .ds-icon-btn:hover { background: var(--primary-soft, oklch(0.955 0.021 254)); color: var(--primary, oklch(0.42 0.128 255)); } .ds-icon-btn:hover .ds-count { animation: ds-bump 320ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); } .ds-count { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); position: absolute; top: -4px; right: -4px; display: flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9999px; background: var(--accent, oklch(0.79 0.148 76)); color: var(--accent-foreground, oklch(0.245 0.045 70)); font-size: 11px; font-weight: 700; line-height: 1; box-shadow: 0 0 0 2px var(--surface-raised, oklch(1 0 0)); font-variant-numeric: tabular-nums; } @keyframes ds-bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } } @media (prefers-reduced-motion: reduce) { .ds-icon-btn:hover .ds-count { animation: none; } }"
+    },
+    {
+      "name": "Section Heading",
+      "kind": "custom",
+      "refersTo": "title",
+      "description": "Rounded blue-to-amber bar, bold title, muted subtitle, and the عرض الكل pill link.",
+      "html": "<div class=\"ds-section-head\" dir=\"rtl\"><div><h2 class=\"ds-section-title\"><span class=\"ds-section-bar\" aria-hidden=\"true\"></span>الأكثر مبيعاً</h2><p class=\"ds-section-sub\">الأجهزة التي يختارها عملاؤنا أكثر</p></div><a class=\"ds-section-more\" href=\"#\">عرض الكل <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></a></div>",
+      "css": ".ds-section-head { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; width: 560px; max-width: 100%; } .ds-section-title { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 1.5rem; font-weight: 700; line-height: 1.333; color: var(--foreground, oklch(0.205 0.028 265)); } .ds-section-bar { width: 6px; height: 24px; flex-shrink: 0; border-radius: 9999px; background: linear-gradient(to bottom, var(--primary, oklch(0.42 0.128 255)), var(--accent, oklch(0.79 0.148 76))); } .ds-section-sub { margin: 8px 0 0; padding-inline-start: 18px; font-size: 0.875rem; color: var(--muted-foreground, oklch(0.525 0.026 258)); } .ds-section-more { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 6px 12px; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: var(--primary, oklch(0.42 0.128 255)); text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-section-more:hover { background: var(--primary-soft, oklch(0.955 0.021 254)); color: var(--primary-hover, oklch(0.36 0.124 255)); } .ds-section-more svg { transition: transform 150ms; } .ds-section-more:hover svg { transform: translateX(-2px); } .ds-section-more:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); }"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar-item-active",
+      "description": "Mobile navigation below lg: five tabs, Dealer Blue active state with a top pill, amber count badges.",
+      "html": "<nav class=\"ds-tabbar\" dir=\"rtl\"><a class=\"ds-tab is-active\" href=\"#\"><span class=\"ds-tab-pill\" aria-hidden=\"true\"></span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>الرئيسية</span></a><a class=\"ds-tab\" href=\"#\"><span class=\"ds-tab-pill\" aria-hidden=\"true\"></span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\"/></svg><span>الأقسام</span></a><a class=\"ds-tab\" href=\"#\"><span class=\"ds-tab-pill\" aria-hidden=\"true\"></span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\"/></svg><span>المفضلة</span></a><a class=\"ds-tab\" href=\"#\"><span class=\"ds-tab-pill\" aria-hidden=\"true\"></span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"5\"/><path d=\"M20 21a8 8 0 0 0-16 0\"/></svg><span>حسابي</span></a><a class=\"ds-tab\" href=\"#\"><span class=\"ds-tab-pill\" aria-hidden=\"true\"></span><span class=\"ds-tab-icon\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/></svg><span class=\"ds-tab-count\">2</span></span><span>السلة</span></a></nav>",
+      "css": ".ds-tabbar { font-family: var(--font-sans, Cairo, ui-sans-serif, system-ui, sans-serif); display: flex; justify-content: space-around; align-items: center; width: 375px; max-width: 100%; height: 64px; border-top: 1px solid var(--border, oklch(0.918 0.008 253)); background: color-mix(in oklch, var(--surface-raised, oklch(1 0 0)) 95%, transparent); backdrop-filter: blur(8px); } .ds-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; font-size: 11px; font-weight: 500; color: var(--muted-foreground, oklch(0.525 0.026 258)); text-decoration: none; transition: color 150ms; } .ds-tab:hover { color: var(--foreground, oklch(0.205 0.028 265)); } .ds-tab.is-active { color: var(--primary, oklch(0.42 0.128 255)); font-weight: 700; } .ds-tab-pill { position: absolute; top: 0; width: 32px; height: 2px; border-radius: 9999px; background: var(--primary, oklch(0.42 0.128 255)); transform: scaleX(0); transition: transform 300ms; } .ds-tab.is-active .ds-tab-pill { transform: scaleX(1); } .ds-tab:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.42 0.128 255 / 0.5); border-radius: 8px; } .ds-tab-icon { position: relative; display: inline-flex; } .ds-tab-count { position: absolute; top: -4px; right: -4px; display: flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9999px; background: var(--accent, oklch(0.79 0.148 76)); color: var(--accent-foreground, oklch(0.245 0.045 70)); font-size: 11px; font-weight: 700; line-height: 1; box-shadow: 0 0 0 2px var(--surface-raised, oklch(1 0 0)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trusted Showroom",
+    "overview": "A bright, orderly shop floor. Every appliance is photographed whole on white and priced in plain figures, and the shop's navy-and-gold sign hangs over the door. The system has two layers and keeps them apart. The **shop floor** is the interface: cool near-white surfaces, Dealer Blue for structure and action, and Signal Amber for what should be noticed. The **sign** is the identity: ALHARMAN Navy and Gold, sampled from the client's logo, which appear only where the shop introduces itself (the wordmark and the brand hero slide).\n\nDensity is commerce-dense but calm. Product grids run two columns on a phone and four on desktop. UI body copy is 14px Cairo. Every surface is right-to-left, and a phone gets a fixed bottom tab bar. Hierarchy comes from size and weight inside one family, from 1px hairline borders and from tonal surfaces, not from heavy shadows or ornament. Motion is quiet and earned: each section fades up once as it enters, cards lift on hover, the cart count bumps when it changes, and the wordmark draws its gold rules and sweeps a single highlight. Under `prefers-reduced-motion: reduce` nothing moves and the hero stops autoplaying.\n\nThe system rejects three looks. **Flash-sale marketplace noise:** red banners, stacked countdowns and discounts shouted on every card. **Luxury-boutique distance:** gold on black and sparse prestige that makes a fridge feel out of reach. **Template SaaS defaults:** stock shadcn greys, purple gradients and accent-coloured hover flashes with nothing retail or Egyptian about them.",
+    "keyCharacteristics": [
+      "Two layers: shop-floor interface colour (blue, amber, cool white) and sign-over-the-door identity colour (navy, gold), never mixed.",
+      "Arabic-first and RTL in every surface; Latin, lining, tabular numerals everywhere.",
+      "One type family (Cairo); hierarchy by size and weight only.",
+      "Flat at rest, lift on intent; hairline borders do the structural work.",
+      "Products shown whole (`object-contain` on white), never cropped to fill.",
+      "Motion is CSS-first, `motion-safe`, transform-only, and stops entirely under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The Sign Over the Door Rule",
+        "section": "colors",
+        "body": "ALHARMAN Navy and Gold belong to the wordmark and the brand hero only. Interface colour is Dealer Blue and Signal Amber. A navy button or a gold border is a bug. The identity colours are not redefined for dark mode, because a logo does not change colour with the theme."
+      },
+      {
+        "name": "The Red Means Urgency Rule",
+        "section": "colors",
+        "body": "Discount Red marks money or time running out, or something being lost: a discount, an offer clock, the last pieces in stock, a removal. It never colours a count, a section, a decoration or an unavailable variant. That is why count badges are amber and \"غير متوفر\" is grey."
+      },
+      {
+        "name": "The Amber Is Not Hover Rule",
+        "section": "colors",
+        "body": "Hover and focus tints are Dealer Blue Soft. Amber fills only things that ask to be acted on or counted. shadcn's default `hover:bg-accent` made every header icon, menu row and select option flash amber; it does not come back. On the inverted footer, where a pale tint would glare, links brighten to white instead."
+      },
+      {
+        "name": "The One Family Rule",
+        "section": "typography",
+        "body": "Cairo is the only typeface the site ships. Hierarchy comes from size and from the weights 500, 600 and 700, never from a second family. The wordmark is not type: it is outlined Kufam geometry, and the site loads no Kufam."
+      },
+      {
+        "name": "The Latin Numerals Rule",
+        "section": "typography",
+        "body": "Prices, counts, quantities and dates use Latin digits, lining and tabular (`[dir=\"rtl\"]` sets `lining-nums tabular-nums`). Money goes through `formatCurrency` and nothing else, because the `Intl` currency style emits Arabic-Indic digits."
+      },
+      {
+        "name": "The Whole Word Rule",
+        "section": "typography",
+        "body": "Arabic is never split below the word to animate it. Per-letter spans break the cursive joining. Animate whole words (`RotatingWords`) or the outlined wordmark."
+      },
+      {
+        "name": "The One Section Rule",
+        "section": "layout",
+        "body": "Every homepage and listing block goes through `Section`. It owns the heading, the \"عرض الكل\" link, the rhythm and the scroll reveal, and the reveal is applied there once. It is never nested and never placed inside a horizontal rail, because the rail's `overflow-x` becomes the `view()` timeline and never advances."
+      },
+      {
+        "name": "The Flat-at-Rest Rule",
+        "section": "elevation",
+        "body": "A surface earns a shadow only by being hovered, scrolled past or opened. A card at rest has a border, not a shadow."
+      }
+    ],
+    "dos": [
+      "**Do** keep ALHARMAN Navy and Gold for the wordmark and the brand hero, and build every control from Dealer Blue, Signal Amber and the neutrals (The Sign Over the Door Rule).",
+      "**Do** hover ghost and outline controls to Dealer Blue Soft with Dealer Blue text.",
+      "**Do** show appliances whole: a square pure-white well, `object-contain`, 16px of air.",
+      "**Do** run every homepage and listing block through `Section`, and let it apply `reveal` once.",
+      "**Do** write every animation `motion-safe:` or inside `prefers-reduced-motion: no-preference`, put scroll-driven effects behind `@supports`, and write scroll timelines as longhands (the `animation` shorthand resets `animation-timeline`).",
+      "**Do** animate `transform` in keyframes; reveal ranges are lengths (`entry 0px entry 220px`), not percentages.",
+      "**Do** route item counts through `CountBadge` and money through `formatCurrency`.",
+      "**Do** use logical properties (`ps-`, `border-s`, `inline-start`) so RTL is the default.",
+      "**Do** reserve fixed-height slots for conditional card rows so a rail never reflows."
+    ],
+    "donts": [
+      "**Don't** let the site look like a flash-sale marketplace: no red banners, no stacked countdowns, no discount shouted on every card.",
+      "**Don't** drift into luxury-boutique gold-on-black; gold is the sign, not the shop floor.",
+      "**Don't** ship template SaaS defaults: no stock shadcn greys, no purple gradients, no `hover:bg-accent` flashing amber.",
+      "**Don't** use Discount Red for counts, sections or decoration; it marks urgency, discounts and removals only.",
+      "**Don't** split Arabic into per-letter spans to animate it.",
+      "**Don't** animate the `translate` or `scale` properties in a keyframe; a filled animation on them silently kills every Tailwind hover lift.",
+      "**Don't** put `reveal` inside a horizontal rail or nest it inside a `Section`.",
+      "**Don't** replace, redraw or approximate the ALHARMAN mark, and don't add the triangle mark to the lockup until the designer's vector is supplied.",
+      "**Don't** add a second typeface, or Arabic-Indic digits in prices and counts.",
+      "**Don't** give a resting card a shadow; borders carry structure, and shadows answer state.",
+      "**Don't** run a one-sided bar down a rounded box (`border-r-4` on a card, callout or quote); use a full border and a wash, and let the leading icon carry the meaning.",
+      "**Don't** put an eyebrow, kicker or tag pill above a heading; the heading carries its own weight.",
+      "**Don't** nest a card inside a card. Inside a panel, use rows, dividers, ruled tables and icon lists.",
+      "**Don't** set functional text below 11px."
+    ]
+  }
+}

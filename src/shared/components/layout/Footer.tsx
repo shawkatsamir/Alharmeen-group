@@ -1,6 +1,7 @@
 import { Facebook, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { NavigationCategory } from "@/services/server/categories";
+import { BrandWordmark } from "@/shared/components/brand/BrandWordmark";
 
 interface FooterProps {
   categories?: NavigationCategory[];
@@ -27,6 +28,13 @@ export default function Footer({ categories = [] }: FooterProps) {
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
+            <Link
+              href="/"
+              aria-label="الحرمين جروب — الرئيسية"
+              className="mb-4 inline-block"
+            >
+              <BrandWordmark tone="inverse" shine className="h-14" />
+            </Link>
             <p className="mb-4 text-lg font-bold text-background">
               الحرمين للأجهزة الكهربائية والمنزلية
             </p>
@@ -38,7 +46,7 @@ export default function Footer({ categories = [] }: FooterProps) {
               <a
                 href="https://www.facebook.com/share/17zDjvxrcJ/"
                 aria-label="فيسبوك"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20 hover:text-background"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -54,7 +62,7 @@ export default function Footer({ categories = [] }: FooterProps) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="transition-colors hover:text-accent"
+                    className="transition-colors hover:text-background"
                   >
                     {link.label}
                   </Link>
@@ -70,7 +78,7 @@ export default function Footer({ categories = [] }: FooterProps) {
                 <li key={category.id}>
                   <Link
                     href={`/${category.slug}`}
-                    className="transition-colors hover:text-accent"
+                    className="transition-colors hover:text-background"
                   >
                     {category.name}
                   </Link>
@@ -94,13 +102,13 @@ export default function Footer({ categories = [] }: FooterProps) {
                   <a
                     href="tel:01031722719"
                     dir="ltr"
-                    className="font-medium transition-colors hover:text-accent"
+                    className="font-medium transition-colors hover:text-background"
                   >
                     01031722719
                   </a>
                   <a
                     href="https://wa.me/201031722719"
-                    className="text-xs text-success transition-colors hover:text-accent"
+                    className="text-xs text-success-soft transition-colors hover:text-background"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -112,7 +120,7 @@ export default function Footer({ categories = [] }: FooterProps) {
                 <Mail className="h-5 w-5 shrink-0 text-accent" />
                 <a
                   href="mailto:support@alharmaingroup.com"
-                  className="transition-colors hover:text-accent"
+                  className="transition-colors hover:text-background"
                 >
                   support@alharmaingroup.com
                 </a>

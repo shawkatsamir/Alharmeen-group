@@ -71,7 +71,7 @@ function BlockRenderer({
 
     case "callout":
       return (
-        <div className="rounded-lg border-r-4 border-accent bg-accent-soft p-4">
+        <div className="rounded-lg border border-accent/40 bg-accent-soft p-4">
           {block.title && (
             <p className="mb-1 font-bold text-accent-foreground">
               {block.title}

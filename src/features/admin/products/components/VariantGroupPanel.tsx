@@ -114,7 +114,7 @@ export function VariantGroupPanel({
                 {image ? (
                   <Img src={image} alt="" fill sizes="48px" className="object-contain" />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-[10px] text-sale">
+                  <span className="flex h-full w-full items-center justify-center text-[11px] text-sale">
                     بلا صورة
                   </span>
                 )}
@@ -124,12 +124,12 @@ export function VariantGroupPanel({
                 <p className="truncate text-sm font-medium">
                   {label || <span className="text-sale">بدون قيمة</span>}
                   {member.is_group_primary && (
-                    <span className="mr-2 rounded bg-primary-soft px-1.5 py-0.5 text-[10px] text-primary">
+                    <span className="mr-2 rounded bg-primary-soft px-1.5 py-0.5 text-[11px] text-primary">
                       الأساسي
                     </span>
                   )}
                   {isCurrent && (
-                    <span className="mr-2 text-[10px] text-muted-foreground">
+                    <span className="mr-2 text-[11px] text-muted-foreground">
                       (هذا المنتج)
                     </span>
                   )}

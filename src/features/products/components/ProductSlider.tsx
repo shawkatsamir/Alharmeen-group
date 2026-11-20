@@ -1,21 +1,26 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { Section } from "@/shared/components/ui/Section";
 import { ProductCard } from "./ProductCard";
 import { collapseVariants } from "../lib/variant-group";
 import { Product } from "../types";
 
 interface ProductSliderProps {
   title: string;
+  subtitle?: string;
   products: Product[];
   seeMoreLink?: string;
   wishlistIds?: string[];
 }
 
+const ARROW =
+  "absolute top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface-raised p-2 text-muted-foreground opacity-0 shadow-lg transition-[opacity,background-color,color] duration-300 hover:bg-primary-soft hover:text-primary focus-visible:opacity-100 md:flex group-hover/rail:opacity-100";
+
 export default function ProductSlider({
   title,
+  subtitle,
   products,
   seeMoreLink,
   wishlistIds,
@@ -31,71 +36,58 @@ export default function ProductSlider({
   };
 
   return (
-    <div className="py-8 bg-white mb-4">
-      <div className="container mx-auto px-4 relative">
-        {/* --- Header Section --- */}
-        <div className="flex justify-between items-end mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 border-r-4 border-blue-600 pr-3">
-            {title}
-          </h2>
-          {seeMoreLink && (
-            <Link
-              href={seeMoreLink}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+    /*
+     * Through `Section` so rails share the heading, spacing and reveal of every
+     * other block. This used to be its own `bg-white` band with Tailwind's
+     * `blue-600` — a second, brighter blue than the brand primary.
+     */
+    <Section title={title} subtitle={subtitle} seeMoreLink={seeMoreLink}>
+      {/*
+        Named group. A bare `group` here would also match every ProductCard's
+        `group-hover:` utilities, because Tailwind compiles those to a
+        descendant selector against *any* `.group` ancestor — which made
+        hovering anywhere in the rail light up every card at once.
+      */}
+      <div className="group/rail relative">
+        <button
+          onClick={() => scroll("left")}
+          className={`${ARROW} -left-4`}
+          aria-label="التمرير لليسار"
+        >
+          <ChevronRight className="h-6 w-6 rotate-180" />
+        </button>
+
+        <button
+          onClick={() => scroll("right")}
+          className={`${ARROW} -right-4`}
+          aria-label="التمرير لليمين"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+
+        <div
+          ref={sliderRef}
+          className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pt-1 pb-4"
+        >
+          {/*
+            Collapsed for the same reason as ProductGrid: a rail that shows
+            the same fridge in three finishes wastes three of its handful of
+            visible slots on one product.
+          */}
+          {collapseVariants(products).map(({ representative, members }) => (
+            <div
+              key={representative.id}
+              className="w-[200px] flex-none snap-start md:w-[240px] lg:w-[260px]"
             >
-              عرض الكل
-            </Link>
-          )}
-        </div>
-
-        {/*
-          Named group. A bare `group` here would also match every ProductCard's
-          `group-hover:` utilities, because Tailwind compiles those to a
-          descendant selector against *any* `.group` ancestor — which made
-          hovering anywhere in the rail light up every card at once.
-        */}
-        <div className="relative group/rail">
-          <button
-            onClick={() => scroll("left")}
-            className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 bg-surface-raised shadow-lg border rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary hidden md:flex opacity-0 group-hover/rail:opacity-100 focus-visible:opacity-100 transition-opacity duration-300"
-            aria-label="التمرير لليسار"
-          >
-            <ChevronRight className="w-6 h-6 rotate-180" />
-          </button>
-
-          <button
-            onClick={() => scroll("right")}
-            className="absolute -right-4 top-1/2 -translate-y-1/2 z-20 bg-surface-raised shadow-lg border rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary hidden md:flex opacity-0 group-hover/rail:opacity-100 focus-visible:opacity-100 transition-opacity duration-300"
-            aria-label="التمرير لليمين"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-
-          <div
-            ref={sliderRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scroll-smooth no-scrollbar"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            {/*
-              Collapsed for the same reason as ProductGrid: a rail that shows
-              the same fridge in three finishes wastes three of its handful of
-              visible slots on one product.
-            */}
-            {collapseVariants(products).map(({ representative, members }) => (
-              <div
-                key={representative.id}
-                className="flex-none w-[200px] md:w-[240px] lg:w-[260px] snap-start"
-              >
-                <ProductCard
-                  product={representative}
-                  variants={members}
-                  isWishlisted={wishlistIds?.includes(representative.id)}
-                />
-              </div>
-            ))}
-          </div>
+              <ProductCard
+                product={representative}
+                variants={members}
+                isWishlisted={wishlistIds?.includes(representative.id)}
+              />
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </Section>
   );
 }

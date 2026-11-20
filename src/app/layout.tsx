@@ -55,7 +55,6 @@ export const metadata: Metadata = {
     title: "الحرمين جروب - أفضل متجر للأجهزة الكهربائية و المنزلية في مصر",
     description:
       "موقع الحرمين جروب يقدم تشكيلة واسعة من الأجهزة المنزلية والمنتجات الكهربائية بأفضل الأسعار في مصر.",
-    creator: "@alharmaingroup", // Placeholder
   },
   verification: {
     google: "QrAtqQSgGfCYZleJeg3l3j8e-LHZWQHFqTaP9nMxYow",
@@ -72,11 +71,21 @@ export default function RootLayout({
     "@type": "Organization",
     name: "Alharmeen Group",
     url: "https://alharmaingroup.com",
-    logo: "https://alharmaingroup.com/logo.png", // Placeholder
+    // Rendered from the BrandWordmark paths (see CLAUDE.md, Brand and motion).
+    logo: "https://alharmaingroup.com/logo.png",
+    // Same number, address and page as the footer and /contact.
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "شارع الكنيسة، طريق الإبراهيمية",
+      addressLocality: "ديرب نجم",
+      addressRegion: "الشرقية",
+      addressCountry: "EG",
+    },
+    sameAs: ["https://www.facebook.com/share/17zDjvxrcJ/"],
     contactPoint: {
       "@type": "ContactPoint",
-      telephone: "+20 100 000 0000", // Placeholder
-      contactType: "Customer Service",
+      telephone: "+20-103-172-2719",
+      contactType: "customer service",
       areaServed: "EG",
       availableLanguage: "Arabic",
     },

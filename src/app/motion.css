@@ -1,0 +1,250 @@
+/*
+ * Motion — every keyframe the storefront uses lives in this file.
+ *
+ * Rules (also in CLAUDE.md, "Brand and motion"):
+ * - Nothing moves under `prefers-reduced-motion: reduce`. Utilities are used
+ *   through `motion-safe:`; plain CSS below sits inside the media query.
+ * - Scroll-driven effects are behind `@supports`. A browser without scroll
+ *   timelines gets the static, fully visible page — never hidden content.
+ * - Scroll timelines are written as longhands. The `animation` shorthand resets
+ *   `animation-timeline` to `auto`, which silently turns them into 1ms
+ *   time-based animations.
+ * - Keyframes animate `transform`, never the `translate`/`scale` properties.
+ *   Tailwind v4's `hover:-translate-y-*` and `hover:scale-*` write those, and a
+ *   filled animation on the same property would override every hover lift.
+ * - Arabic is never split into per-letter spans to animate it: that breaks the
+ *   cursive joining. Animate whole words, or the outlined wordmark.
+ */
+
+@theme {
+  /* The keyframe already overshoots and returns; the curve only settles it. */
+  --animate-badge-bump: badge-bump 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-word-in: word-in 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-rise-in: rise-in 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-drift: drift 18s ease-in-out infinite alternate;
+  --animate-drift-reverse: drift 24s ease-in-out infinite alternate-reverse;
+  /* Duration is set inline to the carousel interval. */
+  --animate-dot-fill: dot-fill linear both;
+
+  @keyframes badge-bump {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.35);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes word-in {
+    from {
+      opacity: 0;
+      transform: translateY(65%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes drift {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(10%, -8%) scale(1.18);
+    }
+  }
+
+  /* Fills right-to-left: progress reads in the page's direction. */
+  @keyframes dot-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+/*
+ * Scroll reveal. Applied once per `Section`, never to items inside a
+ * horizontal scroller: `view()` binds to the nearest scroll container, and an
+ * `overflow-x` rail would become that container and never advance.
+ *
+ * The range is a length, not a percentage. `entry 60%` on a section taller
+ * than the viewport would leave its top half faded while it is being read.
+ */
+@utility reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation-name: reveal-up;
+      animation-duration: 1ms; /* Firefox needs a non-zero duration. */
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 0px entry 220px;
+    }
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A soft shadow under the sticky header once the page has scrolled. */
+@utility header-scroll-shadow {
+  @supports (animation-timeline: scroll()) {
+    animation-name: header-shadow;
+    animation-duration: 1ms;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(root block);
+    animation-range: 0px 96px;
+  }
+}
+
+@keyframes header-shadow {
+  from {
+    box-shadow: 0 0 0 0 oklch(0.205 0.028 265 / 0);
+  }
+  to {
+    box-shadow: 0 10px 30px -18px oklch(0.205 0.028 265 / 0.35);
+  }
+}
+
+/*
+ * Wordmark (BrandWordmark.tsx).
+ *
+ *   subtle — header: the letters stay put so the logo is readable at once; the
+ *            gold rules grow out from جروب and one light sweep follows.
+ *   full   — brand hero: the letters wipe in right-to-left, in reading order,
+ *            then جروب, the rules, and the sweep.
+ *
+ * Hovering or focusing the enclosing link replays the sweep. It uses its own
+ * element and keyframe name so leaving the hover cannot restart the intro.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .wm .wm-rule {
+    transform-box: fill-box;
+  }
+  .wm .wm-rule-l {
+    transform-origin: 100% 50%;
+  }
+  .wm .wm-rule-r {
+    transform-origin: 0% 50%;
+  }
+
+  .wm[data-intro="subtle"] .wm-rule,
+  .wm[data-intro="full"] .wm-rule {
+    animation: wm-rule 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .wm[data-intro="subtle"] .wm-rule {
+    animation-delay: 200ms;
+  }
+  .wm[data-intro="subtle"] .wm-group {
+    animation: wm-group 500ms ease-out 100ms both;
+  }
+  .wm[data-intro="subtle"] .wm-shine {
+    animation: wm-shine 1100ms cubic-bezier(0.45, 0, 0.25, 1) 900ms both;
+  }
+
+  .wm[data-intro="full"] .wm-letters {
+    animation: wm-wipe 950ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both;
+  }
+  .wm[data-intro="full"] .wm-group {
+    animation: wm-group 550ms ease-out 800ms both;
+  }
+  .wm[data-intro="full"] .wm-rule {
+    animation-delay: 900ms;
+  }
+  .wm[data-intro="full"] .wm-shine {
+    animation: wm-shine 1200ms cubic-bezier(0.45, 0, 0.25, 1) 1500ms both;
+  }
+
+  :is(a, button):is(:hover, :focus-visible) .wm .wm-shine-hover,
+  .wm:hover .wm-shine-hover {
+    animation: wm-shine-hover 1000ms cubic-bezier(0.45, 0, 0.25, 1);
+  }
+
+  /*
+   * Inside the hero carousel, a slide that is off screen drops its intro so
+   * the animation starts over each time the slide comes back into view.
+   * Specificity matches the intro rules above (0,3,0) and wins on order.
+   */
+  [data-active="false"] .wm[data-intro] * {
+    animation-name: none;
+  }
+}
+
+@keyframes wm-wipe {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes wm-group {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wm-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/*
+ * The sweep is a skewed band parked just past the right edge of the letters
+ * (see BrandWordmark), travelling leftwards across them. Units are the
+ * wordmark's viewBox units, which CSS `px` maps to inside an SVG.
+ */
+@keyframes wm-shine {
+  from {
+    transform: translateX(0) skewX(-18deg);
+  }
+  to {
+    transform: translateX(-640px) skewX(-18deg);
+  }
+}
+
+@keyframes wm-shine-hover {
+  from {
+    transform: translateX(0) skewX(-18deg);
+  }
+  to {
+    transform: translateX(-640px) skewX(-18deg);
+  }
+}

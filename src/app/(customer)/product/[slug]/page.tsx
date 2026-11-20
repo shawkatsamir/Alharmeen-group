@@ -121,7 +121,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
         siblings={siblings}
         relatedSlot={
           related.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border border-border">
+            // On the page like every other rail, not boxed: a panel around
+            // product cards nests cards. -mx-4 cancels Section's own gutter.
+            <div className="-mx-4">
               <ProductSlider title="منتجات مشابهة" products={related} />
             </div>
           ) : null

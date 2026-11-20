@@ -758,7 +758,7 @@ function PendingImages({
                 <X className="h-3 w-3" />
               </button>
               {index === 0 && (
-                <span className="absolute bottom-1 right-1 rounded bg-[#4EA674] px-1.5 py-0.5 text-[10px] text-white">
+                <span className="absolute bottom-1 right-1 rounded bg-success px-1.5 py-0.5 text-[11px] text-success-foreground">
                   رئيسية
                 </span>
               )}

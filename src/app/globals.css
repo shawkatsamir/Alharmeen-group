@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./motion.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -55,6 +56,12 @@
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
+  --color-input-background: var(--input-background);
+
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-light: var(--brand-gold-light);
+  --color-brand-gold-deep: var(--brand-gold-deep);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -76,12 +83,25 @@
    */
   --header-h: 4rem;
 
+  /*
+   * Brand identity, sampled from the ALHARMAN logo (src/app/favicon.ico): a
+   * navy field with a gold mark. Identity only — the wordmark and the brand
+   * hero. Interface colour stays primary/accent; do not build UI from these.
+   * Not redefined under .dark: a logo does not change colour with the theme.
+   */
+  --brand-navy: oklch(0.224 0.054 259);
+  --brand-gold: oklch(0.706 0.108 74.5);
+  --brand-gold-light: oklch(0.861 0.11 85.3);
+  --brand-gold-deep: oklch(0.609 0.107 73.8);
+
   /* Page + cards --------------------------------------------------------- */
   --background: oklch(0.985 0.002 250);
   --foreground: oklch(0.205 0.028 265);
   --surface: oklch(0.975 0.004 250);
   --surface-raised: oklch(1 0 0);
   --surface-sunken: oklch(0.955 0.006 250);
+  /* Field fill: white, so an input reads as a field on the off-white page. */
+  --input-background: oklch(1 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.205 0.028 265);
   --popover: oklch(1 0 0);
@@ -93,13 +113,21 @@
   --primary-hover: oklch(0.36 0.124 255);
   --primary-soft: oklch(0.955 0.021 254);
 
-  /* Accent — amber. Commerce accent: CTAs, prices, deal chips. ------------ */
+  /*
+   * Accent — amber. Attention, not structure: the hero CTA, count badges,
+   * the "جديد" badge, the amber campaign tile. Never a hover tint (that is
+   * primary-soft) and never prices (those are primary).
+   */
   --accent: oklch(0.79 0.148 76);
   --accent-foreground: oklch(0.245 0.045 70);
   --accent-hover: oklch(0.73 0.152 70);
   --accent-soft: oklch(0.965 0.036 84);
 
-  /* Sale — reserved for discounts only, must stay distinct from accent. --- */
+  /*
+   * Sale — urgency: discounts, offer countdowns, low stock, a wishlisted
+   * heart, removals. Never a count, a section or decoration, and never
+   * "unavailable" (that is muted). Must stay distinct from accent.
+   */
   --sale: oklch(0.575 0.213 27.5);
   --sale-foreground: oklch(0.99 0.003 250);
   --sale-soft: oklch(0.96 0.026 25);
@@ -112,7 +140,8 @@
   --secondary: oklch(0.962 0.007 250);
   --secondary-foreground: oklch(0.275 0.035 265);
   --muted: oklch(0.962 0.007 250);
-  --muted-foreground: oklch(0.545 0.026 258);
+  /* 0.525, not 0.545: keeps 4.5:1 on surface-sunken and the soft tints too. */
+  --muted-foreground: oklch(0.525 0.026 258);
 
   --destructive: oklch(0.575 0.213 27.5);
 
@@ -142,6 +171,8 @@
   --surface: oklch(0.185 0.026 265);
   --surface-raised: oklch(0.245 0.03 263);
   --surface-sunken: oklch(0.155 0.024 265);
+  /* Unused in practice: fields set `dark:bg-input/30` themselves. */
+  --input-background: transparent;
   --card: oklch(0.245 0.03 263);
   --card-foreground: oklch(0.975 0.004 250);
   --popover: oklch(0.245 0.03 263);
@@ -268,7 +299,7 @@
   }
 
   .rich-content h2 {
-    font-size: 1.375rem;
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.4;
     margin-block: 2rem 0.75rem;
@@ -341,9 +372,9 @@
   .rich-content blockquote {
     margin-block: 1.5rem;
     padding: 0.875rem 1rem;
-    border-inline-start: 3px solid var(--accent);
+    border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
     background: var(--accent-soft);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
   }
 
   .rich-content table {

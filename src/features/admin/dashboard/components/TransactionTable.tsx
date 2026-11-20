@@ -4,7 +4,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/DropdownMenu";
-import { Filter, MoreVertical } from "lucide-react";
+import { Filter } from "lucide-react";
 
 export function TransactionTable() {
   const transactions = [
@@ -49,7 +49,7 @@ export function TransactionTable() {
           <h2 className="text-lg font-semibold text-foreground">المعاملات</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg border border-border">
+              <button className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-primary-soft hover:text-primary rounded-lg border border-border">
                 <Filter className="w-4 h-4" />
                 <span>تصفية</span>
               </button>
@@ -92,7 +92,7 @@ export function TransactionTable() {
           </thead>
           <tbody className="bg-card divide-y divide-border">
             {transactions.map((transaction, index) => (
-              <tr key={index} className="hover:bg-accent transition-colors">
+              <tr key={index} className="hover:bg-primary-soft transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {transaction.no}
                 </td>

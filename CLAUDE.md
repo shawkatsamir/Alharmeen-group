@@ -79,6 +79,28 @@ Storefront pages are ISR: `export const revalidate = 3600` (home, product, featu
 
 Admin identity = `profiles.role === "admin"`; there is also an `is_admin()` Postgres function used by RLS.
 
+### Design system and product context (added 2026-11-20)
+
+`DESIGN.md` (repo root) is the visual system — tokens in its frontmatter, rules in its prose — and `.impeccable/design.json` is its sidecar (ramps, shadows, motion, component snippets). `PRODUCT.md` holds product truth: users, positioning, evidence on hand and the claims that must not be made. Both are maintained by the Impeccable skill (`/impeccable document`, `/impeccable init`); update them when the system changes rather than letting them drift. Two of its rules the code enforces by convention only:
+
+- **No one-sided bar on a rounded box** (`border-r-4` on a card or callout). Use a full border plus a tint; the leading icon carries the meaning. Heading rules on plain text are fine.
+- **No eyebrow or kicker above a heading.** The heading carries its own weight.
+
+### Brand and motion (added 2026-09-23)
+
+**The client already has a logo** — `src/app/favicon.ico` is the ALHARMAN mark (gold triangular spiral on navy, Latin "ALHARMAN — GROUP —"). It is not a Next default; do not replace it without the owner. The Arabic wordmark is its counterpart, not a new identity.
+
+- **`BrandWordmark` (`src/shared/components/brand/`) is outlined geometry, not text.** `wordmark-paths.ts` is Kufam (google/fonts, variable) shaped by harfbuzzjs — wght 800 for الحرمين, 600 for جروب — so the joins come from the font's GSUB. Regenerate, never hand-edit. The site ships no Kufam. `public/logo.png` (the JSON-LD `logo`) is rendered from the same paths.
+- **Brand colours are `--brand-navy` / `--brand-gold*`, sampled from the favicon, and are for identity only** (wordmark, brand hero). Interface colour stays `primary` / `accent`.
+- **The triangle mark is deliberately absent.** The only source is a 128px raster; a redraw would be an approximation of the client's logo. Add it to the lockup from the designer's original vector when one is supplied.
+- **`src/app/motion.css` holds every keyframe.** Everything is `motion-safe:` or inside `prefers-reduced-motion: no-preference`; under reduce the hero also stops autoplaying.
+- **Never split Arabic into per-letter spans to animate it** — transforms/opacity on inline pieces break the cursive joining. Animate whole words (`RotatingWords`) or the outlined wordmark.
+- **Scroll reveals are CSS scroll-driven (`reveal` utility), behind `@supports`, written as longhands** — the `animation` shorthand resets `animation-timeline`. Ranges are lengths (`entry 0px entry 220px`), because a percentage leaves a tall section half-faded while it is being read. `reveal` is applied once, by `Section`; never inside a horizontal rail, whose `overflow-x` becomes the `view()` source and never advances.
+- **Keyframes animate `transform`, never the `translate` / `scale` properties.** Tailwind v4's `hover:-translate-y-*` writes `translate`; a filled animation on the same property silently kills every hover lift.
+- **Ghost/outline `Button` hovers are `primary-soft`, never `accent`** — `accent` is the saturated amber here, and shadcn's default made every header icon flash amber.
+- **Hero slides replay their entrance via `data-active`.** `HeroCarousel` sets it on each slide frame; copy uses `SLIDE_ENTER` (`features/home/slide-motion.ts` — kept out of the `"use client"` carousel so the server-rendered `BrandHeroSlide` can import the string). The brand slide owns the page's `<h1>`.
+- **Counts on cart / wishlist / bottom nav go through `CountBadge`** (amber — `sale` means urgency: discounts, offer clocks, low stock, a wishlisted heart, removals; never a count, and never "unavailable", which is muted), keyed on the count so each change replays the bump.
+
 ## Database
 
 Tables: `products`, `product_images`, `categories` (self-referencing), `brands`, `orders`, `order_items`, `order_status_history`, `order_payments`, `governorates`, `app_settings`, `profiles`, `wishlists`, `notifications`. RPCs: `search_products(search_term, limit_count)` — search goes through this function, not ILIKE queries — and `governorate_order_stats()` (admin-only, SECURITY DEFINER).
