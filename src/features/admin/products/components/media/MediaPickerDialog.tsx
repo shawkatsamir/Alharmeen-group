@@ -46,21 +46,21 @@ export function MediaPickerDialog({
         </DialogHeader>
 
         {loading ? (
-          <div className="flex h-48 items-center justify-center text-gray-500">
+          <div className="flex h-48 items-center justify-center text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : items.length === 0 ? (
-          <p className="py-12 text-center text-sm text-gray-500">
+          <p className="py-12 text-center text-sm text-muted-foreground">
             لا توجد صور في المكتبة بعد. استخدم زر «رفع صورة» لإضافة أول صورة.
           </p>
         ) : (
-          <div className="grid max-h-[60vh] grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4">
+          <div className="grid max-h-[55dvh] grid-cols-2 gap-3 overflow-y-auto overscroll-contain sm:grid-cols-4">
             {items.map((item) => (
               <button
                 key={item.path}
                 type="button"
                 onClick={() => onSelect(item.url)}
-                className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors hover:border-[#4EA674] dark:border-gray-700"
+                className="relative aspect-square overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary"
                 title={item.name}
               >
                 <Img

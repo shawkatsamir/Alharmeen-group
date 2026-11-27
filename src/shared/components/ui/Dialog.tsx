@@ -63,9 +63,17 @@ function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-primary-soft data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
+        {/*
+         * `end-3`, not `right-4`: the app is `dir="rtl"`, so the physical
+         * right edge is the *start* of the box and the close button was
+         * landing on top of the dialog title. Sized to a real touch target
+         * rather than a bare 16px glyph.
+         */}
+        <DialogPrimitive.Close
+          aria-label="إغلاق"
+          className="text-muted-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 absolute top-3 end-3 flex size-9 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+        >
           <XIcon />
-          <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>

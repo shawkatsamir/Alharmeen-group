@@ -1,14 +1,16 @@
 "use client";
 
-import { Plus, MoreVertical } from "lucide-react";
+import { MoreVertical, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/DropdownMenu";
+import { Button } from "@/shared/components/ui/Button";
 import OrdersTable from "@/features/orders/components/OrdersTable";
-import { useQuery } from "@tanstack/react-query";
 import { getOrderStats } from "@/services/client/orders";
 
 export default function OrderManagement() {
@@ -18,111 +20,74 @@ export default function OrderManagement() {
   });
 
   const stats = [
-    {
-      label: "إجمالي الطلبات",
-      value: statData?.all?.toString() || "0",
-      change: "",
-      trend: "none",
-      period: "إجمالي",
-    },
-    {
-      label: "طلبات جديدة",
-      value: statData?.pending?.toString() || "0",
-      change: "",
-      trend: "none",
-      period: "إجمالي",
-    },
-    {
-      label: "طلبات مكتملة",
-      value: statData?.completed?.toString() || "0",
-      change: "",
-      trend: "none",
-      period: "إجمالي",
-    },
-    {
-      label: "طلبات ملغاة",
-      value: statData?.canceled?.toString() || "0",
-      change: "",
-      trend: "none",
-      period: "إجمالي",
-    },
+    { label: "إجمالي الطلبات", value: statData?.all },
+    { label: "طلبات جديدة", value: statData?.pending },
+    { label: "طلبات مكتملة", value: statData?.completed },
+    { label: "طلبات ملغاة", value: statData?.canceled },
   ];
 
   return (
-    <div className="space-y-6" dir="rtl">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            قائمة الطلبات
-          </h1>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors">
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">إضافة طلب</span>
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  إجراءات إضافية
-                </span>
-                <MoreVertical className="w-4 h-4 text-gray-500" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[160px]">
-              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
-                تصدير الطلبات
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
-                استيراد الطلبات
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-right flex justify-end cursor-pointer">
-                طباعة الكل
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+    <div className="space-y-4" dir="rtl">
+      {/*
+       * No page heading here: the admin header renders the route's title, and
+       * two different headings ("لوحة التحكم" / "قائمة الطلبات") stacked on a
+       * phone cost a third of the first viewport to say the same thing twice.
+       */}
+      <div className="flex items-center justify-end gap-2">
+        {/*
+         * Both of these are unimplemented — no handler behind the button, no
+         * action behind any menu item. Left in place because they record what
+         * is planned, but disabled: a control that silently does nothing when
+         * tapped is worse on a phone than one that says it isn't ready.
+         */}
+        <Button
+          variant="outline"
+          disabled
+          title="غير متاح بعد"
+          className="h-11 gap-2"
+        >
+          <Plus className="size-5" />
+          <span>إضافة طلب</span>
+          <span className="bg-surface-sunken rounded-full px-1.5 py-0.5 text-[0.6875rem]">
+            قريباً
+          </span>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-11 gap-2">
+              <span className="hidden sm:inline">إجراءات إضافية</span>
+              <MoreVertical className="size-4" />
+              <span className="sr-only sm:hidden">إجراءات إضافية</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuItem disabled>تصدير الطلبات (قريباً)</DropdownMenuItem>
+            <DropdownMenuItem disabled>استيراد الطلبات (قريباً)</DropdownMenuItem>
+            <DropdownMenuItem disabled>طباعة الكل (قريباً)</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
+      {/*
+       * Hidden on phones on purpose. These four numbers are the same four the
+       * filter tabs carry twenty pixels below, and as full cards they pushed
+       * the first order ~520px down the page — the admin had to scroll past a
+       * summary to reach the thing they opened the screen for.
+       */}
+      <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
           <div
-            key={index}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 relative"
+            key={stat.label}
+            className="bg-card border-border rounded-xl border p-4"
           >
-            <button className="absolute top-4 left-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <MoreVertical className="w-5 h-5" />
-            </button>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {stat.label}
-              </p>
-              <div className="flex items-baseline space-x-2 space-x-reverse">
-                <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {isStatsLoading ? "..." : stat.value}
-                </h3>
-                {stat.change && (
-                  <span
-                    className={`text-sm font-medium ${
-                      stat.trend === "up" ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {stat.change}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {stat.period}
-              </p>
-            </div>
+            <p className="text-muted-foreground text-sm">{stat.label}</p>
+            <p className="text-foreground mt-1 text-3xl font-bold tabular-nums">
+              {isStatsLoading ? "—" : (stat.value ?? 0)}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* Orders Table */}
       <OrdersTable stats={statData} />
     </div>
   );

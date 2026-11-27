@@ -43,3 +43,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Impeccable design skill
+# Local scratch: screenshots, verification harnesses, hook cache, local config.
+# DESIGN.md's sidecar and the live config stay tracked — CLAUDE.md documents
+# them as part of the design system, so they are re-included explicitly.
+.impeccable/*
+!.impeccable/design.json
+!.impeccable/live/
+.impeccable/live/*
+!.impeccable/live/config.json
+
+# Agent tooling, installed per-machine rather than committed.
+.claude/
+.agents/
+.codex/
+skills-lock.json

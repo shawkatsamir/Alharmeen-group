@@ -17,7 +17,7 @@ interface OrderTimelineProps {
 export function OrderTimeline({ steps }: OrderTimelineProps) {
   return (
     <div className="relative">
-      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-surface-sunken" />
       <div className="space-y-8 relative">
         {steps.map((step) => {
           const isCompleted = step.status === "completed";
@@ -32,7 +32,7 @@ export function OrderTimeline({ steps }: OrderTimelineProps) {
                     ? "bg-green-100 border-green-500 text-green-600"
                     : isCurrent
                       ? "bg-blue-100 border-blue-500 text-blue-600"
-                      : "bg-gray-50 border-gray-300 text-gray-400",
+                      : "bg-surface-sunken border-border text-muted-foreground",
                 )}
               >
                 {isCompleted ? (
@@ -48,20 +48,20 @@ export function OrderTimeline({ steps }: OrderTimelineProps) {
                       className={cn(
                         "text-sm font-semibold",
                         isCompleted || isCurrent
-                          ? "text-gray-900 dark:text-white"
-                          : "text-gray-500",
+                          ? "text-foreground dark:text-white"
+                          : "text-muted-foreground",
                       )}
                     >
                       {step.label}
                     </h4>
                     {step.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {step.description}
                       </p>
                     )}
                   </div>
                   {step.date && (
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {step.date}
                     </span>
                   )}

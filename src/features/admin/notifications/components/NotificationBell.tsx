@@ -1,82 +1,93 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { useNotifications } from "../hooks/useNotifications";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { arSA } from "date-fns/locale";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/shared/components/ui/Popover";
-import { Button } from "@/shared/components/ui/Button";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { useNotifications } from "../hooks/useNotifications";
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead } = useNotifications();
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-gray-600" />
-
-          {/* The Red Dot 🔴 */}
-          {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-600 border-2 border-white" />
-          )}
-        </Button>
+      <PopoverTrigger
+        aria-label={
+          unreadCount > 0 ? `الإشعارات (${unreadCount} جديد)` : "الإشعارات"
+        }
+        className="text-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 relative flex size-11 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+      >
+        <Bell className="size-5" />
+        {unreadCount > 0 && (
+          <span className="bg-sale border-surface-raised absolute top-2 end-2 size-2.5 rounded-full border-2" />
+        )}
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-80 p-0 shadow-xl">
-        <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-          <h4 className="font-semibold">الاشعارات</h4>
+      {/*
+       * `w-80` alone overflowed a 360px viewport once the popover's own
+       * collision padding was added. Capped to the viewport instead.
+       */}
+      <PopoverContent
+        align="end"
+        dir="rtl"
+        className="w-[min(20rem,calc(100vw-1.5rem))] p-0 shadow-xl"
+      >
+        <div className="border-border bg-surface-sunken flex items-center justify-between gap-2 border-b p-4">
+          <h4 className="font-semibold">الإشعارات</h4>
           {unreadCount > 0 && (
-            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-              {unreadCount} New
+            <span className="bg-sale-soft text-sale rounded-full px-2 py-0.5 text-xs font-medium">
+              {unreadCount} جديد
             </span>
           )}
         </div>
 
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[min(20rem,50dvh)]">
           {notifications.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              No notifications yet.
+            <div className="text-muted-foreground p-8 text-center text-sm">
+              لا توجد إشعارات بعد.
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-border divide-y">
               {notifications.map((n) => (
                 <Link
-                  href={`/admin/orders?id=${n.order_id}`} // Link to the order
+                  href={`/admin/orders?id=${n.order_id}`}
                   key={n.id}
                   onClick={() => markAsRead(n.id)}
                   className={cn(
-                    "block p-4 hover:bg-gray-50 transition-colors text-left",
-                    !n.is_read && "bg-blue-50/50", // Highlight unread
+                    "hover:bg-primary-soft block p-4 text-start transition-colors",
+                    !n.is_read && "bg-primary-soft/60",
                   )}
                 >
-                  <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <p
                       className={cn(
                         "text-sm",
                         !n.is_read
-                          ? "font-semibold text-gray-900"
-                          : "text-gray-600",
+                          ? "text-foreground font-semibold"
+                          : "text-muted-foreground",
                       )}
                     >
                       {n.message}
                     </p>
                     {!n.is_read && (
-                      <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                      <span className="bg-primary mt-1.5 size-2 shrink-0 rounded-full" />
                     )}
                   </div>
                   <p
-                    className="text-xs text-gray-400 mt-1"
+                    className="text-muted-foreground mt-1 text-xs"
                     suppressHydrationWarning
                   >
                     {formatDistanceToNow(new Date(n.created_at), {
                       addSuffix: true,
+                      locale: arSA,
                     })}
                   </p>
                 </Link>

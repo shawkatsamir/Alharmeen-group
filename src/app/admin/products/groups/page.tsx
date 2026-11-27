@@ -56,9 +56,7 @@ export default async function ProductGroupsPage({
   if (!user) redirect("/auth/login");
 
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
+    .from("profiles") .select("role") .eq("id", user.id)
     .single();
 
   if (profile?.role !== "admin") redirect("/");
@@ -83,19 +81,16 @@ export default async function ProductGroupsPage({
   const primaryOf = new Map(entryPoints);
 
   return (
-    <div className="p-4">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            مجموعات المنتجات
-          </h1>
+    <div>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm text-muted-foreground">
             المنتجات التي تُباع في أكثر من لون أو مقاس أو مواصفة.
           </p>
         </div>
         <Link
           href="/admin/products"
-          className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-surface-sunken"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-border px-3 text-sm transition-colors hover:bg-primary-soft hover:text-primary"
         >
           كل المنتجات
         </Link>
@@ -104,7 +99,7 @@ export default async function ProductGroupsPage({
       {groupError && (
         <p
           role="alert"
-          className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200"
+          className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
         >
           {GROUP_ERRORS[groupError] ?? "حدث خطأ غير متوقع"}
         </p>
@@ -121,7 +116,7 @@ export default async function ProductGroupsPage({
             const warnings = warningsFor(group);
 
             return (
-              <li key={group.id} className="flex flex-wrap items-center gap-3 p-3">
+              <li key={group.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {primary ? (
@@ -154,14 +149,14 @@ export default async function ProductGroupsPage({
                     <form
                       key={axis}
                       action={renameGroupAxis.bind(null, group.id, axis)}
-                      className="mt-1 flex flex-wrap items-center gap-1 text-xs"
+                      className="mt-1 flex flex-wrap items-center gap-2 text-xs"
                     >
                       <span className="text-muted-foreground">يختلف في</span>
                       <input
                         name="axis"
                         defaultValue={axis}
                         list={`axis-choices-${group.id}`}
-                        className="w-44 rounded border border-gray-200 px-2 py-0.5 dark:border-gray-700 dark:bg-gray-900"
+                        className="min-h-11 w-44 max-w-full rounded-md border border-border px-2 sm:min-h-0 sm:py-0.5"
                       />
                       {variantAxisLabel(axis, axisRegistry) !== axis && (
                         <span className="text-muted-foreground">
@@ -170,7 +165,7 @@ export default async function ProductGroupsPage({
                       )}
                       <button
                         type="submit"
-                        className="rounded border border-border px-2 py-0.5 hover:bg-surface-sunken"
+                        className="min-h-11 rounded-md border border-border px-3 transition-colors hover:bg-primary-soft hover:text-primary sm:min-h-0 sm:px-2 sm:py-0.5"
                       >
                         تغيير
                       </button>

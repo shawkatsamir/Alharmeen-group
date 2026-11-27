@@ -50,19 +50,19 @@ export function PaymentInstructions({
 
   return (
     <div className="rounded-lg border border-[#4EA674]/30 bg-[#4EA674]/5 p-5">
-      <h3 className="mb-3 flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+      <h3 className="mb-3 flex items-center gap-2 font-bold text-foreground dark:text-white">
         <Wallet className="h-5 w-5 text-[#4EA674]" />
         خطوات إتمام الدفع
       </h3>
 
-      <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+      <div className="space-y-3 text-sm text-foreground">
         <p>
           المبلغ المطلوب:{" "}
           <span className="font-bold text-[#4EA674]">
             {formatCurrency(remaining)}
           </span>
           {amountPaid > 0 && (
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {" "}
               (تم دفع {formatCurrency(amountPaid)} من {formatCurrency(total)})
             </span>
@@ -80,8 +80,8 @@ export function PaymentInstructions({
 
         {isPrepaidMethod(paymentMethod) &&
           (destination ? (
-            <div className="rounded-md bg-white p-3 dark:bg-gray-800">
-              <p className="text-xs text-gray-500">
+            <div className="rounded-md bg-white p-3">
+              <p className="text-xs text-muted-foreground">
                 حوّل المبلغ إلى{" "}
                 {isPaymentMethod(paymentMethod)
                   ? PAYMENT_METHOD_LABELS[paymentMethod]
@@ -92,12 +92,12 @@ export function PaymentInstructions({
               </p>
             </div>
           ) : (
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               سنرسل لك بيانات التحويل عند التواصل معك.
             </p>
           ))}
 
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground">
           سنتواصل معك على الهاتف أو واتساب لتأكيد الطلب قبل الشحن. برجاء
           الاحتفاظ برقم عملية التحويل.
         </p>

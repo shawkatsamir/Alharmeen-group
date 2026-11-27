@@ -9,8 +9,8 @@ const STEPS = HAPPY_PATH.map((id) => ({ id, label: STATUS_LABELS[id] }));
 export function OrderTracker({ currentStatus }: { currentStatus: string }) {
   if (currentStatus === "ملغي") {
     return (
-      <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
-        <XCircle className="w-5 h-5" />
+      <div className="border-destructive/20 bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg border p-4">
+        <XCircle className="size-5 shrink-0" />
         <span className="font-semibold">تم إلغاء الطلب</span>
       </div>
     );
@@ -18,8 +18,8 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
 
   if (currentStatus === "مرتجع") {
     return (
-      <div className="bg-amber-50 text-amber-700 p-4 rounded-lg flex items-center gap-2">
-        <RotateCcw className="w-5 h-5" />
+      <div className="border-accent/40 bg-accent-soft text-accent-foreground flex items-center gap-2 rounded-lg border p-4">
+        <RotateCcw className="size-5 shrink-0" />
         <span className="font-semibold">تم إرجاع الطلب</span>
       </div>
     );
@@ -28,35 +28,36 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
   // An unrecognised status shows step 1 rather than a broken bar.
   const foundIndex = STEPS.findIndex((s) => s.id === currentStatus);
   const currentStepIndex = foundIndex === -1 ? 0 : foundIndex;
+  const currentStep = STEPS[currentStepIndex];
 
   return (
-    <div className="w-full py-6" dir="rtl">
+    <div className="w-full py-4 sm:py-6" dir="rtl">
       <div className="relative flex items-center justify-between">
-        {/* Background Grey Line */}
-        <div className="absolute left-0 top-1/2 w-full h-1 bg-gray-200 -z-10" />
+        <div className="bg-surface-sunken absolute start-0 top-1/2 -z-10 h-1 w-full" />
 
-        {/* Active Green Line (Calculated Width) */}
-        {/* Note: In RTL, right:0 is the start. We animate width to the left. */}
+        {/*
+         * The completed run. `start-0` rather than `right-0`: the container
+         * is RTL, so the bar grows from the inline start.
+         */}
         <div
-          className="absolute right-0 top-1/2 h-1 bg-[#4EA674] -z-10 transition-all duration-500"
+          className="bg-primary absolute start-0 top-1/2 -z-10 h-1 transition-all duration-500"
           style={{ width: `${(currentStepIndex / (STEPS.length - 1)) * 100}%` }}
         />
 
-        {/* Steps Bubbles */}
         {STEPS.map((step, index) => {
           const isCompleted = index <= currentStepIndex;
 
           return (
             <div
               key={step.id}
-              className="flex flex-col items-center bg-white px-2"
+              className="bg-card flex flex-col items-center px-1 sm:px-2"
             >
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors duration-300",
+                  "flex size-8 items-center justify-center rounded-full border-2 transition-colors duration-300",
                   isCompleted
-                    ? "bg-[#4EA674] border-[#4EA674] text-white"
-                    : "bg-white border-gray-300 text-gray-300",
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : "bg-card border-border text-muted-foreground",
                 )}
               >
                 {isCompleted ? (
@@ -64,16 +65,21 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
                     // Icon comes from the status registry — hardcoded indices
                     // silently broke when a step was added to the path.
                     const Icon = STATUS_ICONS[step.id];
-                    return <Icon className="w-4 h-4" />;
+                    return <Icon className="size-4" />;
                   })()
                 ) : (
-                  <span>{index + 1}</span>
+                  <span className="text-xs tabular-nums">{index + 1}</span>
                 )}
               </div>
+              {/*
+               * Five two-word Arabic labels across a 350px phone give each
+               * about 70px, so they collided. The bubbles alone carry the
+               * progress there and the step is named once, below.
+               */}
               <span
                 className={cn(
-                  "text-xs mt-2 font-medium",
-                  isCompleted ? "text-[#4EA674]" : "text-gray-500",
+                  "mt-2 hidden text-xs font-medium sm:block",
+                  isCompleted ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {step.label}
@@ -82,6 +88,11 @@ export function OrderTracker({ currentStatus }: { currentStatus: string }) {
           );
         })}
       </div>
+
+      <p className="text-muted-foreground mt-3 text-center text-xs sm:hidden">
+        الخطوة {currentStepIndex + 1} من {STEPS.length} —{" "}
+        <span className="text-primary font-medium">{currentStep.label}</span>
+      </p>
     </div>
   );
 }

@@ -156,10 +156,10 @@ export function ImageManager({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className="font-semibold text-foreground dark:text-white">
             صور المنتج
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             الصورة الأولى (★) هي الصورة الرئيسية التي تظهر في القوائم ونتائج البحث.
           </p>
         </div>
@@ -168,7 +168,7 @@ export function ImageManager({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#4EA674] px-4 py-2 text-sm font-medium text-white hover:bg-[#3d8a5e] disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           {uploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -189,7 +189,7 @@ export function ImageManager({
       />
 
       {images.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600">
+        <p className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
           لا توجد صور بعد. ارفع صورة واحدة على الأقل قبل نشر المنتج.
         </p>
       ) : (
@@ -197,7 +197,7 @@ export function ImageManager({
           {images.map((image, index) => (
             <div
               key={image.id}
-              className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
+              className="flex items-center gap-3 rounded-xl border border-border p-3"
             >
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white">
                 <Img
@@ -226,7 +226,7 @@ export function ImageManager({
                   className={`rounded-lg p-1.5 transition-colors ${
                     image.is_primary
                       ? "text-amber-500"
-                      : "text-gray-400 hover:bg-gray-100 hover:text-amber-500 dark:hover:bg-gray-700"
+                      : "text-muted-foreground hover:bg-surface-sunken hover:text-amber-500 "
                   }`}
                 >
                   <Star
@@ -241,7 +241,7 @@ export function ImageManager({
                   title="تحريك للبداية"
                   disabled={index === 0}
                   onClick={() => handleMove(index, -1)}
-                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-sunken disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -250,7 +250,7 @@ export function ImageManager({
                   title="تحريك للنهاية"
                   disabled={index === images.length - 1}
                   onClick={() => handleMove(index, 1)}
-                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-sunken disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -259,7 +259,7 @@ export function ImageManager({
                   type="button"
                   title="حذف الصورة"
                   onClick={() => handleRemove(image)}
-                  className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

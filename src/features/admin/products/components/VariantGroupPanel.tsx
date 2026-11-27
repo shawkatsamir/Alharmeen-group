@@ -82,7 +82,7 @@ export function VariantGroupPanel({
     <section className="mb-6 rounded-lg border border-border p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-gray-900 dark:text-white">
+          <h2 className="font-semibold text-foreground dark:text-white">
             مجموعة المنتج
           </h2>
           <p className="text-xs text-muted-foreground">
@@ -113,13 +113,13 @@ export function VariantGroupPanel({
         className="mb-4 flex flex-wrap items-end gap-2"
       >
         <label className="flex-1 text-sm">
-          <span className="mb-1 block font-medium text-gray-700 dark:text-gray-200">
+          <span className="mb-1 block font-medium text-foreground">
             اسم المجموعة
           </span>
           <input
             name="name"
             defaultValue={group.name_ar}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
         </label>
         <button
@@ -223,7 +223,7 @@ export function VariantGroupPanel({
                       <input
                         name="value"
                         defaultValue={readValue(member.variant_values, axis)}
-                        className="w-40 rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900"
+                        className="w-40 rounded border border-border px-2 py-1 text-xs"
                       />
                     </label>
                     <button
@@ -312,8 +312,8 @@ function CreateGroupForm({
   const unrecorded = axisCandidates.filter((candidate) => !candidate.value);
 
   return (
-    <section className="mb-6 rounded-lg border border-dashed border-gray-300 p-4 dark:border-gray-700">
-      <h2 className="font-semibold text-gray-900 dark:text-white">
+    <section className="mb-6 rounded-lg border border-dashed border-border p-4">
+      <h2 className="font-semibold text-foreground dark:text-white">
         هل يوجد نفس هذا المنتج مع اختلاف في خاصية واحدة؟
       </h2>
       <p className="mt-1 mb-3 text-sm text-muted-foreground">
@@ -324,7 +324,7 @@ function CreateGroupForm({
 
       <form action={createGroupFromProduct.bind(null, productId)} className="space-y-3">
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+          <legend className="mb-2 text-sm font-medium text-foreground">
             ما الذي يختلف بين النسختين؟
           </legend>
 
@@ -364,7 +364,7 @@ function CreateGroupForm({
 
             {unrecorded.length > 0 && (
               <details className="rounded-lg border border-border p-2">
-                <summary className="cursor-pointer text-sm text-gray-700 dark:text-gray-200">
+                <summary className="cursor-pointer text-sm text-foreground">
                   خاصية لا يسجّلها هذا المنتج بعد ({unrecorded.length})
                 </summary>
                 <div className="mt-2 space-y-1.5">
@@ -396,36 +396,36 @@ function CreateGroupForm({
 
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700 dark:text-gray-200">
+            <span className="mb-1 block font-medium text-foreground">
               اسم الخاصية (لو اخترت «أخرى»)
             </span>
             <input
               name="customAxis"
               placeholder="مثل: عدد الأبواب"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700 dark:text-gray-200">
+            <span className="mb-1 block font-medium text-foreground">
               قيمة {productSku}
             </span>
             <input
               name="customValue"
               placeholder="اتركها فارغة لاستخدام قيمة المواصفة"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700 dark:text-gray-200">
+            <span className="mb-1 block font-medium text-foreground">
               اسم المجموعة
             </span>
             <input
               name="name"
               required
               defaultValue={suggestedName}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
             />
           </label>
         </div>

@@ -1,5 +1,10 @@
-import { TrendingUp, TrendingDown, MoreVertical } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
+/**
+ * NOTE: these figures are placeholders, not live data — see the dashboard
+ * note in CLAUDE.md. This pass fixes how they lay out on a phone and leaves
+ * the numbers alone.
+ */
 export function StatsCards() {
   const stats = [
     {
@@ -32,78 +37,72 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
       {stats.map((stat, index) => (
         <div
           key={index}
-          className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+          className="bg-card border-border rounded-xl border p-4 lg:p-6"
         >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                {stat.title}
-              </h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {stat.subtitle}
-              </p>
-            </div>
-            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
-              <MoreVertical className="w-5 h-5" />
-            </button>
+          {/*
+           * The per-card `MoreVertical` button is gone: it had no handler and
+           * no menu, so on a phone it was a 20px target that did nothing in
+           * the corner of every card.
+           */}
+          <div className="mb-3">
+            <h3 className="text-muted-foreground text-sm font-medium">
+              {stat.title}
+            </h3>
+            <p className="text-muted-foreground/80 mt-0.5 text-xs">
+              {stat.subtitle}
+            </p>
           </div>
 
           {stat.hasSplit ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stat.pending}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {stat.pendingLabel}
-                  </span>
-                </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-foreground text-3xl font-bold tabular-nums">
+                  {stat.pending}
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  {stat.pendingLabel}
+                </span>
               </div>
-              <div className="text-right">
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stat.canceled}
-                  </span>
-                  <span className="text-sm text-red-500">
-                    {stat.canceledLabel}
-                  </span>
-                </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-foreground text-3xl font-bold tabular-nums">
+                  {stat.canceled}
+                </span>
+                <span className="text-destructive text-sm">
+                  {stat.canceledLabel}
+                </span>
               </div>
             </div>
           ) : (
             <>
-              <div className="flex items-baseline space-x-3 mb-2">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-foreground text-3xl font-bold tabular-nums">
                   {stat.value}
                 </span>
                 <div
-                  className={`flex items-center space-x-1 text-sm ${
-                    stat.trend === "up" ? "text-green-600" : "text-red-600"
+                  className={`flex items-center gap-1 text-sm ${
+                    stat.trend === "up" ? "text-success" : "text-destructive"
                   }`}
                 >
                   {stat.trend === "up" ? (
-                    <TrendingUp className="w-4 h-4" />
+                    <TrendingUp className="size-4" />
                   ) : (
-                    <TrendingDown className="w-4 h-4" />
+                    <TrendingDown className="size-4" />
                   )}
                   <span>{stat.label}</span>
-                  <span className="font-medium">{stat.change}</span>
+                  <span className="font-medium tabular-nums">
+                    {stat.change}
+                  </span>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="text-muted-foreground/80 text-xs">
                 {stat.prevValue}
               </p>
             </>
           )}
-
-          <button className="mt-4 text-sm text-[#4EA674] font-medium hover:text-[#3d8a5e] border border-[#4EA674] rounded-full px-4 py-1">
-            التفاصيل
-          </button>
         </div>
       ))}
     </div>

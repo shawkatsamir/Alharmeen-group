@@ -174,10 +174,10 @@ export function VariantGroupEditor({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-900 dark:text-white">
+        <h3 className="font-semibold text-foreground dark:text-white">
           المجموعة والنسخ
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           إذا كان هذا المنتج نفس منتج آخر مع اختلاف في خاصية واحدة، اربطهما بنفس
           المجموعة. سيظهر للعميل زر تبديل بين النسخ، وسيظهر المنتج مرة واحدة في
           قوائم المنتجات بدلاً من مرة لكل نسخة.
@@ -187,7 +187,7 @@ export function VariantGroupEditor({
       <div>
         <label
           htmlFor={`${listId}-group`}
-          className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
+          className="mb-1 block text-sm font-medium text-foreground"
         >
           المجموعة
         </label>
@@ -195,7 +195,7 @@ export function VariantGroupEditor({
           id={`${listId}-group`}
           value={groupId ?? ""}
           onChange={(event) => selectGroup(event.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none dark:border-gray-700 dark:bg-gray-900"
+          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
         >
           <option value="">بدون مجموعة (منتج مستقل)</option>
           {groups.map((group) => (
@@ -207,14 +207,14 @@ export function VariantGroupEditor({
         {groupError ? (
           <p className="mt-1 text-xs text-red-600 dark:text-red-400">{groupError}</p>
         ) : (
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             المجموعات تُنشأ من لوحة «مجموعة المنتج» أعلى هذه الصفحة.
           </p>
         )}
       </div>
 
       {selected && (
-        <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-900/40">
+        <div className="space-y-3 rounded-lg bg-surface-sunken p-3">
           {variantValues.map((row, index) => {
             const axisListId = `${listId}-${row.axis}`;
             const kind = variantAxisKind(row.axis, registry);
@@ -229,7 +229,7 @@ export function VariantGroupEditor({
               <div key={row.axis}>
                 <label
                   htmlFor={axisListId}
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                  className="mb-1 block text-sm font-medium text-foreground"
                 >
                   {variantAxisPrompt(row.axis, registry)}
                   <span className="mr-1 text-red-500">*</span>
@@ -290,14 +290,14 @@ export function VariantGroupEditor({
                 )}
 
                 {!error && !taken && !row.value.trim() && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {label} هو ما يميّز هذه النسخة عن باقي المجموعة، وبدونه لا
                     يمكن حفظ المنتج.
                   </p>
                 )}
 
                 {claimed.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     مستخدم في المجموعة:{" "}
                     {claimed.map((held, i) => (
                       <span key={held.productId}>
@@ -330,7 +330,7 @@ export function VariantGroupEditor({
       )}
 
       {!selected && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           المنتجات المستقلة لا تحتاج إلى تحديد قيمة هنا — يكفي إضافتها ضمن
           المواصفات الفنية.
         </p>

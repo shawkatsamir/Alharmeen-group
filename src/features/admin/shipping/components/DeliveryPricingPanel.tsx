@@ -97,7 +97,7 @@ function OriginCard({
   });
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
       <h2 className="mb-1 text-lg font-semibold">موقع المتجر ونطاق التوصيل</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         كل المسافات تُحسب من هذا الموقع. تغييره يعيد حساب مسافات كل المدن
@@ -192,7 +192,7 @@ function TiersCard({ tiers, onDone }: { tiers: DeliveryTier[]; onDone: Done }) {
   ] as const;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
       <h2 className="mb-1 text-lg font-semibold">فئات التوصيل</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         السعر = رسم ثابت + (المسافة × سعر الكيلومتر). الرسم الثابت يغطي التحميل
@@ -302,7 +302,7 @@ function RulesCard({
   });
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
       <h2 className="mb-1 text-lg font-semibold">الشحن المجاني</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         يُطبق حسب أقرب نطاق يغطي المشوار. بدون قواعد، لا يوجد شحن مجاني — وهذا
@@ -320,7 +320,7 @@ function RulesCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-red-600"
+                className="text-muted-foreground hover:text-destructive"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(rule.id)}
               >

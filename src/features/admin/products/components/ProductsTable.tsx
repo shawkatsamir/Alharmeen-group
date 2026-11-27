@@ -4,19 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 
 import {
-  Plus,
-  MoreVertical,
-  FilePenLine,
   Archive,
   ArchiveRestore,
   ChevronLeft,
   ChevronRight,
+  FilePenLine,
+  Loader2,
+  MoreVertical,
+  Plus,
 } from "lucide-react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Img } from "@/shared/components/ui/Image";
+import { Button } from "@/shared/components/ui/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/DropdownMenu";
 import { DebouncedSearchInput } from "@/features/search/components/DebouncedSearchInput";
 import {
   AlertDialog,
@@ -35,7 +42,7 @@ import {
   getAdminProducts,
   type AdminProductStatus,
 } from "../actions/get-products";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, formatDateShort } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -92,7 +99,9 @@ export function ProductsTable() {
 
   const archiveMutation = useMutation({
     mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
-      const result = archived ? await restoreProduct(id) : await archiveProduct(id);
+      const result = archived
+        ? await restoreProduct(id)
+        : await archiveProduct(id);
       if (!result.success) throw new Error(result.message);
       return result;
     },
@@ -113,7 +122,7 @@ export function ProductsTable() {
         p.images?.find((img) => img.is_primary)?.image_url ||
         p.images?.[0]?.image_url ||
         "/placeholder.jpg",
-      createdDate: new Date(p.created_at).toLocaleDateString("ar-EG"),
+      createdDate: formatDateShort(p.created_at),
       price: p.price,
       stockQuantity: p.stock_quantity,
       isActive: p.is_active,
@@ -122,263 +131,283 @@ export function ProductsTable() {
   const totalPages = Math.ceil((data?.count || 0) / 10);
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            المنتجات
-          </h1>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Link
-            href="/admin/products/new"
-            className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-[#4EA674] text-white rounded-lg hover:bg-[#3d8a5e] transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">إضافة منتج</span>
+    /*
+     * No `p-6` here. The admin layout already pads `main`, so this component's
+     * own padding stacked on top of it and a 390px phone lost 96px of width
+     * to nested gutters.
+     */
+    <div className="space-y-4" dir="rtl">
+      <div className="flex items-center justify-end gap-2">
+        <Button asChild className="h-11 gap-2">
+          <Link href="/admin/products/new">
+            <Plus className="size-5" />
+            إضافة منتج
           </Link>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button className="flex items-center space-x-2 space-x-reverse px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  إجراءات
-                </span>
-                <MoreVertical className="w-4 h-4 text-gray-500" />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 min-w-[160px]"
-                align="end"
-              >
-                <DropdownMenu.Item asChild>
-                  <Link
-                    href="/admin/products/media"
-                    className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer outline-none text-right"
-                  >
-                    وسائط المنتجات
-                  </Link>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item asChild>
-                  <Link
-                    href="/admin/products/groups"
-                    className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer outline-none text-right"
-                  >
-                    مجموعات المنتجات
-                  </Link>
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </div>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-11 gap-2">
+              <span className="hidden sm:inline">إجراءات</span>
+              <MoreVertical className="size-4" />
+              <span className="sr-only sm:hidden">إجراءات</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuItem asChild>
+              <Link href="/admin/products/media" className="cursor-pointer">
+                وسائط المنتجات
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/products/groups" className="cursor-pointer">
+                مجموعات المنتجات
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Table Container */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            {/* Tabs */}
-            <div className="flex items-center space-x-2 space-x-reverse">
-              {TABS.map((tab) => (
+      <div className="bg-card border-border overflow-hidden rounded-xl border">
+        <div className="border-border space-y-3 border-b p-3 sm:p-4 lg:flex lg:items-center lg:justify-between lg:gap-4 lg:space-y-0">
+          <div
+            role="tablist"
+            aria-label="تصفية المنتجات"
+            className="no-scrollbar -mx-3 flex snap-x gap-1 overflow-x-auto px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:flex-wrap lg:px-0"
+          >
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => {
                     setActiveTab(tab.id);
                     setCurrentPage(1);
                   }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-[#4EA674]/10 text-[#4EA674]"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  }`}
+                  className={cn(
+                    "focus-visible:ring-ring/50 flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-primary-soft hover:text-primary",
+                  )}
                 >
                   {tab.name}
                   {counts && (
-                    <span className="text-xs mr-1">({counts[tab.id]})</span>
+                    <span className="text-xs tabular-nums opacity-80">
+                      ({counts[tab.id]})
+                    </span>
                   )}
                 </button>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="flex items-center space-x-3">
-              <DebouncedSearchInput
-                placeholder="بحث برمز المنتج SKU (3 أحرف على الأقل)"
-                onSearch={(term) => {
-                  setEffectiveSearchTerm(term);
-                  setCurrentPage(1);
-                }}
-                className="w-64"
-              />
-            </div>
+              );
+            })}
           </div>
+
+          <DebouncedSearchInput
+            placeholder="بحث برمز المنتج SKU (3 أحرف على الأقل)"
+            onSearch={(term) => {
+              setEffectiveSearchTerm(term);
+              setCurrentPage(1);
+            }}
+            className="w-full lg:w-64"
+          />
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                {["اسم المنتج", "السعر", "المخزون", "الحالة", "تاريخ الإضافة"].map(
-                  (heading) => (
-                    <th
-                      key={heading}
-                      className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      {heading}
+        {isLoading ? (
+          <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 px-6 py-20">
+            <Loader2 className="text-primary size-8 animate-spin" />
+            <p>جاري تحميل المنتجات...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-muted-foreground px-6 py-20 text-center">
+            {effectiveSearchTerm
+              ? "لا توجد منتجات مطابقة لهذا البحث."
+              : "لا توجد منتجات في هذا التبويب."}
+          </div>
+        ) : (
+          <>
+            {/* Phone: one card per product. */}
+            <ul className="divide-border divide-y md:hidden">
+              {products.map((product) => (
+                <li key={product.id} className="flex items-start gap-1 p-3">
+                  {/*
+                   * The whole row is the link to the editor. As a bare text
+                   * link the product name was a 20px-tall target; the card
+                   * body gives it 64px and matches where a thumb lands.
+                   */}
+                  <Link
+                    href={`/admin/products/${product.id}/edit`}
+                    className="hover:bg-primary-soft/40 focus-visible:ring-ring/50 -m-1 flex min-w-0 flex-1 items-start gap-3 rounded-lg p-1 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+                  >
+                    <span className="bg-surface-sunken relative size-16 shrink-0 overflow-hidden rounded-lg">
+                      <Img
+                        className="object-cover"
+                        src={product.image}
+                        alt=""
+                        fill
+                        sizes="64px"
+                      />
+                    </span>
+
+                    <span className="min-w-0 flex-1 space-y-1.5">
+                      <span className="text-foreground line-clamp-2 block text-sm font-medium">
+                        {product.name}
+                      </span>
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-foreground text-sm font-semibold tabular-nums">
+                          {formatCurrency(product.price)}
+                        </span>
+                        <StockBadge product={product} />
+                      </span>
+                      <span className="text-muted-foreground block text-xs">
+                        المخزون {product.stockQuantity} · أضيف{" "}
+                        {product.createdDate}
+                      </span>
+                    </span>
+                  </Link>
+
+                  <RowActions
+                    product={product}
+                    onArchive={() => setPendingArchive(product)}
+                    onRestore={() =>
+                      archiveMutation.mutate({
+                        id: product.id,
+                        archived: true,
+                      })
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+
+            {/* Desktop: the full table. */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full">
+                <thead className="bg-surface-sunken border-border border-b">
+                  <tr>
+                    {[
+                      "اسم المنتج",
+                      "السعر",
+                      "المخزون",
+                      "الحالة",
+                      "تاريخ الإضافة",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        className="text-muted-foreground px-4 py-3 text-right text-xs font-semibold tracking-wide"
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                    <th className="text-muted-foreground px-4 py-3 text-left text-xs font-semibold tracking-wide">
+                      إجراءات
                     </th>
-                  ),
-                )}
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  إجراءات
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center text-gray-500">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4EA674] mb-2"></div>
-                      <p>جاري تحميل المنتجات...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : products.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-20 text-center text-gray-500"
-                  >
-                    لا توجد منتجات.
-                  </td>
-                </tr>
-              ) : (
-                products.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 shrink-0 ml-4">
-                          <div className="relative h-10 w-10">
+                  </tr>
+                </thead>
+                <tbody className="divide-border divide-y">
+                  {products.map((product) => (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-primary-soft/50 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-surface-sunken relative size-10 shrink-0 overflow-hidden rounded-lg">
                             <Img
-                              className="rounded-lg object-cover"
+                              className="object-cover"
                               src={product.image}
-                              alt={product.name}
+                              alt=""
                               fill
-                              sizes="48px"
+                              sizes="40px"
                             />
                           </div>
-                        </div>
-                        <div>
                           <Link
                             href={`/admin/products/${product.id}/edit`}
-                            className="text-sm font-medium text-gray-900 hover:text-[#4EA674] dark:text-white"
+                            className="text-foreground hover:text-primary text-sm font-medium"
                           >
                             {product.name}
                           </Link>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
+                      </td>
+                      <td className="text-foreground px-4 py-3 text-sm tabular-nums whitespace-nowrap">
                         {formatCurrency(product.price)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      </td>
+                      <td className="text-muted-foreground px-4 py-3 text-sm tabular-nums">
                         {product.stockQuantity}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {!product.isActive ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                          مؤرشف
-                        </span>
-                      ) : product.stockQuantity > 0 ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          متوفر
-                        </span>
-                      ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                          غير متوفر
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      </td>
+                      <td className="px-4 py-3">
+                        <StockBadge product={product} />
+                      </td>
+                      <td className="text-muted-foreground px-4 py-3 text-sm whitespace-nowrap">
                         {product.createdDate}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2 space-x-reverse">
-                        <Link
-                          href={`/admin/products/${product.id}/edit`}
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-[#4EA674]"
-                          title="تعديل"
-                        >
-                          <FilePenLine className="w-4 h-4" />
-                        </Link>
-                        {product.isActive ? (
-                          <button
-                            onClick={() => setPendingArchive(product)}
-                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-red-500"
-                            title="أرشفة"
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/admin/products/${product.id}/edit`}
+                            title="تعديل"
+                            aria-label={`تعديل ${product.name}`}
+                            className="text-muted-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
                           >
-                            <Archive className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              archiveMutation.mutate({
-                                id: product.id,
-                                archived: true,
-                              })
-                            }
-                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-[#4EA674]"
-                            title="استعادة"
-                          >
-                            <ArchiveRestore className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <FilePenLine className="size-4" />
+                          </Link>
+                          {product.isActive ? (
+                            <button
+                              onClick={() => setPendingArchive(product)}
+                              title="أرشفة"
+                              aria-label={`أرشفة ${product.name}`}
+                              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+                            >
+                              <Archive className="size-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                archiveMutation.mutate({
+                                  id: product.id,
+                                  archived: true,
+                                })
+                              }
+                              title="استعادة"
+                              aria-label={`استعادة ${product.name}`}
+                              className="text-muted-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+                            >
+                              <ArchiveRestore className="size-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              عرض صفحة {currentPage} من {totalPages}
-            </div>
-            <div className="flex space-x-2 space-x-reverse">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                title="السابق"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                title="التالي"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-              </button>
-            </div>
+          <div className="border-border flex items-center justify-between gap-2 border-t p-3 sm:px-4">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="h-11 gap-1"
+            >
+              <ChevronRight className="size-4" />
+              السابق
+            </Button>
+            <span className="text-muted-foreground text-sm tabular-nums">
+              صفحة {currentPage} من {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="h-11 gap-1"
+            >
+              التالي
+              <ChevronLeft className="size-4" />
+            </Button>
           </div>
         )}
       </div>
@@ -397,11 +426,15 @@ export function ProductsTable() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel className="h-11">إلغاء</AlertDialogCancel>
             <AlertDialogAction
+              className="h-11"
               onClick={() =>
                 pendingArchive &&
-                archiveMutation.mutate({ id: pendingArchive.id, archived: false })
+                archiveMutation.mutate({
+                  id: pendingArchive.id,
+                  archived: false,
+                })
               }
             >
               أرشفة
@@ -410,5 +443,80 @@ export function ProductsTable() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function StockBadge({ product }: { product: Product }) {
+  if (!product.isActive) {
+    return (
+      <span className="bg-surface-sunken text-muted-foreground inline-flex rounded-full px-2 py-0.5 text-xs font-semibold">
+        مؤرشف
+      </span>
+    );
+  }
+  if (product.stockQuantity > 0) {
+    return (
+      <span className="bg-success-soft text-success inline-flex rounded-full px-2 py-0.5 text-xs font-semibold">
+        متوفر
+      </span>
+    );
+  }
+  return (
+    <span className="bg-sale-soft text-sale inline-flex rounded-full px-2 py-0.5 text-xs font-semibold">
+      غير متوفر
+    </span>
+  );
+}
+
+/**
+ * Edit / archive on a phone.
+ *
+ * As two 24px icon buttons these were half the 44px touch minimum and sat
+ * side by side. One 44px menu holds both with room to label them.
+ */
+function RowActions({
+  product,
+  onArchive,
+  onRestore,
+}: {
+  product: Product;
+  onArchive: () => void;
+  onRestore: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`إجراءات ${product.name}`}
+        className="text-muted-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 -me-1 flex size-11 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+      >
+        <MoreVertical className="size-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-40">
+        <DropdownMenuItem asChild>
+          <Link
+            href={`/admin/products/${product.id}/edit`}
+            className="cursor-pointer gap-2"
+          >
+            <FilePenLine className="size-4" />
+            تعديل
+          </Link>
+        </DropdownMenuItem>
+        {product.isActive ? (
+          <DropdownMenuItem
+            variant="destructive"
+            className="cursor-pointer gap-2"
+            onClick={onArchive}
+          >
+            <Archive className="size-4" />
+            أرشفة
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem className="cursor-pointer gap-2" onClick={onRestore}>
+            <ArchiveRestore className="size-4" />
+            استعادة
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

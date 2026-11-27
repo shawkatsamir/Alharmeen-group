@@ -55,16 +55,16 @@ export function ImageUrlField({ value, onChange, label = "الصورة" }: Image
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="text-sm font-medium text-foreground">
         {label}
       </label>
 
       <div className="flex items-start gap-3">
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-white">
           {value ? (
             <Img src={value} alt="" fill sizes="80px" className="object-contain p-1" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-300">
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <ImageIcon className="h-6 w-6" />
             </div>
           )}
@@ -83,7 +83,7 @@ export function ImageUrlField({ value, onChange, label = "الصورة" }: Image
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-sunken disabled:opacity-50"
             >
               {uploading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -96,7 +96,7 @@ export function ImageUrlField({ value, onChange, label = "الصورة" }: Image
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-sunken"
             >
               <ImageIcon className="h-4 w-4" />
               اختر من المكتبة

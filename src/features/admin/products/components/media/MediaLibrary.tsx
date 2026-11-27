@@ -84,13 +84,10 @@ export function MediaLibrary() {
   }
 
   return (
-    <div className="space-y-6 p-6" dir="rtl">
+    <div className="space-y-4 lg:space-y-6" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            وسائط المنتجات
-          </h1>
-          <p className="text-sm text-gray-500">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">
             صور تُستخدم داخل محتوى صفحات المنتجات. صور المنتج نفسه تُدار من صفحة
             تعديل المنتج.
           </p>
@@ -100,7 +97,7 @@ export function MediaLibrary() {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#4EA674] px-4 py-2 font-medium text-white hover:bg-[#3d8a5e] disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           {uploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -121,19 +118,19 @@ export function MediaLibrary() {
       />
 
       {loading ? (
-        <div className="flex h-64 items-center justify-center text-gray-500">
+        <div className="flex h-64 items-center justify-center text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-gray-300 py-20 text-center text-gray-500 dark:border-gray-600">
+        <p className="rounded-xl border border-dashed border-border py-20 text-center text-muted-foreground">
           لا توجد صور بعد.
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
           {items.map((item) => (
             <div
               key={item.path}
-              className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+              className="overflow-hidden rounded-xl border border-border bg-white"
             >
               <div className="relative aspect-square bg-white">
                 <Img
@@ -144,8 +141,8 @@ export function MediaLibrary() {
                   className="object-contain p-2"
                 />
               </div>
-              <div className="flex items-center justify-between border-t border-gray-100 p-2 dark:border-gray-700">
-                <span className="truncate text-xs text-gray-500" title={item.name}>
+              <div className="flex items-center justify-between border-t border-border p-2">
+                <span className="truncate text-xs text-muted-foreground" title={item.name}>
                   {formatSize(item.size)}
                 </span>
                 <div className="flex items-center gap-1">
@@ -153,10 +150,10 @@ export function MediaLibrary() {
                     type="button"
                     onClick={() => handleCopy(item.url)}
                     title="نسخ الرابط"
-                    className="rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="rounded p-1.5 text-muted-foreground hover:bg-surface-sunken"
                   >
                     {copied === item.url ? (
-                      <Check className="h-3.5 w-3.5 text-[#4EA674]" />
+                      <Check className="h-3.5 w-3.5 text-primary" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )}
@@ -165,7 +162,7 @@ export function MediaLibrary() {
                     type="button"
                     onClick={() => handleDelete(item)}
                     title="حذف"
-                    className="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                    className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

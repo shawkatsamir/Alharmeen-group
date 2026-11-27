@@ -54,10 +54,10 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className="font-semibold text-foreground dark:text-white">
             محتوى صفحة المنتج
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             يظهر في قسم «نظرة عامة على المنتج». التنسيق يتم تلقائياً.
           </p>
         </div>
@@ -65,7 +65,7 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
         <button
           type="button"
           onClick={() => setShowPreview((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-sunken"
         >
           <Eye className="h-4 w-4" />
           {showPreview ? "إخفاء المعاينة" : "معاينة"}
@@ -73,11 +73,11 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
       </div>
 
       {showPreview && (
-        <div className="rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
+        <div className="rounded-xl border border-dashed border-border p-4">
           {value.length > 0 ? (
             <RichContent blocks={value} legacyHtml={null} />
           ) : (
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-muted-foreground">
               لا يوجد محتوى للمعاينة بعد.
             </p>
           )}
@@ -85,7 +85,7 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
       )}
 
       {value.length === 0 && !showPreview && (
-        <p className="rounded-xl border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600">
+        <p className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
           لم تتم إضافة أي أقسام بعد.
           {legacyHtml
             ? " سيظل الوصف القديم ظاهراً حتى تضيف أول قسم."
@@ -97,10 +97,10 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
         {value.map((block, index) => (
           <div
             key={index}
-            className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+            className="rounded-xl border border-border bg-white p-4"
           >
-            <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+              <span className="text-sm font-semibold text-foreground">
                 {BLOCK_LABELS[block.type]}
               </span>
 
@@ -137,8 +137,8 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-        <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div className="rounded-xl border border-border p-3">
+        <p className="mb-2 text-sm font-medium text-foreground">
           إضافة قسم
         </p>
         <div className="flex flex-wrap gap-2">
@@ -148,7 +148,7 @@ export function BlockEditor({ value, onChange, legacyHtml }: BlockEditorProps) {
               type="button"
               title={meta.hint}
               onClick={() => onChange([...value, createBlock(meta.type)])}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:border-[#4EA674] hover:text-[#4EA674] dark:border-gray-700"
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm hover:border-primary hover:text-primary"
             >
               <Plus className="h-3.5 w-3.5" />
               {meta.label}
@@ -436,7 +436,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="text-sm font-medium text-foreground">
         {label}
       </label>
       {children}
@@ -465,8 +465,8 @@ function IconButton({
       disabled={disabled}
       className={`rounded-lg p-1.5 transition-colors disabled:opacity-30 ${
         destructive
-          ? "text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-          : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+          ? "text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+          : "text-muted-foreground hover:bg-surface-sunken "
       }`}
     >
       {children}
@@ -517,14 +517,14 @@ function RepeatableItems<T>({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="text-sm font-medium text-foreground">
         {label}
       </label>
 
       {items.map((item, index) => (
         <div
           key={index}
-          className="flex items-start gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900/40"
+          className="flex items-start gap-2 rounded-lg bg-surface-sunken p-2"
         >
           <div className="flex-1">
             {render(item, (next) =>
@@ -561,7 +561,7 @@ function RepeatableItems<T>({
       <button
         type="button"
         onClick={() => onChange([...items, create()])}
-        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:border-[#4EA674] hover:text-[#4EA674] dark:border-gray-600 dark:text-gray-300"
+        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
         إضافة
