@@ -37,6 +37,33 @@ export function describeProductWriteError(
     if (haystack.includes("products_slug_key")) {
       return { field: "slug", message: "الرابط مستخدم بالفعل، اختر رابطاً آخر" };
     }
+    /*
+     * The second most likely collision in normal use, and the one the generic
+     * message below served worst: the store owner duplicates a product to make
+     * the silver version and leaves the value as it was. "هذه البيانات مستخدمة
+     * بالفعل" sent them hunting through the SKU and the slug, which are the two
+     * fields the duplicate form already blanks.
+     *
+     * The message must NOT name a specific axis. Its first version said
+     * "(اللون أو المقاس)", which told the owner of a gas cooker varying by
+     * screen type to change a colour or a size it does not have — and that was
+     * the message behind six consecutive failed saves. The editor now lists the
+     * claimed values with the SKU holding each, so pointing there is both
+     * accurate for any axis and more useful than naming one.
+     *
+     * Note the index compares NORMALISED values, so this also fires for
+     * "اسود" against an existing "أسود" — same colour, different spelling.
+     */
+    if (haystack.includes("products_group_variant_norm_uniq")) {
+      return {
+        field: null,
+        message:
+          "توجد نسخة بنفس هذه القيمة في المجموعة بالفعل. راجع «مستخدم في المجموعة» بتبويب المواصفات واختر قيمة غير مستخدمة",
+      };
+    }
+    if (haystack.includes("products_group_primary_uniq")) {
+      return { field: null, message: "المجموعة لها منتج أساسي بالفعل" };
+    }
     return { field: null, message: "هذه البيانات مستخدمة بالفعل" };
   }
 
@@ -48,6 +75,15 @@ export function describeProductWriteError(
     }
     if (haystack.includes("content_blocks")) {
       return { field: null, message: "محتوى المنتج بصيغة غير صالحة" };
+    }
+    if (haystack.includes("products_grouped_has_variant_values")) {
+      return {
+        field: null,
+        message: "حدد في تبويب المواصفات القيمة التي تميّز هذه النسخة داخل المجموعة",
+      };
+    }
+    if (haystack.includes("products_group_primary_requires_group")) {
+      return { field: null, message: "لا يمكن تعيين منتج أساسي بدون مجموعة" };
     }
     return { field: null, message: "بعض القيم خارج النطاق المسموح" };
   }

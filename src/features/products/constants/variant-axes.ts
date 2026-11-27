@@ -53,26 +53,115 @@ export interface AxisDefinition {
    * a grill is not `color`, `size`, `material` or `pattern` — so structured data
    * omits it rather than inventing a property name.
    */
-  schemaProperty?: "color" | "size" | "model";
+  schemaProperty?: "color" | "size" | "material" | "pattern" | "model";
+  /**
+   * Other `specifications` keys that state this axis's fact.
+   *
+   * An axis key IS a spec key, but the catalogue spells colour two ways —
+   * `الألوان` on 68 products, `اللون` on 7 — so "does the spec table agree with
+   * the switcher" cannot be answered by looking at one key. Mirrors
+   * `variant_axes.spec_aliases` and the SQL `axis_spec_keys()`.
+   *
+   * NOT a normalisation device: these stay distinct keys, and
+   * `groupSpecifications()` still matches them separately.
+   */
+  specAliases?: readonly string[];
+  /** Ordering for the admin's axis suggestions. Lower first. */
+  order?: number;
 }
+
+/**
+ * A resolved axis registry: the DB's `variant_axes` rows merged over the
+ * built-in defaults below. Plain object so it can be handed from a server
+ * component to a client one without serialisation ceremony.
+ */
+export type AxisRegistry = Readonly<Record<string, AxisDefinition>>;
 
 /**
  * Axis keys are SPEC keys — see the header note. Both colour spellings appear
  * because the catalogue uses `الألوان` on 68 products and `اللون` on 7.
+ *
+ * ---------------------------------------------------------------------------
+ * This is now the FALLBACK, not the whole truth.
+ *
+ * Presentation metadata lives in the `variant_axes` table, so the shop owner
+ * can declare a new axis — label, kind, schema.org property — without a
+ * deploy. This object remains:
+ *
+ *   - the seed that migration 20261121090000 inserted,
+ *   - the compile-time default for every call site that has no registry to
+ *     hand (listing grids, unit tests, anything server-rendered before the
+ *     registry is fetched),
+ *   - the reason an axis keeps working if the table is empty or unreachable.
+ *
+ * Resolution is a chain, never a switch: supplied registry -> this object ->
+ * `{ kind: 'text', label: key }`. Nothing can make an axis stop rendering.
+ * ---------------------------------------------------------------------------
  */
-export const AXIS_REGISTRY: Readonly<Record<string, AxisDefinition>> = {
-  اللون: { kind: "color", label: "اللون", schemaProperty: "color" },
-  الألوان: { kind: "color", label: "اللون", schemaProperty: "color" },
-  المقاس: { kind: "size", label: "المقاس", schemaProperty: "size" },
-  الحجم: { kind: "size", label: "الحجم", schemaProperty: "size" },
-  السعة: { kind: "size", label: "السعة", schemaProperty: "size" },
-  البوصة: { kind: "size", label: "المقاس", schemaProperty: "size" },
-  "حجم الشاشة": { kind: "size", label: "حجم الشاشة", schemaProperty: "size" },
-  "موديل المنتج": { kind: "text", label: "الموديل", schemaProperty: "model" },
-  "نوع الشواية": { kind: "text", label: "نوع الشواية" },
+export const AXIS_REGISTRY: AxisRegistry = {
+  اللون: {
+    kind: "color",
+    label: "اللون",
+    schemaProperty: "color",
+    specAliases: ["الألوان"],
+    order: 10,
+  },
+  الألوان: {
+    kind: "color",
+    label: "اللون",
+    schemaProperty: "color",
+    specAliases: ["اللون"],
+    order: 11,
+  },
+  المقاس: { kind: "size", label: "المقاس", schemaProperty: "size", order: 20 },
+  السعة: { kind: "size", label: "السعة", schemaProperty: "size", order: 30 },
+  الحجم: { kind: "size", label: "الحجم", schemaProperty: "size", order: 31 },
+  "حجم الشاشة": {
+    kind: "size",
+    label: "حجم الشاشة",
+    schemaProperty: "size",
+    order: 40,
+  },
+  البوصة: { kind: "size", label: "المقاس", schemaProperty: "size", order: 41 },
+  "نوع الشواية": { kind: "text", label: "نوع الشواية", order: 50 },
+  "نوع الشاشة": { kind: "text", label: "نوع الشاشة", order: 51 },
+  "موديل المنتج": {
+    kind: "text",
+    label: "الموديل",
+    schemaProperty: "model",
+    order: 90,
+  },
 };
 
-/** Suggested axes for the admin picker. Not a validation gate — any key works. */
+/** The default every unregistered axis gets. The end of the fallback chain. */
+const UNREGISTERED: AxisKind = "text";
+
+/**
+ * Resolve one axis through the fallback chain.
+ *
+ * `registry?.[axis]` wins WHOLE, not field by field: a row the admin has
+ * edited is their deliberate statement about that axis, and letting a built-in
+ * `schemaProperty` leak back in would make the admin unable to remove one.
+ * `getAxisRegistry()` already merges the table over the defaults, so a
+ * resolved registry is complete by the time it arrives here.
+ */
+export function resolveAxis(
+  axis: string,
+  registry?: AxisRegistry,
+): AxisDefinition {
+  return (
+    registry?.[axis] ??
+    AXIS_REGISTRY[axis] ?? { kind: UNREGISTERED, label: axis }
+  );
+}
+
+/**
+ * Suggested axes for the admin picker, in declared order. Not a validation
+ * gate — any key works, which is the point.
+ *
+ * `VARIANT_AXES` is kept as the import-free constant the tests pin; prefer
+ * `suggestedAxes(registry)` in the UI so a newly declared axis shows up.
+ */
 export const VARIANT_AXES = [
   "اللون",
   "المقاس",
@@ -82,22 +171,48 @@ export const VARIANT_AXES = [
   "موديل المنتج",
 ] as const;
 
-export function isVariantAxis(value: unknown): boolean {
-  return typeof value === "string" && value in AXIS_REGISTRY;
+export function suggestedAxes(registry?: AxisRegistry): string[] {
+  const source = registry ?? AXIS_REGISTRY;
+  return Object.keys(source).sort((a, b) => {
+    const orderA = source[a]?.order ?? Number.MAX_SAFE_INTEGER;
+    const orderB = source[b]?.order ?? Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    // Code-unit comparison, not localeCompare: ICU collation for Arabic
+    // differs between the build server and the browser.
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
 }
 
-export function variantAxisKind(axis: string): AxisKind {
-  return AXIS_REGISTRY[axis]?.kind ?? "text";
+export function isVariantAxis(value: unknown, registry?: AxisRegistry): boolean {
+  if (typeof value !== "string") return false;
+  return value in (registry ?? AXIS_REGISTRY);
 }
 
-export function variantAxisLabel(axis: string): string {
-  return AXIS_REGISTRY[axis]?.label ?? axis;
+export function variantAxisKind(axis: string, registry?: AxisRegistry): AxisKind {
+  return resolveAxis(axis, registry).kind;
+}
+
+export function variantAxisLabel(axis: string, registry?: AxisRegistry): string {
+  return resolveAxis(axis, registry).label;
 }
 
 export function variantAxisSchemaProperty(
   axis: string,
+  registry?: AxisRegistry,
 ): AxisDefinition["schemaProperty"] {
-  return AXIS_REGISTRY[axis]?.schemaProperty;
+  return resolveAxis(axis, registry).schemaProperty;
+}
+
+/**
+ * The `specifications` keys that may state a given axis: the axis key itself,
+ * then its declared aliases. Mirrors the SQL `axis_spec_keys()`.
+ *
+ * The axis key comes first so a product carrying both spellings is read from
+ * the one the group actually declares.
+ */
+export function axisSpecKeys(axis: string, registry?: AxisRegistry): string[] {
+  const aliases = resolveAxis(axis, registry).specAliases ?? [];
+  return [axis, ...aliases.filter((alias) => alias !== axis)];
 }
 
 /**
@@ -108,8 +223,11 @@ export function variantAxisSchemaProperty(
  * two-axis group produces "أسود · 43 بوصة", which matches no colour, so every
  * swatch silently degrades.
  */
-export function findColorAxis(axes: readonly string[]): string | null {
-  return axes.find((axis) => variantAxisKind(axis) === "color") ?? null;
+export function findColorAxis(
+  axes: readonly string[],
+  registry?: AxisRegistry,
+): string | null {
+  return axes.find((axis) => variantAxisKind(axis, registry) === "color") ?? null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -219,8 +337,9 @@ export function normalizeColorName(value: string | null | undefined): string {
 export function axisValueRank(
   axis: string,
   value: string | null | undefined,
+  registry?: AxisRegistry,
 ): number | null {
-  if (variantAxisKind(axis) !== "size") return null;
+  if (variantAxisKind(axis, registry) !== "size") return null;
   const match = normalizeAxisValue(axis, value).match(/-?\d+(?:[.,٫]\d+)?/);
   if (!match) return null;
   const parsed = Number(match[0].replace(/[,٫]/, "."));
@@ -302,6 +421,6 @@ export function colorSwatchHex(value: string | null | undefined): string | null 
  * Arabic prompt shown above a selector row, e.g. "اختر اللون".
  * Falls back to the raw key so an unregistered axis still reads correctly.
  */
-export function variantAxisPrompt(axis: string): string {
-  return `اختر ${variantAxisLabel(axis)}`;
+export function variantAxisPrompt(axis: string, registry?: AxisRegistry): string {
+  return `اختر ${variantAxisLabel(axis, registry)}`;
 }

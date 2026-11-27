@@ -13,7 +13,11 @@ import { CountdownTimer } from "./CountdownTimer";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import CompareToggle from "./CompareToggle";
 import { formatCurrency } from "@/lib/utils";
-import { colorSwatchHex, findColorAxis } from "../constants/variant-axes";
+import {
+  colorSwatchHex,
+  findColorAxis,
+  type AxisRegistry,
+} from "../constants/variant-axes";
 import {
   describeVariant,
   readAxisValue,
@@ -29,6 +33,11 @@ interface ProductCardProps {
    * so a three-finish fridge occupies one card instead of three.
    */
   variants?: VariantSibling[];
+  /**
+   * Resolved axis registry, used only to find which axis is the colour one.
+   * Omitted falls back to the built-in defaults, which is today's behaviour.
+   */
+  axisRegistry?: AxisRegistry;
 }
 
 export function ProductCard({
@@ -36,6 +45,7 @@ export function ProductCard({
   isWishlisted = false,
   priority = false,
   variants = [],
+  axisRegistry,
 }: ProductCardProps) {
   const hasDiscount = product.old_price && product.old_price > product.price;
   const discountPercentage = hasDiscount
@@ -71,7 +81,7 @@ export function ProductCard({
    * group gets dots; anything else gets short text pills, because a 20px circle
    * cannot express "43 بوصة" or "بشواية" and would render two identical blanks.
    */
-  const colorAxis = findColorAxis(axes);
+  const colorAxis = findColorAxis(axes, axisRegistry);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const preview = swatches.find((v) => v.id === previewId);
 

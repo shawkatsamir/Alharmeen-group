@@ -258,14 +258,54 @@ Open work, recorded so it is not rediscovered from scratch. Ordered roughly by v
 - **Real road distance.** Straight line × `delivery_road_factor` is still a guess. Calibrate the factor against a few known trips first; if it is still off, store an OSRM/Distance-Matrix road distance per locality (once per origin change, never per request) and drop the factor.
 - **8 legacy orders have no items** (ORD-1017…1026, all 2026-02-03, the owner's own test orders from before `place_order`). Left in place; delete only with the owner's say-so.
 
+#### Adding a variant was impossible until 2026-11-20
+
+Between phase 2 shipping and this fix, **no variant was ever added through the admin UI** — every grouped product in the catalogue predates 2026-08-23 and was grouped by the backfill migration. Five groups were created by hand in that window and not one reached two members. The cause was three defects stacked on one flow:
+
+- **`FIELD_TABS` in `ProductForm` did not list `group_id` or `variant_values`.** `?duplicateFrom=<id>` deliberately blanks the axis value, so the form *opens* invalid with its only error on the المواصفات tab; with no entry in the map `findTabWithError` returned undefined, the form stayed on أساسي, and saving produced a generic toast and nothing else. The map is now `Record<keyof ProductFormValues, ProductFormTabId>` in `lib/form-tabs.ts` — **a missing field is a `npm run typecheck` failure**, plus a runtime test against `emptyProductFormValues()` keys.
+- **`onInvalid` read `formState.errors` from the render closure**, not the errors react-hook-form passes in, so the *first* failed submit always saw `{}` and never switched tabs at all. Always use the argument.
+- **`VariantGroupEditor` rendered no validation state**, while being the only place to fill that required value. It now takes `groupError` / `valuesError` / `valueErrors` and marks the field required.
+
+Two consequences were cleaned up with it: `createGroupFromProduct` **deletes the group it just created when the assign fails** (since superseded by the RPC below) and `describeProductWriteError` now names `products_group_variant_norm_uniq` instead of the generic "هذه البيانات مستخدمة بالفعل", which sent the owner hunting through the SKU and slug — the two fields the duplicate form already blanks.
+
+#### Phase 3 — an axis is data, not code (added 2026-11-21)
+
+Adding the **second** gas cooker then failed six times in two minutes (`products_group_variant_norm_uniq`, 22:34–22:36 on 2026-11-20, visible in `postgres_logs`). Three separate defects, one cause: the data model is axis-agnostic, the authoring layer was not.
+
+**An axis carries four kinds of fact and they do not cost the same to change. Keep them apart.**
+
+| Layer | Decides | Lives in | Cost |
+| --- | --- | --- | --- |
+| Identity | are two values the same value | `normalize_axis_value` + `normalizeAxisValue` twins | **REINDEX** — code only, axis-independent |
+| Structure | which axes a group varies by; each member's value | `product_groups.axes`, `products.variant_values` | nothing — any key already works |
+| Presentation | label, kind, schema.org property, order | **`variant_axes` table**, `AXIS_REGISTRY` as fallback | a row, by the admin, no deploy |
+| Authoring | how the admin names an axis and sets a value | spec-driven picker | — |
+
+- **`variant_axes` is presentation only.** Resolution is a **fallback chain, never a switch**: `variant_axes row → AXIS_REGISTRY → { kind: 'text', label: key }`, so an axis with no row behaves exactly as before and an axis in neither still renders. `AXIS_REGISTRY` stays in code as the seed, the compile-time default and the unit-test target. `mergeAxisRegistry` (`features/products/lib/axis-registry.ts`, import-free) **validates `kind` and `schema_property` against the unions rather than casting** — `kind` is what `VariantSelector` switches on, and an unrecognised string would match no branch and render a blank page. A row **wins whole**, so clearing `schema_property` actually clears it; inheriting the built-in would make a wrong claim to Google unremovable.
+- **`getAxisRegistry()` (`services/server/variant-axes.ts`) can never fail closed** — every error path returns `AXIS_REGISTRY`. `createStaticClient()` + `cache()`, because the PDP is ISR and cookies would opt it out of static generation.
+- **Every helper takes the registry as an OPTIONAL last argument** (`variantAxisKind(axis, registry?)`), so untouched call sites are unchanged by construction. Beware `axes.map(variantAxisLabel)` — the array index lands in the registry slot; typecheck catches it.
+- **Nothing here touches `normalize_axis_value`, so no REINDEX was needed.** Say so in any migration that extends this area; the warning on the index invites a defensive rebuild that costs an exclusive lock for nothing.
+- **Three admin-checked SECURITY DEFINER RPCs** replace multi-table writes that had no transaction: `create_variant_group` (was insert-then-assign, which orphaned a group on failure), `rename_variant_axis` (**the operation whose absence made a mistyped axis permanent** — rewrites `axes` and re-keys every member's `variant_values` *and* `specifications`), `set_variant_value` (fix a mislabelled sibling from the group panel). Re-keying cannot create a collision the unique index did not already forbid.
+- **`revoke all on function … from public` does NOT lock out `anon` on Supabase.** `ALTER DEFAULT PRIVILEGES` grants EXECUTE directly to `anon` and `authenticated`, so the PUBLIC revoke leaves both. The linter flagged all three RPCs as anonymously callable; `20261121091500` revokes `anon` **by name**. Verify with `has_function_privilege('anon', 'public.fn(args)', 'execute')`.
+
+**The axis is now PICKED from the product's own `specifications`, and its value is READ from that spec row, not typed.** `AXIS_REGISTRY`'s contract was always "an axis key IS a spec key"; picking makes it true by construction. This is what killed all three live mistakes: `axes = ['موراندي جراي']` (a colour *value* in the axis box), `نوع الشاشة` existing nowhere in the product's spec table, and the inversion — the old form asked for «قيمة هذا المنتج» two inputs from the axis name, named no product, and offered a datalist seeded from six hardcoded colour/size keys, so the owner typed the *other* product's value. A value read out of this product's spec table cannot describe a different product. Built on the existing `getSpecKeySuggestions(categoryId)`.
+
+- **`spec_aliases` exists because the catalogue spells colour both ways** — `الألوان` on 68 products, `اللون` on 7. `axis_spec_keys()` / `axisSpecKeys()` return the candidate keys, and `axis_spec_write_key()` **updates the alias the product already uses** rather than adding a second colour row next to a stale one. Seeded for the colour pair only; `المقاس`/`الحجم` are plausibly different facts, and merging two keys that turn out to be distinct is expensive to undo.
+- **`ProductGroupOption.values` carries the holder** (`{ value, productId, sku }`), so the editor lists claimed values with the SKU holding each and a link to fix it, and blocks a duplicate locally instead of waiting for a 409. The old bare `string[]` datalist was actively harmful: for a new variant *every* existing value is a guaranteed violation, so the autocomplete offered nothing but forbidden answers. Suggestions now come from the same axis in **other** groups — values that are actually available.
+- **No prompt, placeholder or error in the variant UI may name an axis that is not the group's own.** The duplicate-value message said "غيّر قيمة الخاصية (اللون أو المقاس)" to the owner of a group varying by `نوع الشاشة`, and the `text` placeholder said "مثال: بشواية" for every unregistered axis. There is a test pinning that the 23505 message names no axis.
+- **`product_group_health` gained `members_axis_spec_mismatch`** (spec table contradicts the switcher — customer-visible) **and `members_axis_spec_missing`** (the varying fact is absent from the spec table), split because the fixes differ, plus `undeclared_axes`. Alias-aware: the first draft reported 9 of 10 groups because it compared `اللون` against a spec recorded under `الألوان`.
+
+**When NOT to group.** Group only when the members share one spec sheet and differ in exactly the declared axes. The three Lagermania 90×60 cookers differ by `المجموعة` *and* `عائلة المنتج` *and* colour — different models, not variants, and they must stay separate products. (This is also why toshiba-lifestyle.com groups only its freezers.)
+
 ### Variant groups — remaining admin gaps
 
 Items 1–5 of this list were closed by the 2026-08-25 phase-2 work (group panel, groups index, per-axis selectors, health view, rename / set-primary / remove actions). What is left:
 
-1. **No way to move a product between groups, merge two groups, or delete an empty one.** `removeFromGroup` detaches a product but leaves the group behind; a group whose last member is removed becomes an orphan that only the health page will show.
+1. **No way to move a product between groups or merge two groups.** `removeFromGroup` detaches a product but leaves the group behind; `deleteEmptyGroup` (2026-11-20, on `/admin/products/groups`) removes the residue, and it refuses a group that still has a member because `group_id` is `on delete set null` and a cascade would leave products carrying `variant_values` for a group that no longer exists. *Renaming* an axis is fixed (`rename_variant_axis`, 2026-11-21); moving and merging are not.
 2. **The group `<select>` still appears on every product's form**, including the majority that will never be variants. It is now secondary — the panel above it is the creation path — but it remains noise and still invites mis-grouping.
 3. **`deriveGroupName` keeps the varying word** ("… 450 لتر أسود"), deliberately: guessing which token is the axis value is the same class of heuristic that mis-grouped `RF-31FTV`. It only seeds an editable field now, so this is cosmetic.
-4. **Nothing validates that a variant's axis value matches its own `specifications`.** The registry's contract says an axis key IS a spec key, but a product can carry `variant_values = {"اللون":"أسود"}` and `specifications.الألوان = "سيلفر"` with no complaint.
+4. **Axis/spec disagreement is reported, not prevented.** `product_group_health` counts it per group (2026-11-21) and `create_variant_group` / `set_variant_value` write both sides together, but a direct `products` UPDATE can still split them. Two live rows are in that state — see Catalogue data.
+5. **The axis registry has no admin UI yet.** `variant_axes` rows are editable only through SQL or the Supabase dashboard; `getVariantAxisOptions()` exists for the page that will list them. An undeclared axis works (as a `text` pill) and `/admin/products/groups` now flags it, so this is a convenience gap rather than a blocker.
 
 ### Variant groups — deferred by design
 
@@ -277,6 +317,7 @@ Items 1–5 of this list were closed by the 2026-08-25 phase-2 work (group panel
 
 9. **`SJ-58C(ST)` has one image and it is a photo of a Tornado 396L** (`tornado-…-rf-48t-st-…jpg`) on a Sharp 450L product. Now more visible, not less: that row is its group's primary, so it represents the group in listings and structured data.
 10. **Spec values are inconsistent within groups.** `SJ-58C(BK)` records `السعة = "450"` while `(ST)` records `"450 لتر"`; `SJ-58C(SL)` and `SJ-PV63G-BK` have no colour or capacity spec at all. `groupSpecifications()` matches by exact string, so these fall out of their group and out of the buy-box chips.
+10a. **Two Toshiba freezers contradict themselves on the page.** `GR-RU312WE-DMN(06)` and `(37H)` carry `specifications.اللون = "سيلفر"` — copied from their silver sibling — while their variant switcher correctly reads `رمادي غامق` / `رمادي فاتح`, which is also what their names say. So the spec table and the switcher state different colours on one product page. Surfaced by `members_axis_spec_mismatch` on `/admin/products/groups`; the fix is to make the spec rows match the variant values, and it needs the owner's confirmation rather than a guess.
 
 ### Pre-existing bugs found while building this
 

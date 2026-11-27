@@ -10,6 +10,7 @@ import {
   variantAxisKind,
   variantAxisLabel,
   variantAxisPrompt,
+  type AxisRegistry,
 } from "../../constants/variant-axes";
 import {
   buildAxisSelectors,
@@ -27,6 +28,12 @@ interface VariantSelectorProps {
   siblings: VariantSibling[];
   /** `products.id` of the variant whose page this is. */
   activeId: string;
+  /**
+   * Resolved axis registry, so an axis the admin declared gets its real label
+   * and render kind. Omitted falls back to the built-in `AXIS_REGISTRY`, which
+   * is exactly the behaviour before axes became declarable.
+   */
+  registry?: AxisRegistry;
 }
 
 /**
@@ -56,14 +63,21 @@ export function VariantSelector({
   axes,
   siblings,
   activeId,
+  registry,
 }: VariantSelectorProps) {
   // `getVariantSiblings` already returns [] for a group of one, but a caller
   // passing a raw list should not render a selector offering no choice.
   if (siblings.length < 2) return null;
 
+  /*
+   * `rank` is wrapped rather than passed by reference so a size axis the
+   * admin declared is ordered by its number too. `normalize` is NOT wrapped:
+   * it is axis-independent by design and must stay identical to the Postgres
+   * twin that backs the unique index.
+   */
   const selectors = buildAxisSelectors(siblings, axes, activeId, {
     normalize: normalizeAxisValue,
-    rank: axisValueRank,
+    rank: (axis, value) => axisValueRank(axis, value, registry),
   });
 
   /*
@@ -81,7 +95,7 @@ export function VariantSelector({
       {selectors.map((selector) => (
         <div key={selector.axis}>
           <p className="mb-2 text-sm text-muted-foreground">
-            {variantAxisPrompt(selector.axis)}
+            {variantAxisPrompt(selector.axis, registry)}
             {selector.activeValue && (
               <>
                 :{" "}
@@ -95,7 +109,12 @@ export function VariantSelector({
           <ul className="flex flex-wrap gap-2">
             {selector.options.map((option) => (
               <li key={option.key}>
-                <OptionLink axis={selector.axis} axes={axes} option={option} />
+                <OptionLink
+                  axis={selector.axis}
+                  axes={axes}
+                  option={option}
+                  registry={registry}
+                />
               </li>
             ))}
           </ul>
@@ -109,14 +128,16 @@ function OptionLink({
   axis,
   axes,
   option,
+  registry,
 }: {
   axis: string;
   axes: string[];
   option: AxisOption<VariantSibling>;
+  registry?: AxisRegistry;
 }) {
   const { value, target, isActive, isExact } = option;
   const inStock = target.is_available && target.stock_quantity > 0;
-  const isColor = variantAxisKind(axis) === "color";
+  const isColor = variantAxisKind(axis, registry) === "color";
 
   const image =
     target.images?.find((img) => img.is_primary)?.image_url ??
@@ -145,7 +166,7 @@ function OptionLink({
 
   const ariaLabel = [
     value,
-    !isExact ? `— ${variantAxisLabel(axis)} متاح مع ${describeVariant(target.variant_values, axes.filter((a) => a !== axis))}` : "",
+    !isExact ? `— ${variantAxisLabel(axis, registry)} متاح مع ${describeVariant(target.variant_values, axes.filter((a) => a !== axis))}` : "",
     `— ${formatCurrency(target.price)}`,
     inStock ? "" : "— غير متوفر",
   ]

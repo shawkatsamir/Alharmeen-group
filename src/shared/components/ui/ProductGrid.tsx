@@ -1,4 +1,5 @@
 import { ProductCard } from "@/features/products/components/ProductCard";
+import type { AxisRegistry } from "@/features/products/constants/variant-axes";
 import { collapseVariants } from "@/features/products/lib/variant-group";
 import type { Product } from "@/features/products/types";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,16 @@ interface ProductGridProps {
    * where the shopper saved a specific colour.
    */
   expandVariants?: boolean;
+  /**
+   * Resolved axis registry, for the colour swatch row on a grouped card.
+   *
+   * Optional, and absent on most listings on purpose: a card only needs it to
+   * know which of a group's axes is the COLOUR one, and the built-in defaults
+   * already answer that for every colour axis the catalogue has. Pass it from
+   * a route that has it to hand so an axis the admin newly declared as a colour
+   * axis also gets swatches.
+   */
+  axisRegistry?: AxisRegistry;
 }
 
 /**
@@ -45,6 +56,7 @@ export function ProductGrid({
   className,
   priorityCount = 4,
   expandVariants = false,
+  axisRegistry,
 }: ProductGridProps) {
   const entries = expandVariants
     ? products.map((product) => ({ representative: product, members: [product] }))
@@ -64,6 +76,7 @@ export function ProductGrid({
           variants={members}
           priority={index < priorityCount}
           isWishlisted={wishlistIds?.includes(representative.id)}
+          axisRegistry={axisRegistry}
         />
       ))}
     </div>

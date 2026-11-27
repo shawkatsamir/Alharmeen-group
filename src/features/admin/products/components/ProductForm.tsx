@@ -3,12 +3,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2, Save, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  variantAxisLabel,
+  type AxisRegistry,
+} from "@/features/products/constants/variant-axes";
 import { Input } from "@/shared/components/ui/Input";
 import { Switch } from "@/shared/components/ui/Switch";
 import {
@@ -22,6 +26,12 @@ import { Textarea } from "@/shared/components/ui/Textarea";
 import { attachProductImages } from "../actions/product-images";
 import { createProduct, updateProductDetails } from "../actions/save-product";
 import type { BrandOption, CategoryOption } from "../data";
+import {
+  describeFormErrors,
+  fieldMessage,
+  PRODUCT_FORM_TABS as TABS,
+  rowValueMessages,
+} from "../lib/form-tabs";
 import { slugifyProduct } from "../lib/slug";
 import {
   ACCEPTED_IMAGE_TYPES,
@@ -45,20 +55,16 @@ interface ProductFormProps {
   categories: CategoryOption[];
   brands: BrandOption[];
   groups?: ProductGroupOption[];
+  /**
+   * Resolved axis registry, so a newly declared axis shows its real label and
+   * render kind without a deploy. Omitted falls back to AXIS_REGISTRY.
+   */
+  axisRegistry?: AxisRegistry;
   /** Edit mode only. */
   productId?: string;
   initialImages?: ManagedImage[];
   legacyHtml?: string | null;
 }
-
-const TABS = [
-  { id: "basic", label: "أساسي" },
-  { id: "pricing", label: "السعر والمخزون" },
-  { id: "specs", label: "المواصفات" },
-  { id: "features", label: "المميزات" },
-  { id: "content", label: "المحتوى" },
-  { id: "media", label: "الصور و SEO" },
-];
 
 export function ProductForm({
   mode,
@@ -66,6 +72,7 @@ export function ProductForm({
   categories,
   brands,
   groups = [],
+  axisRegistry,
   productId,
   initialImages = [],
   legacyHtml,
@@ -94,6 +101,28 @@ export function ProductForm({
   const variantValues = watch("variant_values");
   const nameEn = watch("name_en");
   const sku = watch("sku");
+
+  /*
+   * `?duplicateFrom=<id>` copies everything a variant shares with its sibling
+   * and blanks the one thing that differs, so the form opens invalid by design.
+   * The field that answers it lives two tabs away, which is why this says so up
+   * front instead of letting the admin discover it by pressing save.
+   *
+   * The prompt names the group's OWN axes. It used to read "(اللون أو المقاس أو
+   * نوع الشواية)" — a fixed list — which told the owner of a gas cooker
+   * varying by screen type to change a colour or a size it does not have.
+   */
+  const unansweredAxes =
+    mode === "create" && groupId
+      ? variantValues
+          .filter((row) => row.value.trim().length === 0)
+          .map((row) => variantAxisLabel(row.axis, axisRegistry))
+      : [];
+
+  const awaitingVariantValue =
+    mode === "create" &&
+    Boolean(groupId) &&
+    (variantValues.length === 0 || unansweredAxes.length > 0);
 
   const groupedCategories = useMemo(() => {
     const groups = new Map<string, CategoryOption[]>();
@@ -160,11 +189,19 @@ export function ProductForm({
     }
   }
 
-  function onInvalid() {
-    // Errors on a hidden tab are invisible, which reads as a dead save button.
-    const firstTab = findTabWithError(Object.keys(errors));
-    if (firstTab) setActiveTab(firstTab);
-    toast.error("راجع الحقول المطلوبة");
+  /*
+   * Errors on a hidden tab are invisible, which reads as a dead save button.
+   *
+   * The errors come from the argument, NOT from the `errors` closure above:
+   * react-hook-form validates and only then calls this handler, so on the
+   * first failed submit the closure still holds the previous render's empty
+   * `formState.errors` and no tab switch happened at all. The user had to
+   * click save twice to find out which field was wrong.
+   */
+  function onInvalid(invalid: FieldErrors<ProductFormValues>) {
+    const summary = describeFormErrors(invalid as Record<string, unknown>);
+    if (summary.tab) setActiveTab(summary.tab);
+    toast.error(summary.message);
   }
 
   return (
@@ -201,6 +238,27 @@ export function ProductForm({
           {mode === "create" ? "حفظ المنتج" : "حفظ التعديلات"}
         </button>
       </div>
+
+      {awaitingVariantValue && (
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-accent-soft p-3 text-sm text-accent-foreground dark:text-accent"
+        >
+          <span>
+            هذه نسخة جديدة داخل مجموعة.{" "}
+            {unansweredAxes.length > 0
+              ? `حدد ${unansweredAxes.join(" و")} لهذه النسخة قبل الحفظ.`
+              : "حدد قيمة الخاصية التي تميّزها عن باقي النسخ قبل الحفظ."}
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveTab("specs")}
+            className="shrink-0 rounded-lg border border-current px-3 py-1.5 font-medium"
+          >
+            تحديد القيمة
+          </button>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4 h-auto flex-wrap">
@@ -431,6 +489,11 @@ export function ProductForm({
               groupId={groupId}
               variantValues={variantValues}
               groups={groups}
+              registry={axisRegistry}
+              productId={productId}
+              groupError={fieldMessage(errors.group_id)}
+              valuesError={fieldMessage(errors.variant_values)}
+              valueErrors={rowValueMessages(errors.variant_values)}
               onChange={(patch) => {
                 setValue("group_id", patch.group_id, { shouldDirty: true });
                 setValue("variant_values", patch.variant_values, {
@@ -541,36 +604,6 @@ export function ProductForm({
 }
 
 /* -------------------------------------------------------------------------- */
-
-/** Which tab a given field lives on, so validation errors are reachable. */
-const FIELD_TABS: Record<string, string> = {
-  name_ar: "basic",
-  name_en: "basic",
-  sku: "basic",
-  slug: "basic",
-  category_id: "basic",
-  brand_id: "basic",
-  warranty_info: "basic",
-  basePrice: "pricing",
-  salePrice: "pricing",
-  saleEndDate: "pricing",
-  buying_price: "pricing",
-  stock_quantity: "pricing",
-  low_stock_threshold: "pricing",
-  specifications: "specs",
-  features: "features",
-  content_blocks: "content",
-  video_urls: "media",
-  meta_title_ar: "media",
-  meta_description_ar: "media",
-};
-
-function findTabWithError(fields: string[]): string | undefined {
-  for (const tab of TABS) {
-    if (fields.some((field) => FIELD_TABS[field] === tab.id)) return tab.id;
-  }
-  return undefined;
-}
 
 function Field({
   label,

@@ -862,6 +862,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      variant_axes: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          key: string;
+          kind: string;
+          label_ar: string;
+          schema_property: string | null;
+          spec_aliases: string[];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          key: string;
+          kind?: string;
+          label_ar: string;
+          schema_property?: string | null;
+          spec_aliases?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          key?: string;
+          kind?: string;
+          label_ar?: string;
+          schema_property?: string | null;
+          spec_aliases?: string[];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       wishlists: {
         Row: {
           created_at: string;
@@ -900,9 +933,36 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      product_group_health: {
+        Row: {
+          active_count: number | null;
+          axes: string[] | null;
+          id: string | null;
+          member_count: number | null;
+          members_axis_spec_mismatch: number | null;
+          members_axis_spec_missing: number | null;
+          members_missing_axis: number | null;
+          members_with_extra_axis: number | null;
+          members_without_images: number | null;
+          name_ar: string | null;
+          primary_count: number | null;
+          undeclared_axes: string[] | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
+      axis_spec_keys: { Args: { p_axis: string }; Returns: string[] };
+      create_variant_group: {
+        Args: {
+          p_axis: string;
+          p_name: string;
+          p_product_id: string;
+          p_value: string;
+          p_write_spec?: boolean;
+        };
+        Returns: string;
+      };
       derive_payment_status: {
         Args: { p_has_refund: boolean; p_paid: number; p_total: number };
         Returns: string;
@@ -934,6 +994,19 @@ export type Database = {
       normalize_place_name: { Args: { p_name: string }; Returns: string };
       place_order: { Args: { p_items: Json; p_order: Json }; Returns: string };
       recompute_locality_distances: { Args: never; Returns: number };
+      rename_variant_axis: {
+        Args: { p_group_id: string; p_new_key: string; p_old_key: string };
+        Returns: undefined;
+      };
+      set_variant_value: {
+        Args: {
+          p_axis: string;
+          p_product_id: string;
+          p_value: string;
+          p_write_spec?: boolean;
+        };
+        Returns: undefined;
+      };
       search_products: {
         Args: { limit_count?: number; search_term: string };
         Returns: {
