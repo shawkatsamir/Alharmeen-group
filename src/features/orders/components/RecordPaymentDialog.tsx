@@ -108,7 +108,10 @@ export function RecordPaymentDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md" dir="rtl">
+      <DialogContent
+        className="max-h-[92dvh] overflow-y-auto overscroll-contain max-sm:top-auto max-sm:bottom-0 max-sm:w-full max-sm:max-w-full max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-safe sm:max-w-md"
+        dir="rtl"
+      >
         <DialogHeader>
           <DialogTitle>تسجيل دفعة — طلب #{orderNumber}</DialogTitle>
           <DialogDescription>

@@ -28,13 +28,12 @@ export default async function AdminShippingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">الشحن</h1>
-        <p className="text-sm text-muted-foreground">
-          تحديد تكلفة التوصيل لكل محافظة والمحافظات المتاحة للتوصيل.
-        </p>
-      </div>
+    <div className="space-y-4 lg:space-y-6">
+      {/* The route title is rendered by the admin header; repeating it here
+          cost a phone a whole heading before any content. */}
+      <p className="text-muted-foreground text-sm">
+        تحديد تكلفة التوصيل لكل محافظة والمحافظات المتاحة للتوصيل.
+      </p>
       <ShippingRatesTable />
     </div>
   );

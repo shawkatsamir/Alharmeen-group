@@ -53,10 +53,10 @@ export function SpecEditor({ value, onChange, categoryId }: SpecEditorProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-900 dark:text-white">
+        <h3 className="font-semibold text-foreground dark:text-white">
           المواصفات الفنية
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           استخدم نفس أسماء المواصفات المستخدمة في القسم حتى تظهر مجمّعة بشكل صحيح
           وتصلح للمقارنة بين المنتجات.
         </p>
@@ -81,7 +81,7 @@ export function SpecEditor({ value, onChange, categoryId }: SpecEditorProps) {
           return (
             <div
               key={index}
-              className="flex items-start gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900/40"
+              className="flex items-start gap-2 rounded-lg bg-surface-sunken p-2"
             >
               <div className="grid flex-1 gap-2 sm:grid-cols-2">
                 <div>
@@ -92,7 +92,7 @@ export function SpecEditor({ value, onChange, categoryId }: SpecEditorProps) {
                     placeholder="اسم المواصفة، مثال: السعة"
                   />
                   {match?.isHighlight && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-[#4EA674]">
+                    <p className="mt-1 flex items-center gap-1 text-xs text-primary">
                       <Sparkles className="h-3 w-3" />
                       تظهر بجانب السعر
                     </p>
@@ -145,15 +145,15 @@ export function SpecEditor({ value, onChange, categoryId }: SpecEditorProps) {
       <button
         type="button"
         onClick={() => onChange([...value, { key: "", value: "" }])}
-        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:border-[#4EA674] hover:text-[#4EA674] dark:border-gray-600 dark:text-gray-300"
+        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
         إضافة مواصفة
       </button>
 
       {unusedSuggestions.length > 0 && (
-        <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="rounded-xl border border-border p-3">
+          <p className="mb-2 text-sm font-medium text-foreground">
             مواصفات شائعة في هذا القسم
           </p>
           <div className="flex flex-wrap gap-2">
@@ -162,7 +162,7 @@ export function SpecEditor({ value, onChange, categoryId }: SpecEditorProps) {
                 key={s.key}
                 type="button"
                 onClick={() => onChange([...value, { key: s.key, value: "" }])}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs hover:border-[#4EA674] hover:text-[#4EA674] dark:border-gray-700"
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs hover:border-primary hover:text-primary"
                 title={`مستخدمة في ${s.uses} منتج`}
               >
                 <Plus className="h-3 w-3" />
@@ -197,8 +197,8 @@ function SmallButton({
       disabled={disabled}
       className={`rounded-lg p-1.5 transition-colors disabled:opacity-30 ${
         destructive
-          ? "text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-          : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+          ? "text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+          : "text-muted-foreground hover:bg-surface-sunken "
       }`}
     >
       {children}

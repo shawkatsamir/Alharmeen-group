@@ -20,6 +20,34 @@ export function formatCurrency(amount: number) {
   return `${amount.toLocaleString("en-EG", { maximumFractionDigits: 2 })} ج.م`;
 }
 
+/*
+ * Dates, formatted once.
+ *
+ * Same discipline as `formatCurrency`: the admin had a bare
+ * `toLocaleDateString()` in one table (machine locale, so an English date on
+ * an English server) and `"ar-EG"` in another, which renders Arabic-Indic
+ * digits that clash with the Latin numerals used everywhere else. The
+ * `-u-nu-latn` extension keeps the Arabic month name and Latin digits.
+ */
+const DATE_LOCALE = "ar-EG-u-nu-latn";
+
+/** `12 نوفمبر 2026` — full date, for tables and detail views. */
+export function formatDate(value: string | number | Date) {
+  return new Date(value).toLocaleDateString(DATE_LOCALE, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** `12 نوفمبر` — no year, for dense lists where the year is implied. */
+export function formatDateShort(value: string | number | Date) {
+  return new Date(value).toLocaleDateString(DATE_LOCALE, {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 export function getYoutubeId(url: string | null | undefined) {
   if (!url) return null;
 

@@ -205,35 +205,44 @@ export function ProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="p-6" dir="rtl">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+    /*
+     * `pb-28` on the phone clears the sticky save bar below; the admin layout
+     * already supplies the page gutter, so this form adds none of its own.
+     */
+    <form
+      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      className="pb-28 lg:pb-0"
+      dir="rtl"
+    >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 lg:mb-6">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             href="/admin/products"
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="text-muted-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 -ms-1 flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
             title="رجوع للمنتجات"
+            aria-label="رجوع للمنتجات"
           >
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="size-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {mode === "create" ? "إضافة منتج" : "تعديل المنتج"}
-            </h1>
-            {mode === "edit" && (
-              <p className="text-sm text-gray-500">{defaultValues.name_ar}</p>
-            )}
-          </div>
+          {/* The route title is in the admin header; this line names the
+              record being edited, which the header cannot know. */}
+          {mode === "edit" && (
+            <p className="text-muted-foreground min-w-0 truncate text-sm">
+              {defaultValues.name_ar}
+            </p>
+          )}
         </div>
 
+        {/* Desktop keeps save at the top; the phone gets the sticky bar. */}
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#4EA674] px-5 py-2.5 font-medium text-white hover:bg-[#3d8a5e] disabled:opacity-50"
+          className="bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-ring/50 hidden h-11 items-center gap-2 rounded-lg px-5 font-medium transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:opacity-50 lg:inline-flex"
         >
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Save className="h-4 w-4" />
+            <Save className="size-4" />
           )}
           {mode === "create" ? "حفظ المنتج" : "حفظ التعديلات"}
         </button>
@@ -261,15 +270,19 @@ export function ProductForm({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4 h-auto flex-wrap">
+        <TabsList className="no-scrollbar mb-4 flex h-auto w-full snap-x justify-start overflow-x-auto lg:flex-wrap">
           {TABS.map((tab) => (
-            <TabsTrigger key={tab.id} value={tab.id} className="px-3 py-1.5">
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className="min-h-11 shrink-0 snap-start px-3 whitespace-nowrap"
+            >
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+        <div className="border-border bg-card rounded-xl border p-4 lg:p-6">
           {/* ---------------------------------------------------------- basic */}
           <TabsContent value="basic" className="space-y-4">
             <Field label="اسم المنتج بالعربية" error={errors.name_ar?.message} required>
@@ -386,13 +399,13 @@ export function ProductForm({
               </Field>
             </div>
 
-            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+            <div className="rounded-xl border border-border p-4">
               <label className="flex items-center justify-between">
                 <span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-foreground">
                     تفعيل عرض خاص
                   </span>
-                  <span className="block text-sm text-gray-500">
+                  <span className="block text-sm text-muted-foreground">
                     يظهر المنتج في صفحة العروض بسعر مخفّض.
                   </span>
                 </span>
@@ -530,15 +543,15 @@ export function ProductForm({
             />
 
             {legacyHtml && (
-              <details className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+              <details className="rounded-xl border border-border p-4">
+                <summary className="min-h-11 cursor-pointer text-sm font-medium text-foreground">
                   الوصف القديم (HTML) — للقراءة فقط
                 </summary>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-muted-foreground">
                   يظهر هذا الوصف في صفحة المنتج طالما لم تضف أي أقسام أعلاه. بمجرد
                   إضافة أول قسم يحل المحتوى الجديد محله.
                 </p>
-                <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
+                <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-surface-sunken p-3 text-xs text-muted-foreground">
                   {legacyHtml}
                 </pre>
               </details>
@@ -557,11 +570,11 @@ export function ProductForm({
               <PendingImages files={pendingFiles} onChange={setPendingFiles} />
             )}
 
-            <div className="space-y-3 border-t border-gray-200 pt-6 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+            <div className="space-y-3 border-t border-border pt-6">
+              <h3 className="font-semibold text-foreground">
                 فيديوهات المنتج
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 استخدم رابط التضمين من يوتيوب (embed)، وليس رابط المشاهدة.
               </p>
               {(Object.keys(VIDEO_LABELS) as (keyof typeof VIDEO_LABELS)[]).map(
@@ -577,8 +590,8 @@ export function ProductForm({
               )}
             </div>
 
-            <div className="space-y-3 border-t border-gray-200 pt-6 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+            <div className="space-y-3 border-t border-border pt-6">
+              <h3 className="font-semibold text-foreground">
                 تحسين محركات البحث
               </h3>
               <Field
@@ -599,6 +612,26 @@ export function ProductForm({
           </TabsContent>
         </div>
       </Tabs>
+
+      {/*
+       * A phone's save control. The form runs to several screens, and the
+       * only submit button used to sit above the tab strip — scrolled away
+       * for the entire time the admin was actually filling anything in.
+       */}
+      <div className="border-border bg-surface-raised/95 fixed inset-x-0 bottom-0 z-30 border-t p-3 pb-safe backdrop-blur lg:hidden">
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-ring/50 flex h-12 w-full items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Save className="size-4" />
+          )}
+          {mode === "create" ? "حفظ المنتج" : "حفظ التعديلات"}
+        </button>
+      </div>
     </form>
   );
 }
@@ -620,12 +653,12 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="text-sm font-medium text-foreground">
         {label}
         {required && <span className="mr-1 text-red-500">*</span>}
       </label>
       {children}
-      {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
@@ -643,10 +676,10 @@ function FlagSwitch({
   hint?: string;
 }) {
   return (
-    <label className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+    <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-3">
       <span>
-        <span className="font-medium text-gray-900 dark:text-white">{label}</span>
-        {hint && <span className="block text-xs text-gray-500">{hint}</span>}
+        <span className="font-medium text-foreground">{label}</span>
+        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       </span>
       <Controller
         control={control}
@@ -669,10 +702,10 @@ function FeatureList({
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="font-semibold text-gray-900 dark:text-white">
+        <h3 className="font-semibold text-foreground">
           أبرز المميزات
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           تظهر كقائمة بعلامات صح أعلى صفحة المنتج.
         </p>
       </div>
@@ -689,7 +722,7 @@ function FeatureList({
           <button
             type="button"
             onClick={() => onChange(value.filter((_, i) => i !== index))}
-            className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             title="حذف"
           >
             <X className="h-4 w-4" />
@@ -700,7 +733,7 @@ function FeatureList({
       <button
         type="button"
         onClick={() => onChange([...value, ""])}
-        className="rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:border-[#4EA674] hover:text-[#4EA674] dark:border-gray-600 dark:text-gray-300"
+        className="min-h-11 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
       >
         إضافة ميزة
       </button>
@@ -729,17 +762,17 @@ function PendingImages({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className="font-semibold text-foreground">
             صور المنتج
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             سيتم رفع الصور بعد حفظ المنتج. الصورة الأولى تصبح الصورة الرئيسية.
           </p>
         </div>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#4EA674] px-4 py-2 text-sm font-medium text-white hover:bg-[#3d8a5e]"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
         >
           <Upload className="h-4 w-4" />
           اختيار صور
@@ -765,7 +798,7 @@ function PendingImages({
       />
 
       {previews.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600">
+        <p className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
           لم يتم اختيار صور بعد.
         </p>
       ) : (
@@ -773,7 +806,7 @@ function PendingImages({
           {previews.map(({ file, url }, index) => (
             <div
               key={`${file.name}-${index}`}
-              className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700"
+              className="relative aspect-square overflow-hidden rounded-lg border border-border bg-card"
             >
               {/* Object URL, not a remote host — plain <img> avoids the loader. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -785,13 +818,13 @@ function PendingImages({
               <button
                 type="button"
                 onClick={() => onChange(files.filter((_, i) => i !== index))}
-                className="absolute left-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                className="absolute start-1 top-1 flex size-8 items-center justify-center rounded-full bg-foreground/70 text-background transition-colors hover:bg-destructive"
                 title="إزالة"
               >
-                <X className="h-3 w-3" />
+                <X className="size-4" />
               </button>
               {index === 0 && (
-                <span className="absolute bottom-1 right-1 rounded bg-success px-1.5 py-0.5 text-[11px] text-success-foreground">
+                <span className="absolute bottom-1 end-1 rounded bg-success px-1.5 py-0.5 text-[11px] text-success-foreground">
                   رئيسية
                 </span>
               )}

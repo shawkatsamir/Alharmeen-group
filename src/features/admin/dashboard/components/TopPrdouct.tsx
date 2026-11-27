@@ -34,13 +34,13 @@ export function TopProducts() {
   ];
 
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border">
-      <div className="p-6 border-b border-border">
+    <div className="bg-card rounded-xl border border-border">
+      <div className="border-b border-border p-4 lg:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">
             أعلى المنتجات مبيعاً
           </h2>
-          <button className="text-sm text-primary font-medium hover:text-primary/80">
+          <button className="min-h-11 px-2 text-sm font-medium text-primary hover:text-primary/80">
             كل المنتجات
           </button>
         </div>
@@ -49,15 +49,15 @@ export function TopProducts() {
           <input
             type="text"
             placeholder="بحث"
-            className="w-full pl-10 pr-4 py-2 text-sm bg-muted border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
+            className="h-11 w-full rounded-lg border border-input bg-input-background ps-10 pe-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute start-3 top-1/2 size-4 -translate-y-1/2" />
         </div>
       </div>
 
       <div className="divide-y divide-border">
         {products.map((product, index) => (
-          <div key={index} className="p-4 hover:bg-primary-soft transition-colors">
+          <div key={index} className="p-3 transition-colors hover:bg-primary-soft sm:p-4">
             <div className="flex items-center gap-4">
               {" "}
               {/* 1. Outer container: Just handles layout (removed w-12 h-12) */}

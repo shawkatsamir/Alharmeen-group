@@ -86,6 +86,121 @@ Admin identity = `profiles.role === "admin"`; there is also an `is_admin()` Post
 - **No one-sided bar on a rounded box** (`border-r-4` on a card or callout). Use a full border plus a tint; the leading icon carries the meaning. Heading rules on plain text are fine.
 - **No eyebrow or kicker above a heading.** The heading carries its own weight.
 
+### The admin on a phone (added 2026-11-27)
+
+The dashboard was built desktop-only and every page rendered a document about
+800px wide inside a 390px viewport. It is now verified at 360px and 390px,
+light and dark, across all nine admin routes: zero horizontal overflow, zero
+touch targets under 40px.
+
+- **`.admin-touch` is how the admin gets touch-sized controls** (`globals.css`,
+  under `@media (pointer: coarse)`, class applied on the admin layout root).
+  The shared primitives are 36px (`Input` is `h-9`, `Button` default `h-9`,
+  `size="icon"` 36 square) and the `Switch` track is 18px. The rule raises
+  `min-height` on `input` / `select` / `textarea` / `[data-slot="button"]` and
+  extends the switch's hit area with a pseudo-element. **Do not re-solve this
+  per component** — add `min-h-11` only on bare elements the rule cannot see
+  (a hand-rolled `<button>` with no `data-slot`). It keys on pointer type, not
+  viewport, because a touchscreen laptop needs it and a narrow desktop window
+  does not, and it is scoped so the storefront keeps its own sizing.
+- **A table becomes a card list below the breakpoint, never a sideways
+  scroll.** `OrdersTable`, `ProductsTable` and `TransactionTable` switch at
+  `md`; the shipping tables at `lg`, because they carry more columns. Both
+  renderings live in the same component and read the same row state, so they
+  cannot drift. `LocalitiesTable` adds progressive disclosure: its ten columns
+  collapse to the four facts the coordinate audit scans, with the editable
+  fields behind a `<details>` — the audit is a scan of ~97 rows and only a
+  handful get corrected.
+- **Page titles come from the admin header.** `adminPageTitle(pathname)` in
+  `nav-items.ts` resolves the route's title, so **a page must not render its
+  own `<h1>`** — two stacked headings saying nearly the same thing cost a
+  phone a third of the first viewport. A page may add a subtitle, or name the
+  record being edited, which the header cannot know.
+- **`src/features/admin/components/nav-items.ts` is the single source of truth
+  for admin navigation**, import-free and unit-testable (icons live in
+  `nav-icons.ts`, same split as `order-status.ts` / `order-status-icons.ts`).
+  `AdminNav` renders it for both the desktop rail and the phone drawer so the
+  two can never describe different information architectures.
+- **`ready: false` marks a destination with no route yet** and renders it as a
+  non-tappable row labelled `قريباً`. Five of thirteen entries were plain
+  links to pages that do not exist; on a phone the drawer is the only way to
+  navigate, so a 404 was a dead end. The same treatment applies to
+  unimplemented buttons (`إضافة طلب`, the orders export/import/print menu):
+  disabled and labelled, never silently inert.
+- **The drawer is a `Sheet`, not a `fixed` div.** `shared/components/ui/Sheet.tsx`
+  wraps Radix Dialog, so focus trap, Escape, scroll lock and aria come for
+  free. Sides are logical (`start` / `end` / `bottom`) because the app is RTL,
+  and the entrance animation is stated per direction since `slide-in-from-*`
+  translates along a physical axis. Nav links are wrapped in `SheetClose` —
+  closing on a pathname effect would trip `react-hooks/set-state-in-effect`.
+- **Drawer state and desktop-collapsed state are two booleans.** They used to
+  be one, defaulting to `true`, which is why every phone load opened with the
+  sidebar covering the screen.
+- **The phone lets the document scroll.** The fixed-height two-pane shell with
+  an inner scroller starts at `lg`; on a phone it fights the address bar and
+  strands `position: sticky`.
+- **Long forms put the submit control in a sticky bottom bar below `lg`**
+  (`ProductForm`). Its only save button sat above the tab strip, scrolled away
+  for the whole time the admin was filling the form in.
+- **Dialogs that carry real content become bottom sheets below `sm`**
+  (`max-sm:top-auto max-sm:bottom-0 max-sm:translate-y-0 … max-sm:pb-safe`) —
+  see `OrderDetailsModal` and `RecordPaymentDialog`.
+
+#### Three bugs this surfaced, now fixed
+
+- **`--switch-background` was referenced by `Switch` and defined nowhere**, so
+  every toggle in the app rendered its "off" state with a transparent track: a
+  bare white thumb with nothing to say it was a control. On "is this city
+  deliverable?" that is not cosmetic.
+- **`DialogContent`'s close button was `right-4`.** The app is `dir="rtl"`, so
+  the physical right edge is the box's *start* and the ✕ sat on top of every
+  dialog title. It is `end-3` now. **Reach for `start`/`end`, never
+  `left`/`right`, anywhere in this codebase.**
+- **`ThemeToggle`'s moon icon was `absolute` with no positioned ancestor**, so
+  it laid itself out against whatever further up the tree happened to be
+  positioned.
+
+#### Admin colour and formatting
+
+- **The admin carried a hardcoded `#4EA674` green that appears in no token,
+  plus the raw `gray-*` palette DESIGN.md bans.** Both are gone from
+  `src/features/admin`, `src/app/admin` and `src/features/orders`: `primary`
+  (ALHARMAN navy) for active tabs, links and primary actions, `success` for
+  `متوفر` / `مدفوع`, `destructive` for archive and cancel. **Do not reintroduce
+  the green.** It still exists on `/account/orders/[id]`, `/account`, and in
+  `PaymentInstructions` — storefront surfaces, not yet converted.
+- **Order status pills come from the registry, not from a literal.**
+  `STATUS_COLORS` for customer surfaces, `ADMIN_STATUS_COLORS` for the
+  dashboard (which has dark mode). The customer `OrderCard` used to print
+  every status in the same green, so a cancelled order announced itself in the
+  success colour.
+- **`formatDate` / `formatDateShort` in `lib/utils.ts` are the only date
+  formatters**, same discipline as `formatCurrency`. The admin had a bare
+  `toLocaleDateString()` in one table (machine locale, so an English date on an
+  English server) and `"ar-EG"` in another, which emits Arabic-Indic digits
+  that clash with the Latin numerals used everywhere else. The locale is
+  `ar-EG-u-nu-latn`: Arabic month name, Latin digits.
+- Seven order statuses need seven distinguishable hues, which four semantic
+  tokens cannot supply, so `ADMIN_STATUS_COLORS` keeps the Tailwind palette on
+  purpose. That is the one sanctioned exception.
+
+#### Verifying this again
+
+The admin pages guard themselves server-side, so an anonymous browser is
+redirected and the screens cannot be screenshotted at all. Rather than relaxing
+a guard, point the app at a stub: a PostgREST + GoTrue fake that answers "yes,
+admin" and serves fixtures, with the session supplied as the
+`sb-<first-label-of-supabase-host>-auth-token` cookie (same mechanism as
+`e2e/session.ts`). Two traps worth knowing:
+
+- **Measure before you screenshot.** A Playwright `fullPage` capture resizes
+  the viewport and drops Chromium's touch emulation, so anything measured
+  afterwards reports as a mouse and every `(pointer: coarse)` rule reads as
+  inactive.
+- **Restart the dev server after editing `globals.css`.** Turbopack served a
+  stale stylesheet across several runs, which looks exactly like a rule that
+  does not match.
+
 ### Brand and motion (added 2026-09-23)
 
 **The client already has a logo** — `src/app/favicon.ico` is the ALHARMAN mark (gold triangular spiral on navy, Latin "ALHARMAN — GROUP —"). It is not a Next default; do not replace it without the owner. The Arabic wordmark is its counterpart, not a new identity.
@@ -312,6 +427,36 @@ Items 1–5 of this list were closed by the 2026-08-25 phase-2 work (group panel
 5. **Phase 3: group-owned shared content.** Move `description_ar`, `content_blocks`, `features` and `warranty_info` onto `product_groups` with a per-product override, so a correction is made once instead of once per variant. This is the remaining half of the effort saving and the single highest-value item left.
 6. **E2E coverage for variants.** `e2e/stub-supabase.mjs` has no `product_groups`, so the switcher, the per-axis rows and the collapsed grid are covered by unit tests plus manual verification against the built HTML — not by Playwright.
 7. **No two-axis group exists yet.** `buildAxisSelectors` is unit-tested against 2×2, sparse and 3-axis fixtures, but nothing in production exercises it. The first real one should be checked by hand.
+
+### Admin UI — remaining after the phone pass (2026-11-27)
+
+- **The dashboard is still hardcoded mock data.** `StatsCards`, `WeeklyReport`,
+  `TransactionTable` and `TopProducts` render invented figures — `$350K`,
+  `Apple iPhone 13`, `$64` transactions — in dollars, for an EGP shop. The
+  2026-11-27 pass fixed how they lay out and deliberately left the numbers;
+  wiring them to Supabase is a feature build, agreed as later work. `/admin`
+  is the first screen the owner sees, so this is the highest-value item here.
+- **`/admin/categories` and `/admin/customers` are one-line stubs** that the
+  navigation links to as if they were finished.
+- **Five nav destinations have no route**: `/admin/coupons`,
+  `/admin/transactions`, `/admin/brands`, `/admin/roles`, `/admin/permissions`.
+  They render as `قريباً` rather than as links; building any of them means
+  flipping `ready: true` in `nav-items.ts`.
+- **Non-functional controls still on screen, marked `قريباً`**: `إضافة طلب`
+  and the orders export / import / print menu. The admin header's global
+  search was deleted outright rather than marked — it had no handler on any
+  viewport and each table carries its own working `DebouncedSearchInput`.
+- **The orders page prints the same four counts twice on desktop** — the stats
+  cards and the filter tabs. The cards are hidden below `sm` for that reason;
+  whether desktop keeps both is an open call.
+- **`/avatar.jpeg` is a stock photo of a stranger** used as the admin's avatar
+  in the header.
+- **The storefront still carries the `#4EA674` green**: `/account`,
+  `/account/orders/[id]` and `PaymentInstructions`. The admin and the orders
+  list are converted; those three are not.
+- **No real-device testing.** Verification was Chromium with touch emulation,
+  which proves layout, hit areas and gesture wiring, not iOS Safari scrolling,
+  keyboard behaviour or font rendering.
 
 ### Catalogue data
 

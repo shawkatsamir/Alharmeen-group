@@ -57,6 +57,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
   --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
 
   --color-brand-navy: var(--brand-navy);
   --color-brand-gold: var(--brand-gold);
@@ -147,6 +148,14 @@
 
   --border: oklch(0.918 0.008 253);
   --input: oklch(0.918 0.008 253);
+  /*
+   * The unchecked switch track. `Switch` has always referenced
+   * `bg-switch-background` and the token was never defined, so every toggle
+   * in the dashboard rendered its "off" state with a transparent track — a
+   * bare white thumb floating on the card, with nothing to say it was a
+   * control at all. Darker than --border so the track reads as a track.
+   */
+  --switch-background: oklch(0.868 0.011 253);
   --ring: oklch(0.42 0.128 255);
 
   --chart-1: oklch(0.42 0.128 255);
@@ -205,6 +214,7 @@
 
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
+  --switch-background: oklch(1 0 0 / 22%);
   --ring: oklch(0.68 0.132 250);
 
   --chart-1: oklch(0.68 0.132 250);
@@ -241,6 +251,53 @@
   /* Arabic numerals stay latin-shaped so prices read consistently. */
   [dir="rtl"] {
     font-variant-numeric: lining-nums tabular-nums;
+  }
+}
+
+/*
+ * Touch targets in the dashboard.
+ *
+ * The admin is built from 36px controls (`Input` is h-9, `Button` default is
+ * h-9, `size="icon"` is 36 square) and an 18px-tall `Switch` track. That is
+ * fine for a mouse and well under the 44px a thumb needs, and the admin is
+ * now expected to work a phone. Applied by pointer type rather than by
+ * viewport, because a touchscreen laptop needs it and a narrow desktop
+ * window does not, and scoped to `.admin-touch` so the storefront keeps the
+ * sizing it was designed with.
+ *
+ * `min-height` rather than `height`, so a control that is already taller —
+ * a textarea, a wrapped button — is never shrunk.
+ */
+@media (pointer: coarse) {
+  .admin-touch :is(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+      select,
+      textarea,
+      [data-slot="input"],
+      [data-slot="textarea"],
+      [data-slot="select-trigger"],
+      [data-slot="button"]
+    ) {
+    min-height: 2.75rem;
+  }
+
+  .admin-touch [data-slot="button"] {
+    min-inline-size: 2.75rem;
+  }
+
+  /*
+   * The switch track is deliberately small; grow the hit area around it with
+   * a pseudo-element instead, so the control keeps its drawn size.
+   */
+  .admin-touch [data-slot="switch"] {
+    position: relative;
+  }
+
+  .admin-touch [data-slot="switch"]::after {
+    content: "";
+    position: absolute;
+    inset-block: -0.8rem;
+    inset-inline: -0.75rem;
   }
 }
 

@@ -17,9 +17,9 @@ export default function OrderDetailModalWrapper({ order }: { order: Order }) {
   // 2. Show loading spinner inside the modal while fetching
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] gap-2">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-gray-500 text-sm">Loading items...</p>
+      <div className="flex h-[300px] flex-col items-center justify-center gap-2">
+        <Loader2 className="text-primary size-8 animate-spin" />
+        <p className="text-muted-foreground text-sm">جاري تحميل الأصناف...</p>
       </div>
     );
   }

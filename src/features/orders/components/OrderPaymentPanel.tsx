@@ -50,12 +50,12 @@ export function OrderPaymentPanel({
     : paymentStatus;
   const statusClass = isPaymentStatus(paymentStatus)
     ? ADMIN_PAYMENT_STATUS_COLORS[paymentStatus]
-    : "text-gray-600 bg-gray-50";
+    : "text-muted-foreground bg-surface-sunken";
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold text-gray-700 dark:text-gray-300">
+        <h3 className="font-semibold text-foreground">
           المدفوعات
         </h3>
         <span
@@ -80,7 +80,7 @@ export function OrderPaymentPanel({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 text-sm">
+      <div className="grid grid-cols-3 gap-2 text-sm max-[380px]:grid-cols-1">
         <div>
           <p className="text-xs text-muted-foreground">الإجمالي</p>
           <p className="font-medium">{formatCurrency(total)}</p>

@@ -28,14 +28,14 @@ export function AreaChart() {
             label: "المبيعات",
             data: [15, 25, 20, 28, 35, 22, 30],
             fill: true,
-            backgroundColor: "rgba(78, 166, 116, 0.1)",
-            borderColor: "rgba(78, 166, 116, 1)",
+            backgroundColor: "oklch(0.42 0.128 255 / 0.12)",
+            borderColor: "oklch(0.42 0.128 255)",
             borderWidth: 2,
             tension: 0.4,
             pointRadius: 0,
             pointHoverRadius: 6,
             pointBackgroundColor: "#fff",
-            pointBorderColor: "rgba(78, 166, 116, 1)",
+            pointBorderColor: "oklch(0.42 0.128 255)",
             pointBorderWidth: 2,
           },
         ],
@@ -50,7 +50,7 @@ export function AreaChart() {
           tooltip: {
             mode: "index",
             intersect: false,
-            backgroundColor: "rgba(78, 166, 116, 0.9)",
+            backgroundColor: "oklch(0.42 0.128 255 / 0.92)",
             padding: 12,
             cornerRadius: 8,
             displayColors: false,
@@ -104,8 +104,8 @@ export function AreaChart() {
   }, []);
 
   return (
-    <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
-      <div className="h-64">
+    <div className="bg-card rounded-xl border border-border p-4 lg:p-6">
+      <div className="h-56 sm:h-64">
         <canvas ref={chartRef}></canvas>
       </div>
     </div>

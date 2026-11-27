@@ -1,50 +1,84 @@
-import { Search } from "lucide-react";
+"use client";
+
+import { Menu, Store } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/DropdownMenu";
 import { Img } from "@/shared/components/ui/Image";
-import { ModeToggle } from "./ThemeToggle";
 import { NotificationBell } from "../notifications/components/NotificationBell";
+import { adminPageTitle } from "./nav-items";
+import { ModeToggle } from "./ThemeToggle";
+import { AdminSignOutItem } from "./AdminSignOutItem";
 
-interface HeaderProps {
-  children?: React.ReactNode;
-}
+/**
+ * The admin top bar.
+ *
+ * Changes from the desktop-only version: the drawer trigger lives here rather
+ * than floating over the page content, and the page title is always visible —
+ * it was `hidden lg:block`, so a phone had no indication of which screen it
+ * was on, with the drawer closed and no breadcrumb either.
+ *
+ * The 256px-wide search input is gone. It had no `onChange`, no submit handler
+ * and an English placeholder: it searched nothing on any viewport, and on a
+ * phone it was the single widest element in the header. Each table carries its
+ * own working `DebouncedSearchInput`.
+ */
+export function Header({ onOpenNav }: { onOpenNav: () => void }) {
+  const pathname = usePathname();
 
-export function Header({ children }: HeaderProps) {
   return (
-    <header className="bg-background border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {children}
-          <h1 className="text-lg font-bold text-foreground hidden lg:block">
-            لوحة التحكم
-          </h1>
-        </div>
+    <header className="bg-surface-raised border-border sticky top-0 z-30 border-b">
+      <div className="flex h-16 items-center gap-2 px-3 lg:px-6">
+        <button
+          type="button"
+          onClick={onOpenNav}
+          aria-label="فتح القائمة"
+          className="text-foreground hover:bg-primary-soft hover:text-primary focus-visible:ring-ring/50 -ms-1 flex size-11 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-none lg:hidden"
+        >
+          <Menu className="size-5" />
+        </button>
 
-        <div className="flex items-center space-x-4">
-          {/* Search */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search data, users, or reports"
-              className="w-64 pl-4 pr-10 py-2 text-sm  dark:bg-gray-700  bg-muted border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
-            />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-gray-300" />
-          </div>
+        <h1 className="text-foreground min-w-0 flex-1 truncate text-base font-bold lg:text-lg">
+          {adminPageTitle(pathname)}
+        </h1>
 
-          {/* Notification */}
+        <div className="flex shrink-0 items-center gap-1">
           <NotificationBell />
-
-          {/* Theme Toggle */}
           <ModeToggle />
 
-          {/* User Avatar */}
-          <button className="w-8 h-8 rounded-full bg-muted overflow-hidden">
-            <Img
-              src="/avatar.jpeg"
-              alt="User"
-              width={32}
-              height={32}
-              className="w-full h-full object-cover"
-            />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="حساب المسؤول"
+              className="hover:ring-primary/30 focus-visible:ring-ring/50 flex size-11 items-center justify-center rounded-full transition-shadow hover:ring-2 focus-visible:ring-[3px] focus-visible:outline-none"
+            >
+              <span className="bg-surface-sunken size-8 overflow-hidden rounded-full">
+                <Img
+                  src="/avatar.jpeg"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="size-full object-cover"
+                />
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/" className="cursor-pointer gap-2">
+                  <Store className="size-4" />
+                  العودة إلى المتجر
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <AdminSignOutItem />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
