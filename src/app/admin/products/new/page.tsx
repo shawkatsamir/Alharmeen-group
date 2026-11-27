@@ -13,6 +13,7 @@ import {
   toProductFormValues,
 } from "@/features/admin/products/lib/form-defaults";
 import type { ProductFormValues } from "@/features/admin/products/schema";
+import { getAxisRegistry } from "@/services/server/variant-axes";
 
 interface NewProductPageProps {
   searchParams: Promise<{ duplicateFrom?: string }>;
@@ -42,11 +43,12 @@ export default async function NewProductPage({
 
   const { duplicateFrom } = await searchParams;
 
-  const [categories, brands, groups, source] = await Promise.all([
+  const [categories, brands, groups, source, axisRegistry] = await Promise.all([
     getCategoryOptions(),
     getBrandOptions(),
     getProductGroupOptions(),
     duplicateFrom ? getProductForEdit(duplicateFrom) : Promise.resolve(null),
+    getAxisRegistry(),
   ]);
 
   return (
@@ -56,6 +58,7 @@ export default async function NewProductPage({
       categories={categories}
       brands={brands}
       groups={groups}
+      axisRegistry={axisRegistry}
     />
   );
 }

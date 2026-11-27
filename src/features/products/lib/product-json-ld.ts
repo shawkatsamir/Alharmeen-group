@@ -24,7 +24,10 @@
  */
 
 import type { Product, VariantSibling } from "../types";
-import { variantAxisSchemaProperty } from "../constants/variant-axes";
+import {
+  variantAxisSchemaProperty,
+  type AxisRegistry,
+} from "../constants/variant-axes";
 import { readAxisValue } from "./variant-group";
 
 /**
@@ -78,10 +81,11 @@ function offersFor(
 function axisProperties(
   variantValues: unknown,
   axes: readonly string[],
+  registry?: AxisRegistry,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const axis of axes) {
-    const property = variantAxisSchemaProperty(axis);
+    const property = variantAxisSchemaProperty(axis, registry);
     const value = readAxisValue(variantValues, axis);
     if (property && value) out[property] = value;
   }
@@ -97,9 +101,13 @@ function axisProperties(
  * exists to eliminate, so the axis is stated as a generic property rather than
  * dropped silently.
  */
-function unmappedAxisProperties(variantValues: unknown, axes: readonly string[]) {
+function unmappedAxisProperties(
+  variantValues: unknown,
+  axes: readonly string[],
+  registry?: AxisRegistry,
+) {
   const entries = axes
-    .filter((axis) => !variantAxisSchemaProperty(axis))
+    .filter((axis) => !variantAxisSchemaProperty(axis, registry))
     .map((axis) => ({ axis, value: readAxisValue(variantValues, axis) }))
     .filter((entry): entry is { axis: string; value: string } => entry.value !== null)
     .map((entry) => ({
@@ -157,6 +165,12 @@ export interface BuildProductJsonLdArgs {
    * `content_blocks`, so every block-authored product emitted an empty one.
    */
   description: string;
+  /**
+   * Resolved axis registry. Omitted falls back to the built-in `AXIS_REGISTRY`,
+   * which is what every caller did before axes became admin-declarable — so an
+   * unsupplied registry reproduces the previous output exactly.
+   */
+  registry?: AxisRegistry;
 }
 
 export function buildProductJsonLd({
@@ -164,6 +178,7 @@ export function buildProductJsonLd({
   siblings,
   baseUrl,
   description,
+  registry,
 }: BuildProductJsonLdArgs): Record<string, unknown> {
   const axes = product.group?.axes ?? [];
   const url = productUrl(baseUrl, product.slug);
@@ -179,11 +194,11 @@ export function buildProductJsonLd({
     url,
     image: product.images?.map((img) => img.image_url) ?? [],
     brand,
-    ...axisProperties(product.variant_values, axes),
+    ...axisProperties(product.variant_values, axes, registry),
     offers: offersFor(product, baseUrl),
     additionalProperty: mergeProperties(
       specificationProperties(product.specifications),
-      unmappedAxisProperties(product.variant_values, axes),
+      unmappedAxisProperties(product.variant_values, axes, registry),
     ),
   };
 
@@ -195,7 +210,7 @@ export function buildProductJsonLd({
   }
 
   const variesBy = axes
-    .map((axis) => variantAxisSchemaProperty(axis))
+    .map((axis) => variantAxisSchemaProperty(axis, registry))
     .filter(
       (property): property is "color" | "size" =>
         property !== undefined && VARIES_BY_SUPPORTED.has(property),
@@ -227,10 +242,10 @@ export function buildProductJsonLd({
       image:
         sibling.images?.find((img) => img.is_primary)?.image_url ??
         sibling.images?.[0]?.image_url,
-      ...axisProperties(sibling.variant_values, axes),
+      ...axisProperties(sibling.variant_values, axes, registry),
       // Siblings carry no `specifications` in the lean query, so this is the
       // only thing distinguishing variants on an axis Google has no word for.
-      additionalProperty: unmappedAxisProperties(sibling.variant_values, axes),
+      additionalProperty: unmappedAxisProperties(sibling.variant_values, axes, registry),
       offers: offersFor(sibling, baseUrl),
     })),
   };

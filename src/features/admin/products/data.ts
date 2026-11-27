@@ -112,6 +112,12 @@ export interface GroupHealthRow {
   members_without_images: number;
   members_missing_axis: number;
   members_with_extra_axis: number;
+  /** Spec table and variant switcher state different values for the axis. */
+  members_axis_spec_mismatch: number;
+  /** The varying fact appears nowhere in the member's spec table. */
+  members_axis_spec_missing: number;
+  /** Axes with no `variant_axes` row, still on the `text` fallback. */
+  undeclared_axes: string[] | null;
 }
 
 /**
@@ -180,28 +186,47 @@ export async function getGroupMembers(
   return data as unknown as GroupMember[];
 }
 
+/** A value already claimed on an axis, and the product holding it. */
+export interface AxisValueHolder {
+  value: string;
+  productId: string;
+  sku: string;
+}
+
 export interface ProductGroupOption {
   id: string;
   name_ar: string;
   axes: string[];
-  /** Axis values already in use, so the form can suggest canonical spellings. */
-  values: Record<string, string[]>;
+  /**
+   * Values already claimed per axis, WITH the product holding each.
+   *
+   * It used to be `string[]` — bare suggestions in a `<datalist>`. That was
+   * actively harmful: for a NEW variant every existing value is a guaranteed
+   * `products_group_variant_norm_uniq` violation, so the autocomplete offered
+   * nothing but forbidden answers. Worse, when a sibling held the wrong value
+   * the admin had no way to see it. That is the live Toshiba gas cooker: the
+   * product whose name says شاشة ديجيتال carries "بدون شاشة", so the genuinely
+   * screenless one could not be added, and the form said only that the value
+   * was taken — six failed saves in two minutes.
+   *
+   * With the holder attached, the editor can name it and link to it.
+   */
+  values: Record<string, AxisValueHolder[]>;
 }
 
 /**
- * Every variant group, with the axis values its members already use.
+ * Every variant group, with the axis values its members already claim.
  *
- * The values feed a `<datalist>` on the axis input, which is the same nudge
- * `SpecEditor` gives for spec keys and exists for the same reason: axis values
- * are matched by exact string, so one "فضي" typed where the group already uses
- * "سيلفر" silently splits one product into two swatches of the same finish.
+ * Archived members are included on purpose: an archived variant still occupies
+ * its combination in the unique index, so omitting it would let the form
+ * promise a value the database then refuses.
  */
 export async function getProductGroupOptions(): Promise<ProductGroupOption[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("product_groups")
-    .select("id, name_ar, axes, products(variant_values)")
+    .select("id, name_ar, axes, products(id, sku, variant_values)")
     .order("name_ar");
 
   if (error || !data) {
@@ -210,9 +235,11 @@ export async function getProductGroupOptions(): Promise<ProductGroupOption[]> {
   }
 
   return data.map((group) => {
-    const values: Record<string, string[]> = {};
+    const values: Record<string, AxisValueHolder[]> = {};
 
     for (const member of (group.products ?? []) as {
+      id: string;
+      sku: string | null;
       variant_values: unknown;
     }[]) {
       const stored = member.variant_values;
@@ -220,8 +247,13 @@ export async function getProductGroupOptions(): Promise<ProductGroupOption[]> {
 
       for (const [axis, value] of Object.entries(stored as Record<string, unknown>)) {
         if (typeof value !== "string" || !value.trim()) continue;
-        const seen = (values[axis] ??= []);
-        if (!seen.includes(value)) seen.push(value);
+        const claimed = (values[axis] ??= []);
+        if (claimed.some((held) => held.value === value)) continue;
+        claimed.push({
+          value,
+          productId: member.id,
+          sku: member.sku ?? "—",
+        });
       }
     }
 
@@ -232,4 +264,44 @@ export async function getProductGroupOptions(): Promise<ProductGroupOption[]> {
       values,
     };
   });
+}
+
+export interface VariantAxisOption {
+  key: string;
+  label_ar: string;
+  kind: string;
+  schema_property: string | null;
+  spec_aliases: string[];
+  display_order: number;
+}
+
+/**
+ * The declared axes, for the admin's axis list.
+ *
+ * Read through the cookie-bound client like everything else in this module,
+ * even though `variant_axes` is world-readable — the admin pages are dynamic
+ * and consistency is worth more here than one avoided round trip.
+ */
+export async function getVariantAxisOptions(): Promise<VariantAxisOption[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("variant_axes")
+    .select("key, label_ar, kind, schema_property, spec_aliases, display_order")
+    .order("display_order")
+    .order("key");
+
+  if (error || !data) {
+    if (error) console.error("Error fetching variant axes:", error);
+    return [];
+  }
+
+  return data.map((row) => ({
+    key: row.key,
+    label_ar: row.label_ar,
+    kind: row.kind,
+    schema_property: row.schema_property,
+    spec_aliases: row.spec_aliases ?? [],
+    display_order: row.display_order,
+  }));
 }

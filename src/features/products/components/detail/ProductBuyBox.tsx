@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { AxisRegistry } from "../../constants/variant-axes";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
@@ -25,9 +26,15 @@ interface ProductBuyBoxProps {
    * when the product has no siblings, which is the common case.
    */
   siblings?: VariantSibling[];
+  /** Resolved axis registry; omitted falls back to the built-in defaults. */
+  axisRegistry?: AxisRegistry;
 }
 
-export function ProductBuyBox({ product, siblings = [] }: ProductBuyBoxProps) {
+export function ProductBuyBox({
+  product,
+  siblings = [],
+  axisRegistry,
+}: ProductBuyBoxProps) {
   const addItem = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -162,6 +169,7 @@ export function ProductBuyBox({ product, siblings = [] }: ProductBuyBoxProps) {
         <VariantSelector
           axes={product.group?.axes ?? []}
           siblings={siblings}
+          registry={axisRegistry}
           activeId={product.id}
         />
 

@@ -11,6 +11,7 @@ import ProductSlider from "@/features/products/components/ProductSlider";
 import { toPlainTextExcerpt } from "@/features/products/lib/rich-content";
 import { contentBlocksToPlainText } from "@/features/products/lib/content-blocks";
 import { buildProductJsonLd } from "@/features/products/lib/product-json-ld";
+import { getAxisRegistry } from "@/services/server/variant-axes";
 import type { Product } from "@/features/products/types";
 
 export const revalidate = 3600;
@@ -95,11 +96,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Siblings and related products are independent reads; `getProductBySlug` is
-  // React-cached, so this adds two round trips rather than three.
-  const [siblings, related] = await Promise.all([
+  // Siblings, related products and the axis registry are independent reads;
+  // all three are React-cached, so this adds round trips rather than
+  // multiplying them.
+  const [siblings, related, axisRegistry] = await Promise.all([
     getVariantSiblings(product.group_id),
     getRelatedProducts(product, 10),
+    getAxisRegistry(),
   ]);
 
   const jsonLd = buildProductJsonLd({
@@ -108,6 +111,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     baseUrl: SITE_URL,
     // Structured data wants plain text, not the raw HTML blob.
     description: resolveDescription(product, 300),
+    // So an axis the admin declared with a schema.org property states it,
+    // instead of falling back to a generic `additionalProperty`.
+    registry: axisRegistry,
   });
 
   return (
@@ -119,6 +125,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <ProductDetail
         product={product}
         siblings={siblings}
+        axisRegistry={axisRegistry}
         relatedSlot={
           related.length > 0 ? (
             // On the page like every other rail, not boxed: a panel around

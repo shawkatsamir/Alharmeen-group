@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { AxisRegistry } from "../constants/variant-axes";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,6 +32,8 @@ interface ProductDetailProps {
   relatedSlot?: React.ReactNode;
   /** Active variants of this product's group, this one included. */
   siblings?: VariantSibling[];
+  /** Resolved axis registry, so a newly declared axis renders by its kind. */
+  axisRegistry?: AxisRegistry;
 }
 
 /**
@@ -46,6 +49,7 @@ export function ProductDetail({
   product,
   relatedSlot,
   siblings = [],
+  axisRegistry,
 }: ProductDetailProps) {
   const features = normalizeFeatures(product.features);
   const specGroups = groupSpecifications(product.specifications);
@@ -125,7 +129,11 @@ export function ProductDetail({
             images={product.images ?? []}
             productName={product.name_ar.trim()}
           />
-          <ProductBuyBox product={product} siblings={siblings} />
+          <ProductBuyBox
+            product={product}
+            siblings={siblings}
+            axisRegistry={axisRegistry}
+          />
         </div>
 
         <ProductAnchorNav anchors={anchors} />
